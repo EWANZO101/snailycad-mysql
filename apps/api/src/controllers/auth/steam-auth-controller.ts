@@ -12,6 +12,7 @@ import { findRedirectURL } from "./discord-auth-controller";
 import { getSessionUser } from "lib/auth/getSessionUser";
 import { getDefaultPermissionsForNewUser } from "./auth-controller";
 import { setUserTokenCookies } from "lib/auth/setUserTokenCookies";
+import { sendUserRegisteredWebhook } from "lib/discord/extra-webhooks";
 import { getAPIUrl } from "@snailycad/utils/api-url";
 import { Feature, IsFeatureEnabled } from "middlewares/is-enabled";
 
@@ -106,6 +107,8 @@ export class SteamOAuthController {
           whitelistStatus: cad?.whitelisted ? WhitelistStatus.PENDING : WhitelistStatus.ACCEPTED,
         },
       });
+
+      sendUserRegisteredWebhook({ user, method: "steam" });
 
       // authenticate user with cookie
       await setUserTokenCookies({ user, res });

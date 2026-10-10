@@ -10,7 +10,7 @@ import { AlertModal } from "components/modal/AlertModal";
 import { CallEventsArea } from "../../events/EventsArea";
 
 import { usePermission } from "hooks/usePermission";
-import { defaultPermissions } from "@snailycad/permissions";
+import { defaultPermissions, Permissions } from "@snailycad/permissions";
 import { type ActiveOfficer, useLeoState } from "state/leo-state";
 import { type ActiveDeputy, useEmsFdState } from "state/ems-fd-state";
 import type { Delete911CallByIdData } from "@snailycad/types/api";
@@ -34,6 +34,8 @@ interface Props {
 
 interface AreFormFieldsDisabledOptions {
   isDispatch: boolean;
+  /** users with the `ManageCallHistory` permission can always edit/end calls */
+  canManageCalls: boolean;
   forceDisabled?: boolean;
   call: Full911Call | null;
   hasActiveDispatchers: boolean;
@@ -43,8 +45,12 @@ interface AreFormFieldsDisabledOptions {
 function areFormFieldsEnabled(options: AreFormFieldsDisabledOptions) {
   /** force disable the fields */
   if (options.forceDisabled) return false;
+  /** ended calls can no longer be updated (the API rejects it) */
+  if (options.call?.ended) return false;
   /** dispatch can always edit the fields */
   if (options.isDispatch) return true;
+  /** authorised users (e.g. supervisors) can edit/end calls from any page */
+  if (options.canManageCalls) return true;
   /** a new call is being created, always editable */
   if (!options.call) return true;
 
@@ -87,8 +93,11 @@ export function Manage911CallModal({ setCall, forceDisabled, forceOpen, call, on
   const activeUnit = router.pathname.includes("/officer") ? activeOfficer : activeDeputy;
   const isDispatch = router.pathname.includes("/dispatch") && hasDispatchPermissions;
 
+  const canManageCalls = hasPermissions([Permissions.ManageCallHistory]);
+
   const areFieldsDisabled = !areFormFieldsEnabled({
     isDispatch,
+    canManageCalls,
     forceDisabled,
     call,
     hasActiveDispatchers,

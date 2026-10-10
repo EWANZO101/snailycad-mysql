@@ -43,6 +43,7 @@ export const combinedEmsFdUnitProperties = Prisma.validator<Prisma.CombinedEmsFd
   status: { include: { value: true } },
   department: { include: { value: true } },
   deputies: { include: unitProperties },
+  activeVehicle: { include: { value: true } },
 });
 
 export const combinedUnitProperties = Prisma.validator<Prisma.CombinedLeoUnitSelect>()({
@@ -63,6 +64,7 @@ export const assignedUnitsInclude = Prisma.validator<{ include: Prisma.AssignedU
         officers: {
           include: _leoProperties,
         },
+        activeVehicle: { include: { value: true } },
       },
     },
     combinedEmsFdUnit: {
@@ -72,6 +74,7 @@ export const assignedUnitsInclude = Prisma.validator<{ include: Prisma.AssignedU
         deputies: {
           include: unitProperties,
         },
+        activeVehicle: { include: { value: true } },
       },
     },
   },
@@ -82,6 +85,7 @@ export const callInclude = Prisma.validator<Prisma.Call911Select>()({
   assignedUnits: assignedUnitsInclude,
   events: true,
   incidents: true,
+  EmsFdIncident: true,
   departments: { include: _leoProperties.department.include },
   divisions: { include: unitProperties.division.include },
   situationCode: { include: { value: true } },

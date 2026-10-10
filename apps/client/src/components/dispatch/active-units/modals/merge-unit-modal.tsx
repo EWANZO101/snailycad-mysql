@@ -50,6 +50,7 @@ export function MergeUnitModal({
   const { state, execute } = useFetch();
   const common = useTranslations("Common");
   const t = useTranslations("Leo");
+  const ems = useTranslations("Ems");
   const { generateCallsign } = useGenerateCallsign();
   const { USER_DEFINED_CALLSIGN_COMBINED_UNIT } = useFeatureEnabled();
 
@@ -140,7 +141,7 @@ export function MergeUnitModal({
               isClearable
               errorMessage={errors.vehicleId}
               isOptional
-              label={t("patrolVehicle")}
+              label={type === "leo" ? t("patrolVehicle") : ems("emergencyVehicle")}
               localValue={values.vehicleSearch}
               onInputChange={(value) => setFieldValue("vehicleSearch", value)}
               onSelectionChange={(node) => {
@@ -154,7 +155,7 @@ export function MergeUnitModal({
               }}
               fetchOptions={{
                 apiPath: (query) => {
-                  const basePath = "/admin/values/emergency_vehicle/search?query";
+                  const basePath = "/admin/values/emergency_vehicle/search?";
                   const queryParams = new URLSearchParams();
                   const departmentId = activeUnit?.departmentId || unit.departmentId;
 

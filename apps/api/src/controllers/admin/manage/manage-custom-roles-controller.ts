@@ -24,6 +24,11 @@ import process from "node:process";
 import type * as APITypes from "@snailycad/types/api";
 import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 import { defaultPermissions } from "@snailycad/permissions";
+import type { User } from "@snailycad/types";
+import {
+  assertActorHoldsPermissions,
+  assertCanChangePermissions,
+} from "lib/auth/permission-escalation";
 
 @Controller("/admin/manage/custom-roles")
 @UseBeforeEach(IsAuth)
@@ -68,8 +73,12 @@ export class AdminManageCustomRolesController {
   async createCustomRole(
     @BodyParams() body: unknown,
     @Context("sessionUserId") sessionUserId: string,
+    @Context("user") sessionUser: User,
   ): Promise<APITypes.PostCustomRolesData> {
     const data = validateSchema(CUSTOM_ROLE_SCHEMA, body);
+
+    // a user cannot create a custom role with permissions they do not have themselves.
+    assertActorHoldsPermissions(sessionUser, data.permissions as string[]);
 
     const existing = await prisma.customRole.findFirst({
       where: { name: { equals: data.name, mode: "insensitive" } },
@@ -107,6 +116,7 @@ export class AdminManageCustomRolesController {
     @BodyParams() body: unknown,
     @PathParams("id") id: string,
     @Context("sessionUserId") sessionUserId: string,
+    @Context("user") sessionUser: User,
   ): Promise<APITypes.PutCustomRoleByIdData> {
     const data = validateSchema(CUSTOM_ROLE_SCHEMA, body);
 
@@ -117,6 +127,24 @@ export class AdminManageCustomRolesController {
 
     if (!customRole) {
       throw new NotFound("customRoleNotFound");
+    }
+
+    // a user can only add/remove permissions to/from a custom role that they have themselves.
+    assertCanChangePermissions({
+      actor: sessionUser,
+      previous: customRole.permissions,
+      next: data.permissions as string[],
+    });
+
+    /**
+     * changing the linked Discord role changes who receives this role (and its permissions),
+     * so the user must hold every permission of this role.
+     */
+    if ((data.discordRoleId ?? null) !== (customRole.discordRoleId ?? null)) {
+      assertActorHoldsPermissions(sessionUser, [
+        ...customRole.permissions,
+        ...(data.permissions as string[]),
+      ]);
     }
 
     const updated = await prisma.customRole.update({
@@ -147,6 +175,7 @@ export class AdminManageCustomRolesController {
   async deleteCustomRole(
     @PathParams("id") id: string,
     @Context("sessionUserId") sessionUserId: string,
+    @Context("user") sessionUser: User,
   ): Promise<APITypes.DeleteCustomRoleByIdData> {
     const customRole = await prisma.customRole.findUnique({
       where: { id },
@@ -155,6 +184,9 @@ export class AdminManageCustomRolesController {
     if (!customRole) {
       throw new NotFound("customRoleNotFound");
     }
+
+    // deleting a role removes its permissions from every user that has it.
+    assertActorHoldsPermissions(sessionUser, customRole.permissions);
 
     await prisma.customRole.delete({
       where: { id: customRole.id },
@@ -170,6 +202,9 @@ export class AdminManageCustomRolesController {
   }
 
   @Post("/:id")
+  @UsePermissions({
+    permissions: [Permissions.ManageCustomRoles],
+  })
   @Description("Upload an image to a custom role.")
   async uploadImageToCustomRole(
     @PathParams("id") customRoleId: string,

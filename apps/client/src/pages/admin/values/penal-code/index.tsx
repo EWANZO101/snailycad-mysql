@@ -23,6 +23,7 @@ import { OptionsDropdown } from "components/admin/values/import/options-dropdown
 import { useRouter } from "next/router";
 import { createValueDocumentationURL } from "../[path]";
 import { BoxArrowUpRight } from "react-bootstrap-icons";
+import { ExportPenalCodesButton } from "components/admin/values/penal-codes/export-penal-codes-button";
 
 const ManagePenalCodeGroup = dynamic(
   async () =>
@@ -153,6 +154,7 @@ export default function PenalCodeGroupsPage(props: Props) {
           <Button onPress={() => modalState.openModal(ModalIds.ManagePenalCodeGroup)}>
             {t("ADD")}
           </Button>
+          <ExportPenalCodesButton />
           {/* values is set to non-empty array */}
           <OptionsDropdown type={ValueType.PENAL_CODE} valueLength={asyncTable.items.length} />
         </div>
@@ -179,6 +181,12 @@ export default function PenalCodeGroupsPage(props: Props) {
               >
                 {common("view")}
               </Link>
+              <ExportPenalCodesButton
+                className="ml-2"
+                size="xs"
+                groupId={group.id}
+                groupName={group.name}
+              />
               {group.id !== "ungrouped" ? (
                 <>
                   <Button

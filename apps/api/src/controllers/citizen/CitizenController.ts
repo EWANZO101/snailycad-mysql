@@ -35,6 +35,7 @@ import { z } from "zod";
 import { recordsInclude } from "controllers/leo/search/SearchController";
 import { leoProperties } from "utils/leo/includes";
 import { sendDiscordWebhook } from "~/lib/discord/webhooks";
+import { sendCitizenChangeWebhook } from "~/lib/discord/extra-webhooks";
 
 export const citizenInclude = Prisma.validator<Prisma.CitizenInclude>()({
   user: { select: userProperties },
@@ -78,6 +79,7 @@ export const citizenInclude = Prisma.validator<Prisma.CitizenInclude>()({
   pilotLicense: true,
   waterLicense: true,
   dlCategory: { include: { value: true } },
+  aliases: { orderBy: { createdAt: Prisma.SortOrder.asc } },
 });
 
 export const citizenIncludeWithRecords = {
@@ -244,6 +246,12 @@ export class CitizenController {
       where: {
         id: citizen.id,
       },
+    });
+
+    sendCitizenChangeWebhook({
+      action: "deleted",
+      citizen,
+      executor: { username: user.username, discordId: user.discordId },
     });
 
     return true;
@@ -415,6 +423,12 @@ export class CitizenController {
         includeProperties: false,
       });
     }
+
+    sendCitizenChangeWebhook({
+      action: "created",
+      citizen,
+      executor: { username: user.username, discordId: user.discordId },
+    });
 
     return citizen;
   }

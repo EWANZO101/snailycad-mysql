@@ -90,6 +90,11 @@ export const LEO_INCIDENT_SCHEMA = z.object({
 export const EMS_FD_INCIDENT_SCHEMA = LEO_INCIDENT_SCHEMA.extend({
   address: z.string().nullish(),
   fireType: z.string().nullish(),
+  vehicleInvolved: z.boolean().nullish(),
+  reportType: z.enum(["MEDICAL", "FIRE", "FIRE_INVESTIGATION", "INSPECTION"]).nullish(),
+  causeOfFire: z.string().nullish(),
+  propertyDamage: z.string().max(255).nullish(),
+  inspectionResult: z.string().max(255).nullish(),
 });
 
 export const LEO_VEHICLE_LICENSE_SCHEMA = VEHICLE_SCHEMA.pick({

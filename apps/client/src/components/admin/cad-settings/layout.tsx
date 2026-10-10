@@ -25,6 +25,7 @@ export enum SettingsTabs {
   Templates = "TEMPLATES",
   Other = "OTHER",
   Limits = "LIMITS",
+  CustomLocales = "CUSTOM_LOCALES",
 
   /** integrations */
   LiveMap = "LIVE_MAP",
@@ -105,6 +106,7 @@ function CadSettingsSidebar() {
         SettingsTabs.Templates,
         SettingsTabs.Limits,
         SettingsTabs.Other,
+        SettingsTabs.CustomLocales,
       ],
     },
     {

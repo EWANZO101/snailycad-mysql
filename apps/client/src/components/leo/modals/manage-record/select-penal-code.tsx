@@ -5,6 +5,7 @@ import { FormRow } from "@snailycad/ui";
 import { usePenalCodeGroups } from "hooks/values/use-penal-code-groups";
 import { parseCurrentValue } from "./table-item-form";
 import { useTranslations } from "use-intl";
+import { groupPenalCodes } from "lib/penal-codes/group-penal-codes";
 
 interface Props {
   value: SelectValue<PenalCode>[];
@@ -38,6 +39,21 @@ export function SelectPenalCode({ value, handleChange, penalCodes, isReadOnly }:
     }
   }
 
+  const groupedOptions = React.useMemo(() => {
+    const availableCodes = codes.filter((v) => !value.some((vio) => vio.value?.id === v.id));
+
+    return groupPenalCodes(availableCodes, {
+      ungroupedName: t("ungrouped"),
+      groups: penalCodeGroups,
+    }).map((group) => ({
+      label: group.name,
+      options: group.penalCodes.map((penalCode) => ({
+        label: penalCode.title,
+        value: parseCurrentValue(penalCode),
+      })),
+    }));
+  }, [codes, value, penalCodeGroups, t]);
+
   return (
     <FormRow useFlex>
       <Select
@@ -59,12 +75,8 @@ export function SelectPenalCode({ value, handleChange, penalCodes, isReadOnly }:
         name="violations"
         onChange={handleChange}
         isMulti
-        values={codes
-          .filter((v) => !value.some((vio) => vio.value?.id === v.id))
-          .map((value) => ({
-            label: value.title,
-            value: parseCurrentValue(value),
-          }))}
+        // grouped options: sorted by group position, then title. Typing in the select searches across all groups.
+        values={groupedOptions as any}
       />
     </FormRow>
   );

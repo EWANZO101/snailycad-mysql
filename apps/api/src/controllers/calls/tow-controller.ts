@@ -28,6 +28,7 @@ import { canManageInvariant } from "lib/auth/getSessionUser";
 import { Permissions, UsePermissions } from "middlewares/use-permissions";
 import { officerOrDeputyToUnit } from "lib/leo/officerOrDeputyToUnit";
 import { sendDiscordWebhook, sendRawWebhook } from "lib/discord/webhooks";
+import { sendTowTaxiCallWebhook } from "lib/discord/extra-webhooks";
 import type * as APITypes from "@snailycad/types/api";
 import { shouldCheckCitizenUserId } from "lib/citizen/has-citizen-access";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
@@ -216,6 +217,7 @@ export class TowController {
       this.socket.emitTowCallEnd(call);
     } else {
       this.socket.emitTowCall(call);
+      sendTowTaxiCallWebhook({ type: "tow", call });
     }
 
     return call;

@@ -12,6 +12,7 @@ import { TONES_SCHEMA, UPDATE_AOP_SCHEMA, UPDATE_RADIO_CHANNEL_SCHEMA } from "@s
 import { getActiveOfficer } from "lib/leo/activeOfficer";
 import { ExtendedNotFound } from "~/exceptions/extended-not-found";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
+import { hasPermission } from "@snailycad/permissions";
 import { findUnit } from "lib/leo/findUnit";
 import { getInactivityFilter } from "lib/leo/utils";
 import { getActiveDeputy } from "lib/get-active-ems-fd-deputy";
@@ -390,7 +391,20 @@ export class DispatchController {
   @UsePermissions({
     permissions: [Permissions.Dispatch, Permissions.LiveMap],
   })
-  async getCADUsersByDiscordOrSteamId(@BodyParams() body: unknown, @Context() ctx: Context) {
+  async getCADUsersByDiscordOrSteamId(
+    @BodyParams() body: unknown,
+    @Context() ctx: Context,
+    @Context("user") sessionUser: User,
+  ) {
+    /**
+     * without this permission, only CAD users with an on-duty LEO/EMS-FD unit are returned.
+     * (the live map hides players that are not linked to an on-duty unit for these users)
+     */
+    const canViewAllPlayers = hasPermission({
+      userToCheck: sessionUser,
+      permissionsToCheck: [Permissions.ViewAllPlayersOnLiveMap],
+    });
+
     const schema = z.array(
       z.object({ discordId: z.string().optional(), steamId: z.string().optional() }),
     );
@@ -421,6 +435,10 @@ export class DispatchController {
         ]);
 
         const unit = officer ?? deputy ?? null;
+
+        if (!unit && !canViewAllPlayers) {
+          return null;
+        }
 
         return { ...user, unit };
       }),

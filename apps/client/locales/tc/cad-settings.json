@@ -155,6 +155,10 @@
     "FORCE_DISCORD_AUTH-url": "https://docs.snailycad.org/docs/features/settings/forced-connections",
     "FORCE_STEAM_AUTH": "Forced Steam Authentication",
     "FORCE_STEAM_AUTH-description": "When enabled, this will force users to sync with Steam <b>after registration</b>.",
-    "FORCE_STEAM_AUTH-url": "https://docs.snailycad.org/docs/features/settings/forced-connections"
+    "FORCE_STEAM_AUTH-url": "https://docs.snailycad.org/docs/features/settings/forced-connections",
+    "MODERN_CITIZEN_THEME": "Modern Citizen Theme",
+    "MODERN_CITIZEN_THEME-description": "When enabled, the citizen page uses the new card dashboard design. Disable it to use the default SnailyCAD design.",
+    "API_TOKEN_REMINDER": "API Token Reminder",
+    "API_TOKEN_REMINDER-description": "When enabled, users who have not set up their personal API token (used for in-game integrations such as the FiveM script) will see a dismissible reminder banner at the top of the CAD."
   }
 }

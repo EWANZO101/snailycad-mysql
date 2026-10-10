@@ -27,6 +27,7 @@ export class AdminController {
     permissions: [
       ...defaultPermissions.allDefaultAdminPermissions,
       ...defaultPermissions.defaultCourthousePermissions,
+      ...defaultPermissions.defaultScopedAdminPermissions,
       Permissions.ManageAwardsAndQualifications,
     ],
   })

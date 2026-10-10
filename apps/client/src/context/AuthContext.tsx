@@ -33,6 +33,7 @@ const NO_LOADING_ROUTES = [
   "/auth/temp-password",
   "/auth/connections",
   "/auth/account-password",
+  "/auth/recovery",
 ];
 
 export function AuthProvider({ initialData, children }: ProviderProps) {

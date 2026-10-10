@@ -12,6 +12,7 @@ export type AuditLogActions =
   | UserTempPassword
   | CitizenUpdate
   | CitizenDelete
+  | CitizensPruned
   | UnitUpdate
   | UnitDelete
   | UnitsSetOffDuty
@@ -53,6 +54,7 @@ export type AuditLogActions =
   | UnitQualificationRemove
   | UnitDepartmentDeclined
   | UnitDepartmentAccepted
+  | UnitDutySessionUpdate
   | ValueAdd
   | ValueUpdate
   | ValueRemove
@@ -116,6 +118,12 @@ export type CitizenDelete = BaseAuditLogAction<
   AuditLogActionType.CitizenDelete,
   undefined,
   Types.Citizen
+>;
+/** `new` contains a short human-readable summary: the deleted count and the used filters. */
+export type CitizensPruned = BaseAuditLogAction<
+  AuditLogActionType.CitizensPruned,
+  undefined,
+  string[]
 >;
 export type UnitUpdate = BaseAuditLogAction<
   AuditLogActionType.UnitUpdate,
@@ -350,4 +358,9 @@ export type CitizenWarrantRemove = BaseAuditLogAction<
   AuditLogActionType.CitizenWarrantRemove,
   undefined,
   string
+>;
+export type UnitDutySessionUpdate = BaseAuditLogAction<
+  AuditLogActionType.UnitDutySessionUpdate,
+  Types.OfficerLog,
+  Types.OfficerLog
 >;

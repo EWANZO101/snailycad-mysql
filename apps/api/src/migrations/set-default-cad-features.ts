@@ -26,6 +26,7 @@ const DEFAULT_DISABLED_FEATURES: Partial<Record<Feature, { isEnabled: boolean }>
   LEO_EDITABLE_CITIZEN_PROFILE: { isEnabled: false },
   ALLOW_MULTIPLE_UNITS_DEPARTMENTS_PER_USER: { isEnabled: false },
   CITIZEN_RECORD_PAYMENTS: { isEnabled: false },
+  API_TOKEN_REMINDER: { isEnabled: false },
 };
 
 /**

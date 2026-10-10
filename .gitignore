@@ -39,3 +39,11 @@ build-storybook.log
 
 # Prisma generated types
 **/prisma/index.ts
+# start.sh install/build stamps
+.snaily-cache
+
+# Recovery token (roadmap 2.2) - never commit
+.recovery-token
+.recovery-token.json
+.recovery-token*.tmp
+start.log

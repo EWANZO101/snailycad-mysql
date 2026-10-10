@@ -132,6 +132,7 @@ export function Nav({ maxWidth, isAccountPending }: Props) {
                 {hasPermissions([
                   ...defaultPermissions.allDefaultAdminPermissions,
                   ...defaultPermissions.defaultCourthousePermissions,
+                  ...defaultPermissions.defaultScopedAdminPermissions,
                   Permissions.ManageAwardsAndQualifications,
                 ]) ? (
                   <AdminLink />

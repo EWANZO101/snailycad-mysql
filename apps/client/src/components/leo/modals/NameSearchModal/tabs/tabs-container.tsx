@@ -7,15 +7,19 @@ import { NameSearchWarrantsTab } from "./warrants-tab";
 import { RecordsTab } from "./records-tab";
 import { useNameSearch } from "state/search/name-search-state";
 import { RecordType } from "@snailycad/types";
+import { Permissions, usePermission } from "hooks/usePermission";
 
 const NameSearchWeaponsTab = dynamic(
   async () => (await import("./weapons-tab")).NameSearchWeaponsTab,
 );
 const NameSearchNotesTabs = dynamic(async () => (await import("./notes-tab")).NotesTab);
+const NameSearchDrugTestsTab = dynamic(async () => (await import("./drug-tests-tab")).DrugTestsTab);
 
 export function NameSearchTabsContainer() {
   const { WEAPON_REGISTRATION } = useFeatureEnabled();
   const t = useTranslations();
+  const { hasPermissions } = usePermission();
+  const hasLeoPermissions = hasPermissions([Permissions.Leo]);
   const { currentResult, setCurrentResult } = useNameSearch((state) => ({
     currentResult: state.currentResult,
     setCurrentResult: state.setCurrentResult,
@@ -46,6 +50,7 @@ export function NameSearchTabsContainer() {
     { value: "writtenWarnings", name: `${t("Leo.writtenWarnings")} (${writtenWarningsLength})` },
     { value: "warrants", name: `${t("Leo.warrants")} (${warrantsLength})` },
     { value: "notes", name: `${t("Leo.notes")} (${notesLength})` },
+    ...(hasLeoPermissions ? [{ value: "drugTests", name: t("Leo.drugTests") }] : []),
   ];
 
   return (
@@ -63,6 +68,9 @@ export function NameSearchTabsContainer() {
         currentResult={currentResult}
         setCurrentResult={setCurrentResult}
       />
+      {hasLeoPermissions ? (
+        <NameSearchDrugTestsTab key={currentResult.id} citizenId={currentResult.id} />
+      ) : null}
     </TabList>
   );
 }

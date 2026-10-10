@@ -25,6 +25,7 @@ import { validateGoogleCaptcha } from "lib/auth/validate-google-captcha";
 import { validateDiscordAndSteamId } from "lib/auth/validate-discord-steam-id";
 import { createFeaturesObject } from "middlewares/is-enabled";
 import { sendUserWhitelistStatusChangeWebhook } from "../admin/manage/manage-users-controller";
+import { sendUserRegisteredWebhook } from "lib/discord/extra-webhooks";
 
 @Controller("/auth")
 @ContentType("application/json")
@@ -195,6 +196,11 @@ export class AuthController {
     await prisma.user.update({
       where: { id: user.id },
       data: extraUserData,
+    });
+
+    sendUserRegisteredWebhook({
+      user: { ...user, ...extraUserData },
+      method: "password",
     });
 
     await setUserTokenCookies({ user, res });

@@ -33,9 +33,11 @@ import { combinedUnitProperties, leoProperties } from "utils/leo/includes";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { isFeatureEnabled } from "lib/upsert-cad";
 import { sendDiscordWebhook, sendRawWebhook } from "lib/discord/webhooks";
+import { sendWarrantStatusChangedWebhook } from "lib/discord/extra-webhooks";
 import { getUserOfficerFromActiveOfficer, getInactivityFilter } from "lib/leo/utils";
 import type * as APITypes from "@snailycad/types/api";
 import { officerOrDeputyToUnit } from "lib/leo/officerOrDeputyToUnit";
+import { syncCitizensArrestedStatus } from "lib/leo/jail";
 import { Socket } from "services/socket-service";
 import { assignUnitsToWarrant } from "~/lib/leo/records/assign-units-to-warrant";
 import type { MiscCadSettings, Officer, cad } from "@snailycad/types";
@@ -463,6 +465,15 @@ export class RecordsController {
       this.socket.emitUpdateActiveWarrant(normalizedWarrant);
     }
 
+    if (warrant.status !== updated.status) {
+      sendWarrantStatusChangedWebhook({
+        citizen: updated.citizen,
+        previousStatus: warrant.status,
+        newStatus: updated.status,
+        description: updated.description,
+      });
+    }
+
     return normalizedWarrant;
   }
 
@@ -589,6 +600,8 @@ export class RecordsController {
     @BodyParams("type") type: "WARRANT" | (string & {}),
     @Context("sessionUserId") sessionUserId: string,
   ): Promise<APITypes.DeleteRecordsByIdData> {
+    let deletedRecordCitizenId: string | null = null;
+
     if (type === "WARRANT") {
       const warrant = await prisma.warrant.findUnique({
         where: { id },
@@ -605,6 +618,8 @@ export class RecordsController {
       if (!record) {
         throw new NotFound("recordNotFound");
       }
+
+      deletedRecordCitizenId = record.citizenId;
     }
 
     const name = type === "WARRANT" ? "warrant" : "record";
@@ -613,6 +628,11 @@ export class RecordsController {
     await prisma[name].delete({
       where: { id },
     });
+
+    if (deletedRecordCitizenId) {
+      // deleting an (active) arrest report must update the citizen's "arrested" status
+      await syncCitizensArrestedStatus([deletedRecordCitizenId]);
+    }
 
     const auditLogType =
       type === "WARRANT"

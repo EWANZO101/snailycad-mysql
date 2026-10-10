@@ -20,6 +20,10 @@ export function NameSearchBasicInformation() {
     return null;
   }
 
+  const aliases =
+    (currentResult as typeof currentResult & { aliases?: { name: string; surname: string }[] })
+      .aliases ?? [];
+
   return (
     <div className="w-full mb-6 md:mb-0">
       <div className="flex flex-col">
@@ -30,6 +34,12 @@ export function NameSearchBasicInformation() {
         <Infofield label={t("Citizen.fullName")}>
           {currentResult.name} {currentResult.surname}
         </Infofield>
+
+        {aliases.length > 0 ? (
+          <Infofield className="max-w-[400px]" label={t("Citizen.aliases")}>
+            {aliases.map((alias) => `${alias.name} ${alias.surname}`).join(", ")}
+          </Infofield>
+        ) : null}
 
         {SOCIAL_SECURITY_NUMBERS && currentResult.socialSecurityNumber ? (
           <Infofield label={t("Citizen.socialSecurityNumber")}>

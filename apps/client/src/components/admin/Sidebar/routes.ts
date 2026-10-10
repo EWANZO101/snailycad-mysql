@@ -15,11 +15,16 @@ export const managementRoutes: SidebarRoute[] = [
       Permissions.ManageUsers,
       Permissions.BanUsers,
       Permissions.DeleteUsers,
+      Permissions.ManagePendingUsers,
     ],
   },
   {
     type: "CITIZENS",
     permissions: [Permissions.ViewCitizens, Permissions.ManageCitizens, Permissions.DeleteCitizens],
+  },
+  {
+    type: "CITIZEN_CLAIMS",
+    permissions: [Permissions.ManageCitizenClaims, Permissions.ManageCitizens],
   },
   {
     type: "UNITS",
@@ -30,6 +35,19 @@ export const managementRoutes: SidebarRoute[] = [
       Permissions.ManageUnitCallsigns,
       Permissions.ManageAwardsAndQualifications,
       Permissions.ManageUnitRank,
+      Permissions.ManageOfficerRank,
+      Permissions.ManageOfficerCallsign,
+    ],
+  },
+  {
+    // duty clocking report (/admin/manage/duty-hours), built on the unit on-duty time logs
+    type: "DUTY_HOURS",
+    permissions: [
+      Permissions.ViewUnits,
+      Permissions.ManageUnits,
+      Permissions.DeleteUnits,
+      Permissions.ManageUnitCallsigns,
+      Permissions.ManageAwardsAndQualifications,
     ],
   },
   {

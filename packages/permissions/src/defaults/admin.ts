@@ -8,6 +8,7 @@ export const defaultManagementPermissions = [
   Permissions.ViewCitizens,
   Permissions.ManageCitizens,
   Permissions.DeleteCitizens,
+  Permissions.ManageCitizenClaims,
   Permissions.ViewUnits,
   Permissions.ManageUnits,
   Permissions.DeleteUnits,
@@ -65,6 +66,17 @@ export const defaultCourthousePermissions = [
   Permissions.ManageNameChangeRequests,
   Permissions.ManagePendingWarrants,
   Permissions.ManageCourthousePosts,
+];
+
+/**
+ * narrowly scoped permissions that give access to a (small) part of the admin panel.
+ * these are intentionally **not** part of `allDefaultAdminPermissions`, since that list
+ * is used throughout the CAD as an "is admin" check.
+ */
+export const defaultScopedAdminPermissions = [
+  Permissions.ManagePendingUsers,
+  Permissions.ManageOfficerRank,
+  Permissions.ManageOfficerCallsign,
 ];
 
 export const defaultOwnerPermissions = [Permissions.ManageCADSettings];

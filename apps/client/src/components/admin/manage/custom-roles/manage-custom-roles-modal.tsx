@@ -11,6 +11,7 @@ import { ModalIds } from "types/modal-ids";
 import { CUSTOM_ROLE_SCHEMA } from "@snailycad/schemas";
 import { Permissions } from "@snailycad/permissions";
 import { ImageSelectInput, validateFile } from "components/form/inputs/ImageSelectInput";
+import { usePermission } from "hooks/usePermission";
 import type {
   GetCADDiscordRolesData,
   PostCustomRolesData,
@@ -33,6 +34,7 @@ export function ManageCustomRolesModal({ role, onClose, onCreate, onUpdate }: Pr
   const common = useTranslations("Common");
   const t = useTranslations("Management");
   const tPermission = useTranslations("Permissions");
+  const { hasPermissions } = usePermission();
 
   function handleClose() {
     onClose?.();
@@ -148,6 +150,8 @@ export function ManageCustomRolesModal({ role, onClose, onCreate, onUpdate }: Pr
               options={Object.keys(Permissions).map((permission) => ({
                 value: permission,
                 label: tPermission(permission),
+                // users can only add/remove permissions they have themselves (enforced by the API)
+                isDisabled: !hasPermissions([permission as Permissions]),
               }))}
               onSelectionChange={(keys) => setFieldValue("permissions", keys)}
             />

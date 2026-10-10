@@ -272,7 +272,16 @@
     "alert_deleteOfficer": "Tem certeza de que deseja excluir <span>{officer}</span>? Esta ação não pode ser desfeita.",
     "alert_allowCheckout": "Tem certeza de que deseja retirar este veículo do lote apreendido?",
     "alert_deleteIncident": "Tem certeza de que deseja excluir este incidente? Esta ação não pode ser desfeita.",
-    "alert_revokeWarrant": "Tem certeza de que deseja revogar este mandado? Esta ação não pode ser desfeita."
+    "alert_revokeWarrant": "Tem certeza de que deseja revogar este mandado? Esta ação não pode ser desfeita.",
+    "reportType": "Report Type",
+    "reportType_MEDICAL": "Medical",
+    "reportType_FIRE": "Fire",
+    "reportType_FIRE_INVESTIGATION": "Fire Investigation",
+    "reportType_INSPECTION": "Fire Inspection",
+    "causeOfFire": "Cause of Fire",
+    "inspectionFindings": "Inspection Findings",
+    "inspectionResult": "Inspection Result",
+    "propertyDamage": "Property Damage / Estimated Loss"
   },
   "Bolos": {
     "activeBolos": "Bolos Ativos",

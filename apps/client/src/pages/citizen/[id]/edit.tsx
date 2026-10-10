@@ -10,6 +10,10 @@ import { requestAll } from "lib/utils";
 import { ManageCitizenForm } from "components/citizen/ManageCitizenForm";
 import type { PostCitizenImageByIdData, PutCitizenByIdData } from "@snailycad/types/api";
 import { BreadcrumbItem, Breadcrumbs } from "@snailycad/ui";
+import {
+  CitizenAliasesSection,
+  type CitizenAlias,
+} from "components/citizen/citizen-aliases-section";
 
 export default function EditCitizen() {
   const { state, execute } = useFetch();
@@ -73,6 +77,11 @@ export default function EditCitizen() {
       </Breadcrumbs>
 
       <ManageCitizenForm citizen={citizen} onSubmit={onSubmit} state={state} />
+
+      <CitizenAliasesSection
+        citizenId={citizen.id}
+        initialAliases={(citizen as typeof citizen & { aliases?: CitizenAlias[] }).aliases}
+      />
     </Layout>
   );
 }

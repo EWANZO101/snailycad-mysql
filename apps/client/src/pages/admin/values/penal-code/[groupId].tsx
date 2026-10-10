@@ -27,6 +27,7 @@ import { CallDescription } from "components/dispatch/active-calls/CallDescriptio
 import { ArrowLeft, BoxArrowUpRight } from "react-bootstrap-icons";
 import { toastMessage } from "lib/toastMessage";
 import { createValueDocumentationURL } from "../[path]";
+import { ExportPenalCodesButton } from "components/admin/values/penal-codes/export-penal-codes-button";
 
 const ManagePenalCode = dynamic(
   async () =>
@@ -171,6 +172,7 @@ export default function PenalCodeGroupsPage(props: Props) {
             <ArrowLeft /> View all groups
           </Link>
 
+          <ExportPenalCodesButton groupId={groupId} />
           <Button onPress={() => modalState.openModal(ModalIds.ManageValue)}>{t("ADD")}</Button>
         </div>
       </header>

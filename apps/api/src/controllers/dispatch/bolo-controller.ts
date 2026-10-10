@@ -22,6 +22,7 @@ import {
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import type { APIEmbed } from "discord-api-types/v10";
 import { sendDiscordWebhook, sendRawWebhook } from "lib/discord/webhooks";
+import { sendBoloChangeWebhook } from "lib/discord/extra-webhooks";
 import { getUserOfficerFromActiveOfficer, getInactivityFilter } from "lib/leo/utils";
 import type * as APITypes from "@snailycad/types/api";
 import type { cad } from "@snailycad/types";
@@ -181,6 +182,7 @@ export class BoloController {
     });
 
     this.socket.emitUpdateBolo(updated);
+    sendBoloChangeWebhook({ action: "updated", bolo: updated });
 
     return updated;
   }
@@ -207,6 +209,7 @@ export class BoloController {
     });
 
     this.socket.emitDeleteBolo(bolo);
+    sendBoloChangeWebhook({ action: "deleted", bolo });
 
     return true;
   }

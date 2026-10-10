@@ -26,6 +26,7 @@ export const DEFAULT_DISABLED_FEATURES = {
   LEO_EDITABLE_CITIZEN_PROFILE: { isEnabled: false },
   ALLOW_MULTIPLE_UNITS_DEPARTMENTS_PER_USER: { isEnabled: false },
   CITIZEN_RECORD_PAYMENTS: { isEnabled: false },
+  API_TOKEN_REMINDER: { isEnabled: false },
 } satisfies Partial<Record<Feature, { isEnabled: boolean }>>;
 
 export const DEFAULT_FEATURE_OPTIONS = {

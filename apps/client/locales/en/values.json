@@ -77,7 +77,8 @@
     "isPrimary": "Is Primary",
     "isDispositionDescription": "A disposition code can be used when a call is closed. This will be used to determine the outcome of the call.",
     "isDisposition": "Is Disposition",
-    "mustBeValidJson": "Must be valid JSON"
+    "mustBeValidJson": "Must be valid JSON",
+    "exportJson": "Export JSON"
   },
   "PENAL_CODE_GROUP": {
     "MANAGE": "Manage Penal Code Groups",

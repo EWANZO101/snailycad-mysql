@@ -242,7 +242,16 @@
     "alert_deleteOfficer": "Opravdu chcete smazat <span>{officer}</span>? Tato akce nelze vzít zpět.",
     "alert_allowCheckout": "Jste si jistý, že chcete zkontrolovat toto vozidlo z odstavného parkoviště?",
     "alert_deleteIncident": "Opravdu chcete smazat tuto událost? Tuto akci nelze vrátit zpět.",
-    "alert_revokeWarrant": "Opravdu chcete tento příkaz zrušit? Tuto akci nelze vrátit zpět."
+    "alert_revokeWarrant": "Opravdu chcete tento příkaz zrušit? Tuto akci nelze vrátit zpět.",
+    "reportType": "Report Type",
+    "reportType_MEDICAL": "Medical",
+    "reportType_FIRE": "Fire",
+    "reportType_FIRE_INVESTIGATION": "Fire Investigation",
+    "reportType_INSPECTION": "Fire Inspection",
+    "causeOfFire": "Cause of Fire",
+    "inspectionFindings": "Inspection Findings",
+    "inspectionResult": "Inspection Result",
+    "propertyDamage": "Property Damage / Estimated Loss"
   },
   "Bolos": {
     "activeBolos": "Aktivní pátrání",

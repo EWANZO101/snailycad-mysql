@@ -16,6 +16,7 @@ export enum AuditLogActionType {
 
   CitizenUpdate = "CitizenUpdate",
   CitizenDelete = "CitizenDelete",
+  CitizensPruned = "CitizensPruned",
 
   UnitUpdate = "UnitUpdate",
   UnitDelete = "UnitDelete",
@@ -28,6 +29,7 @@ export enum AuditLogActionType {
   UnitQualificationRemove = "UnitQualificationRemove",
   UnitDepartmentDeclined = "UnitDepartmentDeclined",
   UnitDepartmentAccepted = "UnitDepartmentAccepted",
+  UnitDutySessionUpdate = "UnitDutySessionUpdate",
   CitizenRecordRemove = "CitizenRecordRemove",
   CitizenWarrantRemove = "CitizenWarrantRemove",
 

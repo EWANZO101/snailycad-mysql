@@ -11,6 +11,7 @@ import { generateString } from "utils/generate-string";
 import { citizenInclude } from "controllers/citizen/CitizenController";
 import { validateImageURL } from "lib/images/validate-image-url";
 import { Feature, Prisma } from "@prisma/client";
+import { sendCitizenChangeWebhook } from "lib/discord/extra-webhooks";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import type * as APITypes from "@snailycad/types/api";
 import { validateSocialSecurityNumber } from "lib/citizen/validate-ssn";
@@ -251,6 +252,7 @@ export class AdminManageCitizensController {
     }
 
     await prisma.citizen.delete({ where: { id: citizenId } });
+    sendCitizenChangeWebhook({ action: "deleted", citizen });
 
     await createAuditLogEntry({
       translationKey: "deletedEntry",

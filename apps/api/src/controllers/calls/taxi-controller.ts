@@ -20,6 +20,7 @@ import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { towIncludes } from "./tow-controller";
 import type * as APITypes from "@snailycad/types/api";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
+import { sendTowTaxiCallWebhook } from "lib/discord/extra-webhooks";
 
 @Controller("/taxi")
 @UseBeforeEach(IsAuth)
@@ -98,6 +99,7 @@ export class TaxiController {
     });
 
     this.socket.emitCreateTaxiCall(call);
+    sendTowTaxiCallWebhook({ type: "taxi", call });
 
     return call;
   }

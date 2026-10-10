@@ -39,6 +39,15 @@ export type Put911CallByIdData = Get911CallsData["calls"][number];
 export type DeletePurge911CallsData = boolean;
 
 /**
+ * @method POST
+ * @route /911-calls/bulk-end
+ */
+export interface PostBulkEnd911CallsData {
+  /** the ids of the calls that were ended */
+  ids: string[];
+}
+
+/**
  * @method DELETE
  * @route /911-calls/:id
  */
@@ -49,7 +58,10 @@ export type Delete911CallByIdData = boolean;
  * @route /911-calls/link-incident/:callId
  */
 export type PostLink911CallToIncident =
-  | (Prisma.Call911 & { incidents: Types.LeoIncident[] })
+  | (Prisma.Call911 & {
+      incidents: Types.LeoIncident[];
+      EmsFdIncident: Types.EmsFdIncident | null;
+    })
   | null;
 
 /**

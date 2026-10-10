@@ -214,7 +214,16 @@
     "alert_deleteOfficer": "是否確實要刪除 <span>{officer}</span>？此操作無法撤消",
     "alert_allowCheckout": "您確定要從扣押地段檢查這輛車嗎？",
     "alert_deleteIncident": "您確定要刪除此事件嗎？此操作無法撤消",
-    "alert_revokeWarrant": "你確定要撤銷這個授權嗎？此操作無法撤消"
+    "alert_revokeWarrant": "你確定要撤銷這個授權嗎？此操作無法撤消",
+    "reportType": "Report Type",
+    "reportType_MEDICAL": "Medical",
+    "reportType_FIRE": "Fire",
+    "reportType_FIRE_INVESTIGATION": "Fire Investigation",
+    "reportType_INSPECTION": "Fire Inspection",
+    "causeOfFire": "Cause of Fire",
+    "inspectionFindings": "Inspection Findings",
+    "inspectionResult": "Inspection Result",
+    "propertyDamage": "Property Damage / Estimated Loss"
   },
   "Bolos": {
     "activeBolos": "活躍的Bolos",

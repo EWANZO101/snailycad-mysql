@@ -6,12 +6,23 @@ const require = createRequire(import.meta.url);
 const json = require("./package.json");
 
 /**
+ * Source maps are only generated and uploaded to Sentry when an auth token is provided.
+ * Without one, the Sentry webpack plugin is disabled, which makes builds faster and use less memory.
+ */
+const SENTRY_AUTH_TOKEN = process.env.SENTRY_AUTH_TOKEN || undefined;
+const uploadSourceMaps = Boolean(SENTRY_AUTH_TOKEN);
+
+/**
  * @template {import("next").NextConfig} T
  * @typedef {T}
  */
 const nextConfig = {
   i18n,
   cleanDistDir: true,
+  // gzip responses in Next.js. Set NEXT_DISABLE_COMPRESSION=true when the reverse proxy compresses instead.
+  compress: process.env.NEXT_DISABLE_COMPRESSION !== "true",
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
   experimental: {
     webpackBuildWorker: true,
   },
@@ -52,8 +63,10 @@ const nextConfig = {
     return config;
   },
   sentry: {
-    hideSourceMaps: false,
+    hideSourceMaps: true,
     widenClientFileUpload: true,
+    disableServerWebpackPlugin: !uploadSourceMaps,
+    disableClientWebpackPlugin: !uploadSourceMaps,
   },
 }; // end config
 
@@ -67,14 +80,16 @@ export default (phase, defaultConfig) => {
           org: "snailycad",
           setCommits: true,
           project: "snailycad-client",
-          authToken: "bce2b8a2e79f4336a3b115f171e675ab639d2d1f809a40919ca4493257a9c0e0",
+          authToken: SENTRY_AUTH_TOKEN,
           release: json.version,
           silent: true,
-          hideSourceMaps: false,
-          widenClientFileUpload: true,
         },
         {
           tunnelRoute: "/api/monitoring-tunnel",
+          hideSourceMaps: true,
+          widenClientFileUpload: true,
+          disableServerWebpackPlugin: !uploadSourceMaps,
+          disableClientWebpackPlugin: !uploadSourceMaps,
         },
       ),
   ];

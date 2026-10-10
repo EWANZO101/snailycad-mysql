@@ -69,7 +69,11 @@
     "huntingLicensePoints": "Hunting License Points",
     "fishingLicensePoints": "Fishing License Points",
     "otherLicenseCategory": "Other License Categories",
-    "markAsPaid": "Mark As Paid"
+    "markAsPaid": "Mark As Paid",
+    "aliases": "Aliases",
+    "aliasesDescription": "Other names this citizen is known by. Law enforcement can find this citizen by searching for any of these aliases.",
+    "noAliases": "This citizen has no aliases.",
+    "addAlias": "Add alias"
   },
   "Vehicles": {
     "model": "Model",
@@ -164,6 +168,36 @@
     "fines": "Fines",
     "bail": "Bail",
     "jailTime": "Jail Time",
-    "isPrimary": "Is Primary"
+    "isPrimary": "Is Primary",
+    "ungrouped": "Ungrouped",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "noSearchResults": "No penal codes match your search."
+  },
+  "CitizenClaims": {
+    "claimCitizen": "Claim a citizen",
+    "claimCitizenInfo": "Search for an existing citizen that is not linked to any user, by name or by their exact social security number. A staff member will review your request before the citizen is linked to your account.",
+    "searchPlaceholder": "Name or social security number",
+    "reason": "Reason",
+    "reasonPlaceholder": "Why should this citizen be linked to your account?",
+    "noClaimableCitizens": "No claimable citizens found.",
+    "requestClaim": "Request claim",
+    "myClaims": "My claim requests",
+    "noClaims": "You have not requested to claim any citizens yet.",
+    "cancelClaim": "Cancel request",
+    "requestedAt": "Requested at",
+    "citizenClaims": "Citizen Claim Requests",
+    "citizenClaimsInfo": "Users can request to claim citizens that are not linked to any user. Accepting a request links the citizen (and its vehicles and weapons without a user) to the requesting user and declines all other pending requests for that citizen.",
+    "noClaimRequests": "There are no claim requests with this status.",
+    "citizen": "Citizen",
+    "user": "User",
+    "status": "Status",
+    "reviewedBy": "Reviewed by",
+    "reviewedAt": "Reviewed at",
+    "accept": "Accept",
+    "decline": "Decline",
+    "PENDING": "Pending",
+    "ACCEPTED": "Accepted",
+    "DECLINED": "Declined"
   }
 }

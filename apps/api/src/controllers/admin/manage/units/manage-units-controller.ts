@@ -80,6 +80,9 @@ export class AdminManageUnitsController {
       Permissions.DeleteUnits,
       Permissions.ManageUnits,
       Permissions.ManageUnitCallsigns,
+      Permissions.ManageUnitRank,
+      Permissions.ManageOfficerRank,
+      Permissions.ManageOfficerCallsign,
       Permissions.ManageAwardsAndQualifications,
     ],
   })
@@ -375,9 +378,13 @@ export class AdminManageUnitsController {
       Permissions.ManageUnitCallsigns,
       Permissions.ManageUnits,
       Permissions.ManageUnitRank,
+      Permissions.ManageOfficerRank,
+      Permissions.ManageOfficerCallsign,
     ],
   })
-  @Description("Update a unit's callsign by its id")
+  @Description(
+    "Update a unit's callsign and/or rank by its id. `ManageOfficerCallsign` and `ManageOfficerRank` only allow updating an officer's callsign (callsign1/callsign2) or rank respectively.",
+  )
   async updateCallsignUnit(
     @Context("sessionUserId") sessionUserId: string,
     @Context("user") user: User,
@@ -411,6 +418,26 @@ export class AdminManageUnitsController {
       userToCheck: user,
     });
 
+    /**
+     * narrowly scoped (LEO supervisor) permissions: these only allow updating
+     * an officer's callsign (callsign1/callsign2) or an officer's rank. Nothing else.
+     */
+    const hasManageOfficerCallsignPermission =
+      type === "leo" &&
+      hasPermission({
+        permissionsToCheck: [Permissions.ManageOfficerCallsign],
+        userToCheck: user,
+      });
+    const hasManageOfficerRankPermission =
+      type === "leo" &&
+      hasPermission({
+        permissionsToCheck: [Permissions.ManageOfficerRank],
+        userToCheck: user,
+      });
+
+    const canUpdateCallsign = hasManageUnitCallsignPermission || hasManageOfficerCallsignPermission;
+    const canUpdateRank = hasManageRankPermission || hasManageOfficerRankPermission;
+
     const dataSubmit: {
       callsign: string | undefined;
       callsign2: string | undefined;
@@ -423,7 +450,7 @@ export class AdminManageUnitsController {
       position: undefined,
     };
 
-    if (hasManageUnitCallsignPermission) {
+    if (canUpdateCallsign) {
       if (data.callsign && data.callsign2 && unit.departmentId) {
         const allowMultipleOfficersWithSameDeptPerUser = isFeatureEnabled({
           feature: Feature.ALLOW_MULTIPLE_UNITS_DEPARTMENTS_PER_USER,
@@ -441,7 +468,8 @@ export class AdminManageUnitsController {
         });
       }
 
-      if (type === "leo") {
+      // division callsigns can only be updated with the (broader) `ManageUnitCallsigns` permission.
+      if (type === "leo" && hasManageUnitCallsignPermission) {
         await updateOfficerDivisionsCallsigns({
           officerId: unit.id,
           disconnectConnectArr: [],
@@ -453,8 +481,12 @@ export class AdminManageUnitsController {
       dataSubmit.callsign = data.callsign;
     }
 
-    if (hasManageRankPermission) {
+    if (canUpdateRank) {
       dataSubmit.rankId = data.rank;
+    }
+
+    // the position can only be updated with the (broader) `ManageUnitRank` permission.
+    if (hasManageRankPermission) {
       dataSubmit.position = data.position;
     }
 

@@ -4,6 +4,7 @@ import {
   UPDATE_ASSIGNED_UNIT_SCHEMA,
   CALL_911_SCHEMA,
   LINK_INCIDENT_TO_CALL_SCHEMA,
+  BULK_911_CALLS_SCHEMA,
   type ASSIGNED_UNIT,
 } from "@snailycad/schemas";
 import { HeaderParams, BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-params";
@@ -25,6 +26,7 @@ import {
   WhatPages,
 } from "@prisma/client";
 import { sendDiscordWebhook, sendRawWebhook } from "lib/discord/webhooks";
+import { sendCalls911EndedWebhook } from "lib/discord/extra-webhooks";
 import type { APIEmbed } from "discord-api-types/v10";
 import { manyToManyHelper } from "lib/data/many-to-many";
 import { Permissions, UsePermissions } from "middlewares/use-permissions";
@@ -36,6 +38,7 @@ import { linkOrUnlinkCallDepartmentsAndDivisions } from "lib/dispatch/911-calls/
 import { hasPermission } from "@snailycad/permissions";
 import type * as APITypes from "@snailycad/types/api";
 import { incidentInclude } from "controllers/leo/incidents/IncidentController";
+import { incidentInclude as emsFdIncidentInclude } from "controllers/ems-fd/incidents/ems-fd-incidents-controller";
 import type { z } from "zod";
 import { getNextActive911CallId } from "lib/dispatch/911-calls/get-next-active-911-call";
 import { Feature, IsFeatureEnabled } from "middlewares/is-enabled";
@@ -260,7 +263,12 @@ export class Calls911Controller {
 
   @Put("/:id")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.EmsFd, Permissions.Leo],
+    permissions: [
+      Permissions.Dispatch,
+      Permissions.EmsFd,
+      Permissions.Leo,
+      Permissions.ManageCallHistory,
+    ],
   })
   async update911Call(
     @PathParams("id") id: string,
@@ -380,24 +388,29 @@ export class Calls911Controller {
   }
 
   @Delete("/purge")
+  @Description("Delete (purge) multiple 911 calls at once")
   @UsePermissions({
     permissions: [Permissions.ManageCallHistory],
   })
   async purgeCalls(
-    @BodyParams("ids") ids: string[],
+    @BodyParams() body: unknown,
     @Context("sessionUserId") sessionUserId: string,
   ): Promise<APITypes.DeletePurge911CallsData> {
-    if (!Array.isArray(ids)) return false;
+    const data = validateSchema(BULK_911_CALLS_SCHEMA, body);
 
-    await Promise.all(
-      ids.map(async (id) => {
-        const call = await prisma.call911.delete({
-          where: { id },
-        });
+    const calls = await prisma.call911.findMany({
+      where: { id: { in: data.ids } },
+    });
+    if (calls.length <= 0) return false;
 
-        this.socket.emit911CallDelete(call);
-      }),
-    );
+    const ids = calls.map((call) => call.id);
+    await prisma.call911.deleteMany({
+      where: { id: { in: ids } },
+    });
+
+    for (const call of calls) {
+      this.socket.emit911CallDelete(call);
+    }
 
     await createAuditLogEntry({
       translationKey: "calls911Purged",
@@ -409,9 +422,45 @@ export class Calls911Controller {
     return true;
   }
 
+  @Post("/bulk-end")
+  @Description("End (close) multiple 911 calls at once")
+  @UsePermissions({
+    permissions: [Permissions.ManageCallHistory],
+  })
+  async bulkEnd911Calls(@BodyParams() body: unknown): Promise<APITypes.PostBulkEnd911CallsData> {
+    const data = validateSchema(BULK_911_CALLS_SCHEMA, body);
+
+    const calls = await prisma.call911.findMany({
+      where: { id: { in: data.ids }, ended: false },
+      include: { assignedUnits: true },
+    });
+
+    // same flow as ending a single call (see `end911Call`)
+    for (const call of calls) {
+      await handleEndCall({ call, socket: this.socket });
+      this.socket.emit911CallDelete(call);
+    }
+
+    if (calls.length > 0) {
+      await Promise.all([
+        this.socket.emitUpdateOfficerStatus(),
+        this.socket.emitUpdateDeputyStatus(),
+      ]);
+    }
+
+    sendCalls911EndedWebhook(calls);
+
+    return { ids: calls.map((call) => call.id) };
+  }
+
   @Delete("/:id")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [
+      Permissions.Dispatch,
+      Permissions.Leo,
+      Permissions.EmsFd,
+      Permissions.ManageCallHistory,
+    ],
   })
   async end911Call(@PathParams("id") id: string): Promise<APITypes.Delete911CallByIdData> {
     const call = await prisma.call911.findUnique({
@@ -429,6 +478,8 @@ export class Calls911Controller {
       this.socket.emitUpdateOfficerStatus(),
       this.socket.emitUpdateDeputyStatus(),
     ]);
+
+    sendCalls911EndedWebhook([call]);
 
     return true;
   }
@@ -452,26 +503,54 @@ export class Calls911Controller {
       throw new NotFound("callNotFound");
     }
 
-    const disconnectConnectArr = manyToManyHelper(
-      call.incidents.map((v) => v.id),
-      data.incidentIds as string[],
-      { showUpsert: false },
-    );
+    if (data.incidentIds) {
+      const disconnectConnectArr = manyToManyHelper(
+        call.incidents.map((v) => v.id),
+        data.incidentIds as string[],
+        { showUpsert: false },
+      );
 
-    await prisma.$transaction(
-      disconnectConnectArr.map((v) =>
-        prisma.call911.update({ where: { id: call.id }, data: { incidents: v } }),
-      ),
-    );
+      await prisma.$transaction(
+        disconnectConnectArr.map((v) =>
+          prisma.call911.update({ where: { id: call.id }, data: { incidents: v } }),
+        ),
+      );
+    }
 
-    const updated = await prisma.call911.findUnique({
+    // EMS-FD incidents: a call can be linked to one EMS-FD incident
+    if (data.emsFdIncidentId !== undefined) {
+      if (data.emsFdIncidentId) {
+        const emsFdIncident = await prisma.emsFdIncident.findUnique({
+          where: { id: data.emsFdIncidentId },
+        });
+
+        if (!emsFdIncident) {
+          throw new NotFound("incidentNotFound");
+        }
+      }
+
+      await prisma.call911.update({
+        where: { id: call.id },
+        data: { emsFdIncidentId: data.emsFdIncidentId ?? null },
+      });
+    }
+
+    const updated = await prisma.call911.findUniqueOrThrow({
       where: { id: call.id },
-      include: { incidents: { include: incidentInclude } },
+      include: {
+        incidents: { include: incidentInclude },
+        EmsFdIncident: { include: emsFdIncidentInclude },
+      },
     });
 
-    const callIncidents = updated?.incidents.map((v) => officerOrDeputyToUnit(v)) ?? [];
+    const callIncidents = updated.incidents.map((v) => officerOrDeputyToUnit(v));
+    const { incidents: _incidents, EmsFdIncident, ...rest } = updated;
 
-    return officerOrDeputyToUnit({ ...call, incidents: callIncidents });
+    return officerOrDeputyToUnit({
+      ...rest,
+      incidents: callIncidents,
+      EmsFdIncident: EmsFdIncident ? officerOrDeputyToUnit(EmsFdIncident) : null,
+    });
   }
 
   @Post("/:type/:callId")

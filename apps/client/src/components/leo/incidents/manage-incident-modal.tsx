@@ -8,6 +8,7 @@ import {
   Infofield,
   FullDate,
   TextField,
+  SelectField,
 } from "@snailycad/ui";
 import { FormField } from "components/form/FormField";
 import { Modal } from "components/modal/Modal";
@@ -22,7 +23,13 @@ import { dataToSlate, Editor } from "components/editor/editor";
 import { IncidentEventsArea } from "./IncidentEventsArea";
 import { classNames } from "lib/classNames";
 import { useActiveIncidents } from "hooks/realtime/useActiveIncidents";
-import { type EmsFdIncident, type LeoIncident, StatusValueType, ValueType } from "@snailycad/types";
+import {
+  type EmsFdIncident,
+  type LeoIncident,
+  EmsFdReportType,
+  StatusValueType,
+  ValueType,
+} from "@snailycad/types";
 import { useValues } from "context/ValuesContext";
 import type { PostIncidentsData, PutIncidentByIdData } from "@snailycad/types/api";
 import { AddressPostalSelect } from "components/form/select/PostalSelect";
@@ -180,6 +187,10 @@ export function ManageIncidentModal<T extends LeoIncident | EmsFdIncident>({
     situationCodeId: incident?.situationCodeId ?? null,
     openModalAfterCreation: true,
     fireType: isEmsFdIncident ? (incident.fireType ?? "") : "",
+    reportType: isEmsFdIncident ? incident.reportType : EmsFdReportType.MEDICAL,
+    causeOfFire: isEmsFdIncident ? (incident.causeOfFire ?? "") : "",
+    propertyDamage: isEmsFdIncident ? (incident.propertyDamage ?? "") : "",
+    inspectionResult: isEmsFdIncident ? (incident.inspectionResult ?? "") : "",
   };
 
   return (
@@ -215,6 +226,20 @@ export function ManageIncidentModal<T extends LeoIncident | EmsFdIncident>({
               ) : null}
 
               <div>
+                {type === "ems-fd" ? (
+                  <SelectField
+                    className="mb-3"
+                    isDisabled={areFieldsDisabled}
+                    label={t("reportType")}
+                    selectedKey={values.reportType}
+                    options={Object.values(EmsFdReportType).map((value) => ({
+                      label: t(`reportType_${value}`),
+                      value,
+                    }))}
+                    onSelectionChange={(value) => setFieldValue("reportType", value)}
+                  />
+                ) : null}
+
                 <div
                   className={classNames(
                     "grid mb-3",
@@ -300,6 +325,45 @@ export function ManageIncidentModal<T extends LeoIncident | EmsFdIncident>({
                     addressLabel="address"
                   />
                 </FormRow>
+
+                {type === "ems-fd" && values.reportType !== EmsFdReportType.MEDICAL ? (
+                  <>
+                    <FormRow useFlex>
+                      <TextField
+                        isOptional
+                        isDisabled={areFieldsDisabled}
+                        value={values.propertyDamage}
+                        className="w-full"
+                        onChange={(value) => setFieldValue("propertyDamage", value)}
+                        label={t("propertyDamage")}
+                      />
+
+                      {values.reportType === EmsFdReportType.INSPECTION ? (
+                        <TextField
+                          isOptional
+                          isDisabled={areFieldsDisabled}
+                          value={values.inspectionResult}
+                          className="w-full"
+                          onChange={(value) => setFieldValue("inspectionResult", value)}
+                          label={t("inspectionResult")}
+                        />
+                      ) : null}
+                    </FormRow>
+
+                    <TextField
+                      isOptional
+                      isTextarea
+                      isDisabled={areFieldsDisabled}
+                      value={values.causeOfFire}
+                      onChange={(value) => setFieldValue("causeOfFire", value)}
+                      label={
+                        values.reportType === EmsFdReportType.INSPECTION
+                          ? t("inspectionFindings")
+                          : t("causeOfFire")
+                      }
+                    />
+                  </>
+                ) : null}
 
                 {incident ? (
                   <InvolvedUnitsTable

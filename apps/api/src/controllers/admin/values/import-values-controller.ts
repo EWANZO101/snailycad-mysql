@@ -21,6 +21,7 @@ import {
   CODES_10_ARR,
   DIVISION_ARR,
   PENAL_CODE_ARR,
+  PENAL_CODE_SCHEMA,
   QUALIFICATION_ARR,
   CALL_TYPE_ARR,
   ADDRESS_SCHEMA_ARR,
@@ -328,6 +329,7 @@ export const typeHandlers = {
     });
   },
   PENAL_CODE: async ({ body, id, context }: HandlerOptions) => {
+    await validatePenalCodeImport(body);
     const data = validateSchema(PENAL_CODE_ARR, body);
     const penalCode = id && (await prisma.penalCode.findUnique({ where: { id: String(id) } }));
     const cad = context.get("cad") as cad & { features?: Record<Feature, boolean> };
@@ -656,4 +658,86 @@ async function handlePromiseAll<T, R>(data: T[], handler: (item: T) => Promise<R
   );
 
   return success;
+}
+
+/**
+ * validates every penal code in an import file and throws a single error containing a
+ * human readable list of every problem found (item index, title and field), instead of
+ * only the first zod error.
+ */
+async function validatePenalCodeImport(body: unknown) {
+  const MAX_LISTED_ERRORS = 50;
+  const errors: string[] = [];
+
+  if (!Array.isArray(body) || body.length <= 0) {
+    throw new ExtendedBadRequest({ file: "The file must contain a non-empty JSON array." });
+  }
+
+  const isMinMaxArray = (value: unknown) =>
+    value === null ||
+    typeof value === "undefined" ||
+    (Array.isArray(value) &&
+      value.length <= 2 &&
+      value.every((v) => v === null || v === "" || !isNaN(Number(v))));
+
+  const groupIdsInFile = new Set<string>();
+  const referencedGroupIds = new Map<string, number[]>();
+
+  for (const [index, item] of body.entries()) {
+    const label = `#${index + 1}${
+      item && typeof item === "object" && typeof item.title === "string" ? ` ("${item.title}")` : ""
+    }`;
+
+    const result = PENAL_CODE_SCHEMA.safeParse(item);
+    if (!result.success) {
+      for (const issue of result.error.issues) {
+        const path = issue.path.join(".") || "item";
+        errors.push(`${label} ${path}: ${issue.message}`);
+      }
+      continue;
+    }
+
+    for (const key of ["warningFines", "warningNotFines", "prisonTerm", "bail"] as const) {
+      if (!isMinMaxArray(result.data[key])) {
+        errors.push(`${label} ${key}: must be an array of [min, max] numbers`);
+      }
+    }
+
+    if (result.data.group) {
+      groupIdsInFile.add(result.data.group.id);
+    } else if (result.data.groupId) {
+      const indices = referencedGroupIds.get(result.data.groupId) ?? [];
+      referencedGroupIds.set(result.data.groupId, [...indices, index + 1]);
+    }
+  }
+
+  // `groupId` without a `group` object must reference a group that exists in this CAD.
+  const unknownGroupIds = Array.from(referencedGroupIds.keys()).filter(
+    (groupId) => !groupIdsInFile.has(groupId),
+  );
+
+  if (unknownGroupIds.length > 0) {
+    const existingGroups = await prisma.penalCodeGroup.findMany({
+      where: { id: { in: unknownGroupIds } },
+      select: { id: true },
+    });
+    const existingIds = new Set(existingGroups.map((group) => group.id));
+
+    for (const groupId of unknownGroupIds) {
+      if (existingIds.has(groupId)) continue;
+      const items = referencedGroupIds.get(groupId)?.join(", #") ?? "";
+      errors.push(
+        `#${items} groupId: group "${groupId}" does not exist. Include a "group" object ({ id, name, position }) or remove the groupId.`,
+      );
+    }
+  }
+
+  if (errors.length > 0) {
+    const listed = errors.slice(0, MAX_LISTED_ERRORS);
+    if (errors.length > MAX_LISTED_ERRORS) {
+      listed.push(`...and ${errors.length - MAX_LISTED_ERRORS} more error(s).`);
+    }
+
+    throw new ExtendedBadRequest({ file: listed.join("\n") }, "invalidImportFile");
+  }
 }

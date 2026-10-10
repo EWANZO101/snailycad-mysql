@@ -387,7 +387,16 @@
     "all": "Tous",
     "ungrouped": "Non groupé",
     "counts": "Nombre",
-    "stats": "Statistiques"
+    "stats": "Statistiques",
+    "reportType": "Report Type",
+    "reportType_MEDICAL": "Medical",
+    "reportType_FIRE": "Fire",
+    "reportType_FIRE_INVESTIGATION": "Fire Investigation",
+    "reportType_INSPECTION": "Fire Inspection",
+    "causeOfFire": "Cause of Fire",
+    "inspectionFindings": "Inspection Findings",
+    "inspectionResult": "Inspection Result",
+    "propertyDamage": "Property Damage / Estimated Loss"
   },
   "Bolos": {
     "activeBolos": "Bolos actifs",

@@ -18,6 +18,7 @@ import {
   WhitelistStatus,
   type User,
   PublishStatus,
+  type MiscCadSettings,
 } from "@prisma/client";
 import { validateSchema } from "lib/data/validate-schema";
 import { CUSTOM_FIELD_SEARCH_SCHEMA } from "@snailycad/schemas";
@@ -29,6 +30,7 @@ import { ExtendedBadRequest } from "~/exceptions/extended-bad-request";
 import { setEndedSuspendedLicenses } from "lib/citizen/licenses/set-ended-suspended-licenses";
 import { incidentInclude } from "../incidents/IncidentController";
 import { officerOrDeputyToUnit } from "lib/leo/officerOrDeputyToUnit";
+import { updateCitizensJailStatus } from "lib/leo/jail";
 
 export const vehicleSearchInclude = {
   model: { include: { value: true } },
@@ -172,6 +174,8 @@ export class LeoSearchController {
         ...citizenSearchIncludeOrSelect(user, cad),
       });
 
+      await appendArrestedStatus(citizens, cad);
+
       const citizensWithCustomFields = await appendCustomFields(
         citizens,
         CustomFieldCategory.CITIZEN,
@@ -198,11 +202,29 @@ export class LeoSearchController {
           { waterLicenseNumber: { contains: name, mode: "insensitive" } },
           { pilotLicenseNumber: { contains: name, mode: "insensitive" } },
           { socialSecurityNumber: name },
+          {
+            aliases: {
+              some: {
+                OR: [
+                  {
+                    name: { contains: name, mode: "insensitive" },
+                    surname: { contains: surname, mode: "insensitive" },
+                  },
+                  {
+                    name: { contains: surname, mode: "insensitive" },
+                    surname: { contains: name, mode: "insensitive" },
+                  },
+                ],
+              },
+            },
+          },
         ],
       },
       take: 35,
       ...citizenSearchIncludeOrSelect(user, cad),
     });
+
+    await appendArrestedStatus(citizens, cad);
 
     const citizensWithEndedSuspendedLicenses = await setEndedSuspendedLicenses(citizens);
     const citizensWithCustomFields = await appendCustomFields(
@@ -376,6 +398,33 @@ export class LeoSearchController {
       .flat(1);
 
     return { field: customField, results } as APITypes.PostSearchCustomFieldData<true>;
+  }
+}
+
+/**
+ * releases expired arrest reports and makes sure the `arrested` flag is up-to-date
+ * for the searched citizens.
+ */
+async function appendArrestedStatus(
+  citizens: { id: string; arrested?: boolean | null }[],
+  cad: { miscCadSettings?: MiscCadSettings | null },
+) {
+  const citizenIds = citizens.map((citizen) => citizen.id);
+  if (citizenIds.length <= 0) return;
+
+  try {
+    const arrestedCitizenIds = await updateCitizensJailStatus({
+      citizenIds,
+      jailTimeScale: cad.miscCadSettings?.jailTimeScale,
+    });
+
+    for (const citizen of citizens) {
+      if ("arrested" in citizen) {
+        citizen.arrested = arrestedCitizenIds.has(citizen.id);
+      }
+    }
+  } catch (error) {
+    console.error(error);
   }
 }
 

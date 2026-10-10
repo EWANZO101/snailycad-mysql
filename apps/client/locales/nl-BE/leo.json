@@ -267,7 +267,16 @@
     "alert_deleteOfficer": "Weet u zeker dat u <span>{officer}</span> wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
     "alert_allowCheckout": "Weet je zeker dat je dit voertuig van het depot wilt halen?",
     "alert_deleteIncident": "Weet u zeker dat u dit incident wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
-    "alert_revokeWarrant": "Weet u zeker dat u dit bevel wilt intrekken? Deze actie kan niet ongedaan worden gemaakt."
+    "alert_revokeWarrant": "Weet u zeker dat u dit bevel wilt intrekken? Deze actie kan niet ongedaan worden gemaakt.",
+    "reportType": "Report Type",
+    "reportType_MEDICAL": "Medical",
+    "reportType_FIRE": "Fire",
+    "reportType_FIRE_INVESTIGATION": "Fire Investigation",
+    "reportType_INSPECTION": "Fire Inspection",
+    "causeOfFire": "Cause of Fire",
+    "inspectionFindings": "Inspection Findings",
+    "inspectionResult": "Inspection Result",
+    "propertyDamage": "Property Damage / Estimated Loss"
   },
   "Bolos": {
     "activeBolos": "Actieve opsporingen",

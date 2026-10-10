@@ -20,6 +20,16 @@ import { useMutation } from "@tanstack/react-query";
 import type { EmsFdDeputy, Officer } from "@snailycad/types";
 import { useListener } from "@casperiv/use-socket.io";
 import { SocketEvents } from "@snailycad/config";
+import { Permissions, usePermission } from "hooks/usePermission";
+
+/**
+ * whether a live map player is linked to an on-duty LEO or EMS/FD unit.
+ * `unit` is only set after the player was matched (via Discord ID or Steam ID) to a CAD user
+ * with an active unit by `POST /dispatch/players`.
+ */
+export function isPlayerOnDutyUnit(player: MapPlayer | PlayerDataEventPayload) {
+  return "unit" in player && Boolean(player.unit);
+}
 
 export const useMapPlayersStore = createWithEqualityFn<{
   players: Map<string, MapPlayer | PlayerDataEventPayload>;
@@ -34,6 +44,8 @@ export const useMapPlayersStore = createWithEqualityFn<{
 
 export function useMapPlayers() {
   const { players, setPlayers } = useMapPlayersStore();
+  const { hasPermissions } = usePermission();
+  const canViewAllPlayers = hasPermissions([Permissions.ViewAllPlayersOnLiveMap]);
 
   const currentMapServerURL = useDispatchMapState((state) => state.currentMapServerURL);
   const setActiveMapUnits = useDispatchMapState((state) => state.setActiveMapUnits);
@@ -251,7 +263,25 @@ export function useMapPlayers() {
     };
   }, [socket, onError, onMessage, onConnect]);
 
+  /**
+   * NOTE: the live map websocket connects the browser directly to the FiveM server, which sends
+   * every connected player. This filtering is therefore only a client-side (UI) restriction.
+   * Users without `ViewAllPlayersOnLiveMap` only see players linked to an on-duty unit.
+   */
+  const visiblePlayers = React.useMemo(() => {
+    if (canViewAllPlayers) return players;
+
+    const filtered = new Map<string, MapPlayer | PlayerDataEventPayload>();
+    for (const [identifier, player] of players) {
+      if (isPlayerOnDutyUnit(player)) {
+        filtered.set(identifier, player);
+      }
+    }
+
+    return filtered;
+  }, [players, canViewAllPlayers]);
+
   return {
-    players,
+    players: visiblePlayers,
   };
 }

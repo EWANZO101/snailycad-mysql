@@ -355,7 +355,11 @@
     "OPEN_LAW_BOOK": "打开法典",
     "OPEN_LAW_BOOK-description": "启用后，将允许每个用户查看 CAD 的刑法（法典）。",
     "CITIZEN_RECORD_PAYMENTS": "市民记录付款",
-    "CITIZEN_RECORD_PAYMENTS-description": "启用后，将允许市民将自己的记录标记为已付款。"
+    "CITIZEN_RECORD_PAYMENTS-description": "启用后，将允许市民将自己的记录标记为已付款。",
+    "MODERN_CITIZEN_THEME": "Modern Citizen Theme",
+    "MODERN_CITIZEN_THEME-description": "When enabled, the citizen page uses the new card dashboard design. Disable it to use the default SnailyCAD design.",
+    "API_TOKEN_REMINDER": "API Token Reminder",
+    "API_TOKEN_REMINDER-description": "When enabled, users who have not set up their personal API token (used for in-game integrations such as the FiveM script) will see a dismissible reminder banner at the top of the CAD."
   },
   "Permissions": {
     "defaultPermissions": "默认权限",
@@ -381,6 +385,7 @@
     "ViewCallHistory": "查看通话历史",
     "ManageCallHistory": "管理通话历史",
     "LiveMap": "实时地图",
+    "ViewAllPlayersOnLiveMap": "Live Map: View All Players (staff)",
     "ViewCitizenLogs": "查看市民日志",
     "ViewLicenseExams": "查看执照考试",
     "ManageLicenseExams": "管理执照考试",

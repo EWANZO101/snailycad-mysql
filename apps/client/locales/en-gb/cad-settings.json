@@ -349,7 +349,11 @@
     "ALLOW_MULTIPLE_UNITS_DEPARTMENTS_PER_USER": "Allow multiple units with the same callsign and force per user",
     "ALLOW_MULTIPLE_UNITS_DEPARTMENTS_PER_USER-description": "When enabled, officers and emergency service members can create multiple units with the same callsign and force.",
     "OPEN_LAW_BOOK": "Open Legislation",
-    "OPEN_LAW_BOOK-description": "When enabled, this will allow every user to view the legislation."
+    "OPEN_LAW_BOOK-description": "When enabled, this will allow every user to view the legislation.",
+    "MODERN_CITIZEN_THEME": "Modern Citizen Theme",
+    "MODERN_CITIZEN_THEME-description": "When enabled, the citizen page uses the new card dashboard design. Disable it to use the default SnailyCAD design.",
+    "API_TOKEN_REMINDER": "API Token Reminder",
+    "API_TOKEN_REMINDER-description": "When enabled, users who have not set up their personal API token (used for in-game integrations such as the FiveM script) will see a dismissible reminder banner at the top of the CAD."
   },
   "Permissions": {
     "defaultPermissions": "Default Permissions",
@@ -375,6 +379,7 @@
     "ViewCallHistory": "View Call History",
     "ManageCallHistory": "Manage Call History",
     "LiveMap": "Live Map",
+    "ViewAllPlayersOnLiveMap": "Live Map: View All Players (staff)",
     "ViewCitizenLogs": "View Civilian Logs",
     "ViewLicenseExams": "View License Exams",
     "ManageLicenseExams": "Manage License Exams",

@@ -34,9 +34,16 @@ import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger
 import { isDiscordIdInUse } from "lib/discord/utils";
 import { getTranslator } from "~/utils/get-translator";
 import { sendRawWebhook, sendDiscordWebhook } from "~/lib/discord/webhooks";
+import { sendUserBanStatusWebhook } from "~/lib/discord/extra-webhooks";
 import { type APIEmbed } from "discord-api-types/v10";
 import { getPrismaModelOrderBy } from "~/utils/order-by";
 import { leoProperties, unitProperties } from "utils/leo/includes";
+import { hasPermission } from "@snailycad/permissions";
+import {
+  assertActorHoldsPermissions,
+  assertCanChangePermissions,
+  getEffectivePermissions,
+} from "lib/auth/permission-escalation";
 
 const manageUsersSelect = (
   selectCitizens: boolean = false,
@@ -69,18 +76,35 @@ export class ManageUsersController {
       Permissions.ManageUsers,
       Permissions.BanUsers,
       Permissions.DeleteUsers,
+      Permissions.ManagePendingUsers,
     ],
   })
-  @Description("Get all the users in the CAD.")
+  @Description(
+    "Get all the users in the CAD. Users with only the `ManagePendingUsers` permission can only view pending users.",
+  )
   async getUsers(
+    @Context("user") sessionUser: User,
     @QueryParams("skip", Number) skip = 0,
     @QueryParams("query", String) query = "",
     @QueryParams("pendingOnly", Boolean) pendingOnly = false,
     @QueryParams("includeAll", Boolean) includeAll = false,
     @QueryParams("sorting") sorting = "",
   ): Promise<APITypes.GetManageUsersData> {
+    const canViewAllUsers = hasPermission({
+      userToCheck: sessionUser,
+      permissionsToCheck: [
+        Permissions.ViewUsers,
+        Permissions.ManageUsers,
+        Permissions.BanUsers,
+        Permissions.DeleteUsers,
+      ],
+    });
+
+    // users with only the `ManagePendingUsers` permission can only see pending users.
+    const onlyPending = pendingOnly || !canViewAllUsers;
+
     const where =
-      query || pendingOnly
+      query || onlyPending
         ? {
             ...(query
               ? {
@@ -92,7 +116,7 @@ export class ManageUsersController {
                   ],
                 }
               : {}),
-            ...(pendingOnly ? { whitelistStatus: WhitelistStatus.PENDING } : {}),
+            ...(onlyPending ? { whitelistStatus: WhitelistStatus.PENDING } : {}),
           }
         : undefined;
 
@@ -265,6 +289,7 @@ export class ManageUsersController {
   })
   async updateUserPermissionsById(
     @Context("sessionUserId") sessionUserId: string,
+    @Context("user") sessionUser: User,
     @PathParams("id") userId: string,
     @BodyParams() body: unknown,
   ): Promise<APITypes.PutManageUserPermissionsByIdData> {
@@ -283,6 +308,17 @@ export class ManageUsersController {
     }
 
     const permissions = this.parsePermissions(data, user);
+
+    /**
+     * a user can only add or remove permissions they hold themselves.
+     * this also prevents a user from raising their own permissions.
+     * (owners are unrestricted)
+     */
+    assertCanChangePermissions({
+      actor: sessionUser,
+      previous: getEffectivePermissions(user),
+      next: getEffectivePermissions({ permissions, roles: user.roles }),
+    });
 
     const updated = await prisma.user.update({
       where: {
@@ -307,6 +343,7 @@ export class ManageUsersController {
   })
   async updateUserRolesById(
     @Context("sessionUserId") sessionUserId: string,
+    @Context("user") sessionUser: User,
     @PathParams("id") userId: string,
     @BodyParams() body: unknown,
   ): Promise<APITypes.PutManageUserByIdRolesData> {
@@ -324,11 +361,32 @@ export class ManageUsersController {
       throw new ExtendedBadRequest({ rank: "cannotUpdateOwnerPermissions" });
     }
 
-    const disconnectConnectArr = manyToManyHelper(
-      user.roles.map((v) => v.id),
-      data.roles as string[],
-      { showUpsert: false },
-    );
+    /**
+     * a user can only assign or remove custom roles of which they hold every permission themselves.
+     * (owners are unrestricted)
+     */
+    const previousRoleIds = user.roles.map((v) => v.id);
+    const nextRoleIds = data.roles as string[];
+    const changedRoleIds = [
+      ...previousRoleIds.filter((id) => !nextRoleIds.includes(id)),
+      ...nextRoleIds.filter((id) => !previousRoleIds.includes(id)),
+    ];
+
+    if (changedRoleIds.length > 0) {
+      const changedRoles = await prisma.customRole.findMany({
+        where: { id: { in: changedRoleIds } },
+        select: { id: true, permissions: true },
+      });
+
+      assertActorHoldsPermissions(
+        sessionUser,
+        changedRoles.flatMap((role) => role.permissions),
+      );
+    }
+
+    const disconnectConnectArr = manyToManyHelper(previousRoleIds, nextRoleIds, {
+      showUpsert: false,
+    });
 
     await prisma.$transaction(
       disconnectConnectArr.map((disconnectConnectData) =>
@@ -498,6 +556,13 @@ export class ManageUsersController {
       });
     }
 
+    sendUserBanStatusWebhook({
+      user: { username: userToManage.username, discordId: userToManage.discordId },
+      banned: banType === "ban",
+      reason: banType === "ban" ? data?.reason : null,
+      executor: { username: authUser.username },
+    });
+
     return updated;
   }
 
@@ -558,10 +623,11 @@ export class ManageUsersController {
 
   @Post("/pending/:id/:type")
   @UsePermissions({
-    permissions: [Permissions.ManageUsers],
+    permissions: [Permissions.ManageUsers, Permissions.ManagePendingUsers],
   })
   async acceptOrDeclineUser(
     @Context("sessionUserId") sessionUserId: string,
+    @Context("user") sessionUser: User,
     @PathParams("id") userId: string,
     @PathParams("type") type: "accept" | "decline",
   ): Promise<APITypes.PostManageUserAcceptDeclineData> {
@@ -578,6 +644,16 @@ export class ManageUsersController {
     });
 
     if (!user) {
+      throw new NotFound("notFound");
+    }
+
+    const hasManageUsersPermission = hasPermission({
+      userToCheck: sessionUser,
+      permissionsToCheck: [Permissions.ManageUsers],
+    });
+
+    // users with only the `ManagePendingUsers` permission can only accept/decline pending users.
+    if (!hasManageUsersPermission && user.whitelistStatus !== WhitelistStatus.PENDING) {
       throw new NotFound("notFound");
     }
 

@@ -35,8 +35,18 @@ export default function ManageUsers({ data }: Props) {
     Permissions.DeleteUsers,
   ]);
 
+  // users with only the `ManagePendingUsers` permission can only see (and accept/decline) pending users
+  const hasViewAllUsersPermissions = hasPermissions([
+    Permissions.ViewUsers,
+    Permissions.ManageUsers,
+    Permissions.BanUsers,
+    Permissions.DeleteUsers,
+  ]);
+
   const tabs = [
-    { name: `${t("allUsers")} (${data.totalCount})`, value: "allUsers" },
+    ...(hasViewAllUsersPermissions
+      ? [{ name: `${t("allUsers")} (${data.totalCount})`, value: "allUsers" }]
+      : []),
     { name: `${t("pendingUsers")} (${data.pendingCount})`, value: "pendingUsers" },
   ];
 
@@ -48,6 +58,7 @@ export default function ManageUsers({ data }: Props) {
           Permissions.ViewUsers,
           Permissions.ManageUsers,
           Permissions.DeleteUsers,
+          Permissions.ManagePendingUsers,
         ],
       }}
     >
@@ -64,7 +75,7 @@ export default function ManageUsers({ data }: Props) {
       </header>
 
       <TabList tabs={tabs}>
-        <AllUsersTab {...data} />
+        {hasViewAllUsersPermissions ? <AllUsersTab {...data} /> : null}
         <PendingUsersTab {...data} users={pending} />
       </TabList>
     </AdminLayout>

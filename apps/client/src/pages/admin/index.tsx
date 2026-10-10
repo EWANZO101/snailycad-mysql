@@ -11,6 +11,7 @@ import type { GetAdminDashboardData } from "@snailycad/types/api";
 import { Alert } from "@snailycad/ui";
 import { Fira_Mono } from "next/font/google";
 import { classNames } from "lib/classNames";
+import { RecoveryTokenCard } from "components/admin/recovery-token-card";
 
 const firaMonoFont = Fira_Mono({
   weight: ["500", "700"],
@@ -32,10 +33,13 @@ export default function Admin({ counts }: Props) {
           permissions: [
             ...defaultPermissions.allDefaultAdminPermissions,
             ...defaultPermissions.defaultCourthousePermissions,
+            ...defaultPermissions.defaultScopedAdminPermissions,
           ],
         }}
       >
         <Title>{t("adminDashboard")}</Title>
+
+        <RecoveryTokenCard />
 
         <Alert
           type="error"
@@ -52,10 +56,13 @@ export default function Admin({ counts }: Props) {
         permissions: [
           ...defaultPermissions.allDefaultAdminPermissions,
           ...defaultPermissions.defaultCourthousePermissions,
+          ...defaultPermissions.defaultScopedAdminPermissions,
         ],
       }}
     >
       <Title>{t("adminDashboard")}</Title>
+
+      <RecoveryTokenCard />
 
       <Group name={t("users")}>
         <Item count={counts.activeUsers} name={t("active")} />
@@ -181,7 +188,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ locale, re
       counts: data,
       session: user,
       messages: {
-        ...(await getTranslations(["admin", "values", "common"], user?.locale ?? locale)),
+        // English fallback for the recovery strings (only en/recovery.json exists for now)
+        ...(await getTranslations(["recovery"], "en")),
+        ...(await getTranslations(["admin", "values", "common", "recovery"], user?.locale ?? locale)),
       },
     },
   };

@@ -368,6 +368,7 @@ export type Call911 = Prisma.Call911 & {
   departments?: DepartmentValue[];
   divisions?: DivisionValue[];
   incidents?: LeoIncident[];
+  EmsFdIncident?: EmsFdIncident | null;
   viaDispatch: boolean | null;
   type: CallTypeValue | null;
   gtaMapPosition?: Prisma.GTAMapPosition | null;

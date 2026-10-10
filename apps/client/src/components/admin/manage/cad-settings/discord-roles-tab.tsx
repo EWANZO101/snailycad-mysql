@@ -227,7 +227,10 @@ export function DiscordRolesTab() {
               <SelectPermissionsField
                 disabled={Boolean(fetchError)}
                 name="leoSupervisorRolePermissions"
-                permissions={defaultPermissions.defaultLeoPermissions}
+                permissions={[
+                  ...defaultPermissions.defaultLeoPermissions,
+                  ...defaultPermissions.defaultLeoSupervisorPermissions,
+                ]}
               />
             </SettingsFormField>
 

@@ -6,10 +6,12 @@ import { BodyParams, Context, PathParams } from "@tsed/platform-params";
 import { ContentType, Description, Get, Put } from "@tsed/schema";
 import { expungementRequestInclude } from "controllers/court/ExpungementRequestsController";
 import { prisma } from "lib/data/prisma";
+import { syncCitizensArrestedStatus } from "lib/leo/jail";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import type * as APITypes from "@snailycad/types/api";
 import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
+import { sendExpungementRequestStatusWebhook } from "lib/discord/extra-webhooks";
 
 @UseBeforeEach(IsAuth)
 @Controller("/admin/manage/expungement-requests")
@@ -69,6 +71,8 @@ export class AdminManageExpungementRequests {
           });
         }),
       ]);
+
+      await syncCitizensArrestedStatus([request.citizenId]);
     }
 
     const updated = await prisma.expungementRequest.update({
@@ -93,6 +97,15 @@ export class AdminManageExpungementRequests {
       prisma,
       executorId: sessionUserId,
     });
+
+    if (type === ExpungementRequestStatus.ACCEPTED || type === ExpungementRequestStatus.DENIED) {
+      sendExpungementRequestStatusWebhook({
+        status: type,
+        citizen: updated.citizen,
+        recordsCount: request.records.length,
+        warrantsCount: request.warrants.length,
+      });
+    }
 
     return updated;
   }

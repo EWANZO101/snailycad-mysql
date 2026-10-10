@@ -51,7 +51,10 @@ export class NavController {
   @Get("/admin")
   @Description("Get a number of notifications for the admin sidebar for the authenticated user.")
   @UsePermissions({
-    permissions: defaultPermissions.allDefaultAdminPermissions,
+    permissions: [
+      ...defaultPermissions.allDefaultAdminPermissions,
+      ...defaultPermissions.defaultScopedAdminPermissions,
+    ],
   })
   async getAdminNotifications(@Context("user") user: User) {
     const hasManageUnits = hasPermission({

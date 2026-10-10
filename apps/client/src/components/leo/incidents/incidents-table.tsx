@@ -1,7 +1,12 @@
 import { Permissions } from "@snailycad/permissions";
-import type { EmsFdIncident, IncidentInvolvedUnit, LeoIncident } from "@snailycad/types";
+import {
+  type EmsFdIncident,
+  type IncidentInvolvedUnit,
+  type LeoIncident,
+  EmsFdReportType,
+} from "@snailycad/types";
 import type { DeleteIncidentByIdData } from "@snailycad/types/api";
-import { Button, FullDate, Loader } from "@snailycad/ui";
+import { Button, FullDate, Loader, SelectField } from "@snailycad/ui";
 import { isUnitCombined, isUnitCombinedEmsFd } from "@snailycad/utils";
 import { CallDescription } from "components/dispatch/active-calls/CallDescription";
 import { ImageWrapper } from "components/shared/image-wrapper";
@@ -63,6 +68,16 @@ export function IncidentsTable<T extends EmsFdIncident | LeoIncident>(
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     props.type === "ems-fd" ? Permissions.PurgeEmsFdIncidents : Permissions.PurgeLeoIncidents;
   const hasPurgePermissions = hasPermissions([permissionToUse]);
+  const hasManagePermissions = hasPermissions([
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    props.type === "ems-fd" ? Permissions.ManageEmsFdIncidents : Permissions.ManageIncidents,
+  ]);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  const isEmsFd = props.type === "ems-fd";
+  const reportTypeOptions = Object.values(EmsFdReportType).map((value) => ({
+    label: t(`reportType_${value}`),
+    value,
+  }));
 
   async function handleDelete() {
     if (!tempIncident) return;
@@ -121,6 +136,19 @@ export function IncidentsTable<T extends EmsFdIncident | LeoIncident>(
 
   return (
     <>
+      {isEmsFd ? (
+        <SelectField
+          className="w-full max-w-xs mt-3"
+          label={t("reportType")}
+          isClearable
+          selectedKey={asyncTable.filters?.reportType ?? null}
+          options={reportTypeOptions}
+          onSelectionChange={(value) => {
+            asyncTable.setFilters((prev) => ({ ...prev, reportType: value }));
+          }}
+        />
+      ) : null}
+
       {asyncTable.noItemsAvailable ? (
         <p className="mt-5">{t("noIncidents")}</p>
       ) : (
@@ -147,6 +175,8 @@ export function IncidentsTable<T extends EmsFdIncident | LeoIncident>(
               return {
                 id: incident.id,
                 caseNumber: `#${incident.caseNumber}`,
+                reportType:
+                  "reportType" in incident ? t(`reportType_${incident.reportType}`) : null,
                 officer: (
                   <span // * 9 to fix overlapping issues with next table column
                     style={{ minWidth: nameAndCallsign.length * 9 }}
@@ -177,7 +207,7 @@ export function IncidentsTable<T extends EmsFdIncident | LeoIncident>(
                 createdAt: <FullDate>{incident.createdAt}</FullDate>,
                 actions: (
                   <>
-                    {hasPermissions([Permissions.ManageIncidents]) ? (
+                    {hasManagePermissions ? (
                       <Button
                         size="xs"
                         variant="success"
@@ -189,7 +219,7 @@ export function IncidentsTable<T extends EmsFdIncident | LeoIncident>(
                       </Button>
                     ) : null}
 
-                    {hasPermissions([Permissions.ManageIncidents]) ? (
+                    {hasManagePermissions ? (
                       <Button size="xs" variant="danger" onPress={() => onDeleteClick(incident)}>
                         {common("delete")}
                       </Button>
@@ -200,6 +230,7 @@ export function IncidentsTable<T extends EmsFdIncident | LeoIncident>(
             })}
             columns={[
               { header: t("caseNumber"), accessorKey: "caseNumber" },
+              isEmsFd ? { header: t("reportType"), accessorKey: "reportType" } : null,
               { header: t("officer"), accessorKey: "officer" },
               { header: t("unitsInvolved"), accessorKey: "unitsInvolved" },
               { header: t("firearmsInvolved"), accessorKey: "firearmsInvolved" },

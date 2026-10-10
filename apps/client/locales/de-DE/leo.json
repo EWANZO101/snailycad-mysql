@@ -392,7 +392,16 @@
     "exportCriminalRecord": "Strafregister exportieren",
     "savedAsDraft": "Erfolgreich als Entwurf gespeichert.",
     "drafts": "Entwürfe",
-    "publishDraft": "Entwurf veröffentlichen"
+    "publishDraft": "Entwurf veröffentlichen",
+    "reportType": "Report Type",
+    "reportType_MEDICAL": "Medical",
+    "reportType_FIRE": "Fire",
+    "reportType_FIRE_INVESTIGATION": "Fire Investigation",
+    "reportType_INSPECTION": "Fire Inspection",
+    "causeOfFire": "Cause of Fire",
+    "inspectionFindings": "Inspection Findings",
+    "inspectionResult": "Inspection Result",
+    "propertyDamage": "Property Damage / Estimated Loss"
   },
   "Bolos": {
     "activeBolos": "Aktive Fahndungen",

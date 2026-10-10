@@ -59,8 +59,14 @@ export default function SupervisorPanelPage(props: Props) {
     Permissions.ManageAwardsAndQualifications,
   ]);
   const hasManagePermissions = hasPermissions([Permissions.ManageUnits]);
-  const hasManageCallsignPermissions = hasPermissions([Permissions.ManageUnitCallsigns]);
-  const hasManageRankPermissions = hasPermissions([Permissions.ManageUnitRank]);
+  const hasManageCallsignPermissions = hasPermissions([
+    Permissions.ManageUnitCallsigns,
+    Permissions.ManageOfficerCallsign,
+  ]);
+  const hasManageRankPermissions = hasPermissions([
+    Permissions.ManageUnitRank,
+    Permissions.ManageOfficerRank,
+  ]);
 
   const TABS = [];
 
@@ -84,10 +90,17 @@ export default function SupervisorPanelPage(props: Props) {
     });
   }
 
-  TABS.push({
-    name: t("Management.departmentTimeLogs"),
-    value: "departmentTimeLogs",
-  });
+  // users with only the scoped officer rank/callsign permissions cannot view department time logs
+  const hasDepartmentTimeLogsPermissions =
+    hasViewPermissions ||
+    hasPermissions([Permissions.ManageUnitCallsigns, Permissions.ManageUnitRank]);
+
+  if (hasDepartmentTimeLogsPermissions) {
+    TABS.push({
+      name: t("Management.departmentTimeLogs"),
+      value: "departmentTimeLogs",
+    });
+  }
 
   return (
     <AdminLayout
@@ -97,6 +110,9 @@ export default function SupervisorPanelPage(props: Props) {
           Permissions.DeleteUnits,
           Permissions.ManageUnits,
           Permissions.ManageUnitCallsigns,
+          Permissions.ManageUnitRank,
+          Permissions.ManageOfficerRank,
+          Permissions.ManageOfficerCallsign,
           Permissions.ManageAwardsAndQualifications,
         ],
       }}
@@ -111,7 +127,7 @@ export default function SupervisorPanelPage(props: Props) {
         {props.pendingUnits.totalCount > 0 && hasManagePermissions ? (
           <DepartmentWhitelistingTab pendingUnits={props.pendingUnits} />
         ) : null}
-        <DepartmentTimeLogsTab />
+        {hasDepartmentTimeLogsPermissions ? <DepartmentTimeLogsTab /> : null}
       </TabList>
     </AdminLayout>
   );

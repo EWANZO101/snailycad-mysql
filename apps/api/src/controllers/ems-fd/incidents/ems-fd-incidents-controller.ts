@@ -6,17 +6,17 @@ import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { EMS_FD_INCIDENT_SCHEMA } from "@snailycad/schemas";
 import {
-  type Officer,
+  type EmsFdDeputy,
   type MiscCadSettings,
-  type CombinedLeoUnit,
+  type CombinedEmsFdUnit,
   DiscordWebhookType,
+  EmsFdReportType,
 } from "@prisma/client";
 import { validateSchema } from "lib/data/validate-schema";
 import { Socket } from "services/socket-service";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { officerOrDeputyToUnit } from "lib/leo/officerOrDeputyToUnit";
 import { findUnit } from "lib/leo/findUnit";
-import { getUserOfficerFromActiveOfficer } from "lib/leo/utils";
 import type * as APITypes from "@snailycad/types/api";
 import { getNextIncidentId } from "lib/incidents/get-next-incident-id";
 import { assignUnitsInvolvedToIncident } from "lib/incidents/handle-involved-units";
@@ -28,6 +28,7 @@ import { User } from "@snailycad/types";
 import type { APIEmbed } from "discord-api-types/v10";
 import { getTranslator } from "~/utils/get-translator";
 import { slateDataToString } from "@snailycad/utils/editor";
+import type { z } from "zod";
 
 export const incidentInclude = {
   creator: { include: unitProperties },
@@ -37,6 +38,24 @@ export const incidentInclude = {
 };
 
 type ActiveTypes = "active" | "inactive" | "all";
+
+/**
+ * fire-specific fields are only kept for fire report types, so switching a report back to
+ * medical doesn't leave stale fire data behind.
+ */
+function reportFields(data: z.infer<typeof EMS_FD_INCIDENT_SCHEMA>) {
+  const reportType = data.reportType ?? EmsFdReportType.MEDICAL;
+  const isFireReport = reportType !== EmsFdReportType.MEDICAL;
+
+  return {
+    reportType,
+    vehicleInvolved: data.vehicleInvolved ?? false,
+    causeOfFire: isFireReport ? (data.causeOfFire ?? null) : null,
+    propertyDamage: isFireReport ? (data.propertyDamage ?? null) : null,
+    inspectionResult:
+      reportType === EmsFdReportType.INSPECTION ? (data.inspectionResult ?? null) : null,
+  };
+}
 
 @Controller("/ems-fd/incidents")
 @UseBeforeEach(IsAuth)
@@ -61,6 +80,8 @@ export class IncidentController {
     @QueryParams("skip", Number) skip = 0,
     @QueryParams("includeAll", Boolean) includeAll = false,
     @QueryParams("assignedUnit", String) assignedUnit?: string,
+    @QueryParams("query", String) query?: string,
+    @QueryParams("reportType", String) reportType?: string,
   ): Promise<APITypes.GetIncidentsData<"ems-fd">> {
     const isActiveObj =
       activeType === "active"
@@ -80,7 +101,27 @@ export class IncidentController {
           ],
         }
       : {};
-    const where = { ...isActiveObj, ...assignedUnitsObj };
+    const trimmedQuery = query?.trim().replace(/^#/, "");
+    const parsedCaseNumber = trimmedQuery ? parseInt(trimmedQuery, 10) : NaN;
+    const queryObj = trimmedQuery
+      ? {
+          AND: [
+            {
+              OR: [
+                ...(Number.isNaN(parsedCaseNumber)
+                  ? []
+                  : [{ caseNumber: { equals: parsedCaseNumber } }]),
+                { description: { contains: trimmedQuery, mode: "insensitive" as const } },
+              ],
+            },
+          ],
+        }
+      : {};
+    const reportTypeObj =
+      reportType && reportType in EmsFdReportType
+        ? { reportType: reportType as EmsFdReportType }
+        : {};
+    const where = { ...isActiveObj, ...assignedUnitsObj, ...queryObj, ...reportTypeObj };
 
     const [totalCount, incidents] = await Promise.all([
       prisma.emsFdIncident.count({ where, orderBy: { caseNumber: "desc" } }),
@@ -124,21 +165,22 @@ export class IncidentController {
   async createIncident(
     @BodyParams() body: unknown,
     @Context("cad") cad: { miscCadSettings: MiscCadSettings },
-    @Context("activeOfficer") activeOfficer: (CombinedLeoUnit & { officers: Officer[] }) | Officer,
+    @Context("activeDeputy")
+    activeDeputy: (CombinedEmsFdUnit & { deputies: EmsFdDeputy[] }) | EmsFdDeputy | null,
     @Context("sessionUserId") sessionUserId: string,
     @Context("user") user: User,
   ): Promise<APITypes.PostIncidentsData<"ems-fd">> {
     const data = validateSchema(EMS_FD_INCIDENT_SCHEMA, body);
-    const officer = getUserOfficerFromActiveOfficer({
-      userId: sessionUserId,
-      allowDispatch: true,
-      activeOfficer,
-    });
+    // when null, the incident was created by dispatch
+    const deputy =
+      activeDeputy && "deputies" in activeDeputy
+        ? (activeDeputy.deputies.find((deputy) => deputy.userId === sessionUserId) ?? null)
+        : activeDeputy;
     const maxAssignmentsToIncidents = cad.miscCadSettings.maxAssignmentsToIncidents ?? Infinity;
 
     const incident = await prisma.emsFdIncident.create({
       data: {
-        creatorId: officer?.id ?? null,
+        creatorId: deputy?.id ?? null,
         description: data.description,
         arrestsMade: data.arrestsMade,
         firearmsInvolved: data.firearmsInvolved,
@@ -149,6 +191,7 @@ export class IncidentController {
         postal: data.postal ?? null,
         address: data.address ?? null,
         fireType: data.fireType ?? null,
+        ...reportFields(data),
       },
       include: {
         unitsInvolved: true,
@@ -327,6 +370,7 @@ export class IncidentController {
         situationCodeId: data.situationCodeId ?? null,
         address: data.address ?? null,
         fireType: data.fireType ?? null,
+        ...reportFields(data),
       },
     });
 

@@ -44,7 +44,7 @@ export default function EmsFdIncidents({ activeDeputy, incidents: initialData }:
       <header className="flex items-center justify-between">
         <Title className="!mb-0">{t("incidents")}</Title>
 
-        {hasPermissions([Permissions.ManageIncidents]) ? (
+        {hasPermissions([Permissions.ManageEmsFdIncidents]) ? (
           <Button
             title={!isDeputyOnDuty ? "You must have an active ems/fd deputy." : ""}
             disabled={!isDeputyOnDuty}

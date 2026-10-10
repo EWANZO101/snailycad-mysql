@@ -31,8 +31,16 @@ export function ManageUnitCallsignModal({ onUpdate, unit }: Props) {
   const { hasPermissions } = usePermission();
   const { officerRank } = useValues();
 
-  const hasManageCallsignPermissions = hasPermissions([Permissions.ManageUnitCallsigns]);
-  const hasManageRankPermissions = hasPermissions([Permissions.ManageUnitRank]);
+  const hasManageUnitCallsignPermissions = hasPermissions([Permissions.ManageUnitCallsigns]);
+  const hasManageUnitRankPermissions = hasPermissions([Permissions.ManageUnitRank]);
+
+  // scoped LEO supervisor permissions: only allow updating an officer's callsign1/callsign2 or rank
+  const isOfficer = isUnitOfficer(unit);
+  const hasManageCallsignPermissions =
+    hasManageUnitCallsignPermissions ||
+    (isOfficer && hasPermissions([Permissions.ManageOfficerCallsign]));
+  const hasManageRankPermissions =
+    hasManageUnitRankPermissions || (isOfficer && hasPermissions([Permissions.ManageOfficerRank]));
 
   async function handleSubmit(values: typeof INITIAL_VALUES) {
     const { json } = await execute<PutManageUnitCallsignData>({
@@ -116,18 +124,20 @@ export function ManageUnitCallsignModal({ onUpdate, unit }: Props) {
                   }}
                 />
 
-                <TextField
-                  isDisabled={areFormFieldsDisabled}
-                  errorMessage={errors.position}
-                  label={t("Leo.position")}
-                  name="position"
-                  onChange={(value) => setFieldValue("position", value)}
-                  value={values.position}
-                />
+                {hasManageUnitRankPermissions ? (
+                  <TextField
+                    isDisabled={areFormFieldsDisabled}
+                    errorMessage={errors.position}
+                    label={t("Leo.position")}
+                    name="position"
+                    onChange={(value) => setFieldValue("position", value)}
+                    value={values.position}
+                  />
+                ) : null}
               </FormRow>
             ) : null}
 
-            {isUnitOfficer(unit) ? <AdvancedSettings /> : null}
+            {isOfficer && hasManageUnitCallsignPermissions ? <AdvancedSettings /> : null}
 
             <footer className="flex justify-end mt-5">
               <Button

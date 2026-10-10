@@ -56,6 +56,7 @@ export class IncidentController {
     @QueryParams("skip", Number) skip = 0,
     @QueryParams("includeAll", Boolean) includeAll = false,
     @QueryParams("assignedUnit", String) assignedUnit?: string,
+    @QueryParams("query", String) query?: string,
   ): Promise<APITypes.GetIncidentsData<"leo">> {
     const incidentInactivityFilter = getInactivityFilter(cad, "incidentInactivityTimeout");
 
@@ -77,7 +78,23 @@ export class IncidentController {
           ],
         }
       : {};
-    const where = { ...isActiveObj, ...assignedUnitsObj };
+    const trimmedQuery = query?.trim().replace(/^#/, "");
+    const parsedCaseNumber = trimmedQuery ? parseInt(trimmedQuery, 10) : NaN;
+    const queryObj = trimmedQuery
+      ? {
+          AND: [
+            {
+              OR: [
+                ...(Number.isNaN(parsedCaseNumber)
+                  ? []
+                  : [{ caseNumber: { equals: parsedCaseNumber } }]),
+                { description: { contains: trimmedQuery, mode: "insensitive" as const } },
+              ],
+            },
+          ],
+        }
+      : {};
+    const where = { ...isActiveObj, ...assignedUnitsObj, ...queryObj };
 
     const [totalCount, incidents] = await Promise.all([
       prisma.leoIncident.count({ where, orderBy: { caseNumber: "desc" } }),

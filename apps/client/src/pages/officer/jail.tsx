@@ -27,6 +27,7 @@ import { useAsyncTable } from "hooks/shared/table/use-async-table";
 import type { GetJailedCitizensData } from "@snailycad/types/api";
 import { useLoadValuesClientSide } from "hooks/useLoadValuesClientSide";
 import { RecordsCaseNumberColumn } from "components/leo/records-case-number-column";
+import { SearchArea } from "components/shared/search/search-area";
 
 interface Props {
   data: GetJailedCitizensData;
@@ -37,9 +38,16 @@ export default function Jail({ data }: Props) {
     valueTypes: [ValueType.PENAL_CODE],
   });
 
+  const [search, setSearch] = React.useState("");
+
   const asyncTable = useAsyncTable({
+    search,
     initialData: data.jailedCitizens,
     totalCount: data.totalCount,
+    sortingSchema: {
+      citizen: "citizen",
+      createdAt: "createdAt",
+    },
     fetchOptions: {
       onResponse: (json: GetJailedCitizensData) => ({
         data: json.jailedCitizens,
@@ -51,6 +59,7 @@ export default function Jail({ data }: Props) {
 
   const tableState = useTableState({
     pagination: asyncTable.pagination,
+    sorting: asyncTable.sorting,
   });
 
   const t = useTranslations("Leo");
@@ -84,9 +93,12 @@ export default function Jail({ data }: Props) {
     const records = [];
 
     for (const citizen of asyncTable.items) {
-      const [record] = citizen.Record.sort((a, b) =>
-        compareDesc(new Date(a.createdAt), new Date(b.createdAt)),
-      ).filter((v) => v.type === "ARREST_REPORT");
+      const arrestReports = [...citizen.Record]
+        .sort((a, b) => compareDesc(new Date(a.createdAt), new Date(b.createdAt)))
+        .filter((v) => v.type === "ARREST_REPORT");
+
+      // show the most recent active arrest report first, otherwise the most recent arrest report.
+      const record = arrestReports.find((v) => !isReleased(v)) ?? arrestReports[0];
 
       if (record) {
         records.push({ ...citizen, record });
@@ -120,14 +132,23 @@ export default function Jail({ data }: Props) {
         </CheckboxField>
       </header>
 
-      {_itemsWithArrestReportSortedByCreatedAt.length <= 0 ? (
+      <SearchArea
+        search={{ search, setSearch }}
+        asyncTable={asyncTable}
+        totalCount={data.totalCount}
+      />
+
+      {asyncTable.noItemsAvailable ? (
         <p className="mt-5">{t("noImprisonedCitizens")}</p>
       ) : (
         <Table
           isLoading={asyncTable.isLoading}
           tableState={tableState}
           data={_itemsWithArrestReportSortedByCreatedAt.map((item) => {
-            const jailTime = item.record?.violations.reduce((ac, cv) => ac + (cv.jailTime || 0), 0);
+            const jailTime = item.record?.violations.reduce(
+              (ac, cv) => ac + (cv.jailTime || 0) * (cv.counts || 1),
+              0,
+            );
             const released = isReleased(item.record);
             const type = released && item.record.release?.type;
             const citizen = released ? item.record.release?.releasedBy : null;
@@ -206,5 +227,5 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ req, local
 function isReleased<T extends Record = Record>(
   record: T,
 ): record is T & { release: RecordRelease } {
-  return record.releaseId !== null;
+  return Boolean(record.releaseId);
 }

@@ -308,6 +308,8 @@ model User {
   DoctorVisit          DoctorVisit[]
   BleeterProfile       BleeterProfile?
   BleeterProfileFollow BleeterProfileFollow[]
+  citizenClaimRequests          CitizenClaimRequest[] @relation("citizenClaimRequests")
+  reviewedCitizenClaimRequests  CitizenClaimRequest[] @relation("reviewedCitizenClaimRequests")
 }
 
 model UserSession {
@@ -430,8 +432,56 @@ model Citizen {
   LicenseExam          LicenseExam[]
   DoctorVisit          DoctorVisit[]
   pets                 Pet[]
+  claimRequests        CitizenClaimRequest[]
+  aliases              CitizenAlias[]
+  drugTests            CitizenDrugTest[]
 
   @@index([name, surname], name: "fullname")
+}
+
+model CitizenAlias {
+  id        String   @id @default(cuid())
+  citizen   Citizen  @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+  citizenId String
+  name      String   @db.VarChar(255)
+  surname   String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+}
+
+model CitizenDrugTest {
+  id         String         @id @default(cuid())
+  citizen    Citizen        @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+  citizenId  String
+  officer    Officer?       @relation(fields: [officerId], references: [id], onDelete: SetNull)
+  officerId  String?
+  substances String         @db.Text
+  result     DrugTestResult
+  notes      String?        @db.Text
+  createdAt  DateTime       @default(now())
+}
+
+enum DrugTestResult {
+  POSITIVE
+  NEGATIVE
+  INCONCLUSIVE
+}
+
+model CitizenClaimRequest {
+  id           String          @id @default(cuid())
+  citizen      Citizen         @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+  citizenId    String
+  user         User            @relation("citizenClaimRequests", fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  status       WhitelistStatus @default(PENDING)
+  reason       String?         @db.Text
+  reviewedBy   User?           @relation("reviewedCitizenClaimRequests", fields: [reviewedById], references: [id])
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @default(now()) @updatedAt
+
+  @@index([citizenId, status])
+  @@index([userId, status])
 }
 
 model CitizenLicensePoints {
@@ -1053,6 +1103,7 @@ model Officer {
   isTemporary                 Boolean                      @default(false)
   identifiers                 String[]
   ChatCreator                 ChatCreator[]
+  drugTests                   CitizenDrugTest[]
 
   @@index([callsign, callsign2, statusId])
 }
@@ -1622,6 +1673,10 @@ model EmsFdIncident {
   address              String?
   postal               String?
   fireType             String?
+  reportType           EmsFdReportType        @default(MEDICAL)
+  causeOfFire          String?                @db.Text
+  propertyDamage       String?                @db.VarChar(255)
+  inspectionResult     String?                @db.VarChar(255)
   // when null, it is the dispatcher
   creator              EmsFdDeputy?           @relation("emsFdIncidentCreator", fields: [creatorId], references: [id])
   creatorId            String?
@@ -1640,6 +1695,13 @@ model EmsFdIncident {
   CombinedLeoUnit      CombinedLeoUnit[]
   CombinedEmsFdUnit    CombinedEmsFdUnit[]
   Record               Record[]
+}
+
+enum EmsFdReportType {
+  MEDICAL
+  FIRE
+  FIRE_INVESTIGATION
+  INSPECTION
 }
 
 // truck logs
@@ -1919,6 +1981,17 @@ enum DiscordWebhookType {
   USER_WHITELIST_STATUS
   LEO_INCIDENT_CREATED
   EMS_FD_INCIDENT_CREATED
+  USER_REGISTERED
+  USER_BAN_STATUS
+  BOLO_UPDATED
+  BOLO_DELETED
+  WARRANT_STATUS_CHANGED
+  CALL_911_ENDED
+  CITIZEN_CREATED
+  CITIZEN_DELETED
+  EXPUNGEMENT_REQUEST_STATUS
+  TOW_CALL_CREATED
+  TAXI_CALL_CREATED
 }
 
 enum JailTimeScale {
@@ -2005,6 +2078,8 @@ enum Feature {
   ALLOW_MULTIPLE_UNITS_DEPARTMENTS_PER_USER // see #1722
   OPEN_LAW_BOOK
   CITIZEN_RECORD_PAYMENTS
+  MODERN_CITIZEN_THEME
+  API_TOKEN_REMINDER
 }
 
 enum DashboardLayoutCardType {

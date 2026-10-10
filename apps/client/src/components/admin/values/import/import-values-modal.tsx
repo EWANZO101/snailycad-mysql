@@ -35,15 +35,20 @@ export function ImportValuesModal({ onImport, type }: Props) {
       fd.set("file", file, file.name);
     }
 
-    const { json } = await execute<ImportValuesData>({
+    const { json, error } = await execute<ImportValuesData, typeof INITIAL_VALUES>({
       path: `/admin/values/import/${type.toLowerCase()}`,
       method: "POST",
       data: fd,
+      // penal code imports return a detailed list of errors on the `file` field
+      helpers: type === "PENAL_CODE" ? helpers : undefined,
     });
 
     if (Array.isArray(json)) {
       onImport(json);
     }
+
+    // keep the modal open so the validation errors can be read and fixed
+    if (error) return;
 
     modalState.closeModal(ModalIds.ImportValues);
   }
@@ -62,7 +67,10 @@ export function ImportValuesModal({ onImport, type }: Props) {
       <Formik onSubmit={onSubmit} initialValues={INITIAL_VALUES}>
         {({ handleChange, values, errors }) => (
           <Form>
-            <FormField errorMessage={errors.file} label={t("file")}>
+            <FormField
+              errorMessage={errors.file?.includes("\n") ? undefined : errors.file}
+              label={t("file")}
+            >
               <div className="flex">
                 <Input
                   style={{ width: "95%", marginRight: "0.5em" }}
@@ -77,6 +85,17 @@ export function ImportValuesModal({ onImport, type }: Props) {
                 />
               </div>
             </FormField>
+
+            {errors.file?.includes("\n") ? (
+              <ul
+                role="alert"
+                className="mb-3 max-h-60 overflow-y-auto list-disc pl-5 text-sm text-red-500 thin-scrollbar"
+              >
+                {errors.file.split("\n").map((line, idx) => (
+                  <li key={idx}>{line}</li>
+                ))}
+              </ul>
+            ) : null}
 
             <a
               className="underline"

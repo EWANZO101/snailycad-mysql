@@ -85,6 +85,7 @@ export function AdminSidebar() {
               ...defaultPermissions.defaultManagementPermissions,
               ...defaultPermissions.defaultOwnerPermissions,
               ...defaultPermissions.defaultCourthousePermissions,
+              ...defaultPermissions.defaultScopedAdminPermissions,
             ]}
             icon={<PersonGear className="w-5 h-5" aria-hidden />}
             title={man("management")}

@@ -12,6 +12,7 @@ import * as Sentry from "@sentry/node";
 import { registerDiscordRolesMetadata } from "lib/discord/register-metadata";
 import { canSecureCookiesBeEnabled } from "utils/validate-environment-variables";
 import { areRequiredCommandsInstalled } from "./utils/validate-requirements";
+import { ensureRecoveryToken } from "lib/recovery/recovery-token";
 
 const rootDir = __dirname;
 
@@ -19,6 +20,7 @@ async function bootstrap() {
   try {
     await areRequiredCommandsInstalled();
     registerDiscordRolesMetadata();
+    ensureRecoveryToken();
 
     const scannedProviders = await importProviders({
       mount: {

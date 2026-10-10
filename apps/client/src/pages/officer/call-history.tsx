@@ -23,6 +23,7 @@ import type {
   DeletePurge911CallsData,
   Get911CallsData,
   GetIncidentsData,
+  PostBulkEnd911CallsData,
 } from "@snailycad/types/api";
 import { useTemporaryItem } from "hooks/shared/useTemporaryItem";
 import { getSelectedTableRows } from "hooks/shared/table/use-table-state";
@@ -32,13 +33,24 @@ import { useCall911State } from "state/dispatch/call-911-state";
 interface Props {
   data: Get911CallsData;
   incidents: GetIncidentsData<"leo">["incidents"];
+  emsFdIncidents: GetIncidentsData<"ems-fd">["incidents"];
 }
 
-export default function CallHistory({ data, incidents }: Props) {
+export default function CallHistory({ data, incidents, emsFdIncidents }: Props) {
   const [search, setSearch] = React.useState("");
 
   const { hasPermissions } = usePermission();
   const hasManagePermissions = hasPermissions([Permissions.ManageCallHistory]);
+  const hasLeoIncidentPermissions = hasPermissions([
+    Permissions.Dispatch,
+    Permissions.ViewIncidents,
+    Permissions.ManageIncidents,
+  ]);
+  const hasEmsFdIncidentPermissions = hasPermissions([
+    Permissions.Dispatch,
+    Permissions.ViewEmsFdIncidents,
+    Permissions.ManageEmsFdIncidents,
+  ]);
   const setCurrentlySelectedCall = useCall911State((state) => state.setCurrentlySelectedCall);
 
   const asyncTable = useAsyncTable({
@@ -87,7 +99,31 @@ export default function CallHistory({ data, incidents }: Props) {
 
     if (json) {
       asyncTable.remove(...selectedRows);
+      tableState.setRowSelection({});
       modalState.closeModal(ModalIds.AlertPurgeCalls);
+    }
+  }
+
+  async function handleBulkEnd() {
+    const selectedRows = getSelectedTableRows(asyncTable.items, tableState.rowSelection);
+    if (selectedRows.length <= 0) return;
+
+    const { json } = await execute<PostBulkEnd911CallsData>({
+      path: "/911-calls/bulk-end",
+      method: "POST",
+      data: { ids: selectedRows },
+    });
+
+    if (Array.isArray(json?.ids)) {
+      for (const id of json.ids) {
+        const call = asyncTable.items.find((v) => v.id === id);
+        if (call) {
+          asyncTable.update(id, { ...call, ended: true, assignedUnits: [] });
+        }
+      }
+
+      tableState.setRowSelection({});
+      modalState.closeModal(ModalIds.AlertBulkEndCalls);
     }
   }
 
@@ -121,6 +157,16 @@ export default function CallHistory({ data, incidents }: Props) {
             />
             {hasManagePermissions ? (
               <Button
+                onPress={() => modalState.openModal(ModalIds.AlertBulkEndCalls)}
+                className="flex items-center gap-2 min-w-fit h-10 mt-3.5"
+                disabled={state === "loading" || isEmpty(tableState.rowSelection)}
+              >
+                {state === "loading" ? <Loader /> : null}
+                {t("endSelected")}
+              </Button>
+            ) : null}
+            {hasManagePermissions ? (
+              <Button
                 onPress={() => modalState.openModal(ModalIds.AlertPurgeCalls)}
                 className="flex items-center gap-2 min-w-fit h-10 mt-3.5"
                 disabled={state === "loading" || isEmpty(tableState.rowSelection)}
@@ -143,7 +189,10 @@ export default function CallHistory({ data, incidents }: Props) {
             tableState={tableState}
             features={{ rowSelection: hasManagePermissions }}
             data={asyncTable.items.map((call) => {
-              const caseNumbers = (call.incidents ?? []).map((i) => `#${i.caseNumber}`).join(", ");
+              const caseNumbers = [...(call.incidents ?? []), call.EmsFdIncident]
+                .filter((i) => i != null)
+                .map((i) => `#${i.caseNumber}`)
+                .join(", ");
 
               return {
                 id: call.id,
@@ -188,6 +237,9 @@ export default function CallHistory({ data, incidents }: Props) {
           asyncTable.update(call.id, call);
         }}
         incidents={incidents}
+        emsFdIncidents={emsFdIncidents}
+        showLeoIncidents={hasLeoIncidentPermissions || !hasEmsFdIncidentPermissions}
+        showEmsFdIncidents={hasEmsFdIncidentPermissions}
         call={tempCall}
       />
       <AlertModal
@@ -199,6 +251,16 @@ export default function CallHistory({ data, incidents }: Props) {
         onDeleteClick={handlePurge}
         deleteText={t("purge")}
       />
+      <AlertModal
+        title={t("endSelectedCalls")}
+        description={t("alert_endSelectedCalls", {
+          length: getObjLength(tableState.rowSelection),
+        })}
+        id={ModalIds.AlertBulkEndCalls}
+        onDeleteClick={handleBulkEnd}
+        deleteText={t("endCall")}
+        state={state}
+      />
 
       <Manage911CallModal call={tempCall} />
     </Layout>
@@ -207,9 +269,10 @@ export default function CallHistory({ data, incidents }: Props) {
 
 export const getServerSideProps: GetServerSideProps = async ({ req, locale }) => {
   const user = await getSessionUser(req);
-  const [calls, { incidents }] = await requestAll(req, [
+  const [calls, { incidents }, { incidents: emsFdIncidents }] = await requestAll(req, [
     ["/911-calls?includeEnded=true&take=35", { calls: [], totalCount: 0 }],
-    ["/incidents", { incidents: [] }],
+    ["/incidents?activeType=all", { incidents: [] }],
+    ["/ems-fd/incidents?activeType=all", { incidents: [] }],
   ]);
 
   return {
@@ -217,6 +280,7 @@ export const getServerSideProps: GetServerSideProps = async ({ req, locale }) =>
       session: user,
       data: calls,
       incidents,
+      emsFdIncidents,
       messages: {
         ...(await getTranslations(["leo", "calls", "common"], user?.locale ?? locale)),
       },

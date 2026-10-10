@@ -55,6 +55,8 @@ export const Feature = {
   ALLOW_MULTIPLE_UNITS_DEPARTMENTS_PER_USER: "ALLOW_MULTIPLE_UNITS_DEPARTMENTS_PER_USER",
   OPEN_LAW_BOOK: "OPEN_LAW_BOOK",
   CITIZEN_RECORD_PAYMENTS: "CITIZEN_RECORD_PAYMENTS",
+  MODERN_CITIZEN_THEME: "MODERN_CITIZEN_THEME",
+  API_TOKEN_REMINDER: "API_TOKEN_REMINDER",
 } as const;
 
 export type Feature = (typeof Feature)[keyof typeof Feature];
@@ -81,6 +83,17 @@ export const DiscordWebhookType = {
   USER_WHITELIST_STATUS: "USER_WHITELIST_STATUS",
   LEO_INCIDENT_CREATED: "LEO_INCIDENT_CREATED",
   EMS_FD_INCIDENT_CREATED: "EMS_FD_INCIDENT_CREATED",
+  USER_REGISTERED: "USER_REGISTERED",
+  USER_BAN_STATUS: "USER_BAN_STATUS",
+  BOLO_UPDATED: "BOLO_UPDATED",
+  BOLO_DELETED: "BOLO_DELETED",
+  WARRANT_STATUS_CHANGED: "WARRANT_STATUS_CHANGED",
+  CALL_911_ENDED: "CALL_911_ENDED",
+  CITIZEN_CREATED: "CITIZEN_CREATED",
+  CITIZEN_DELETED: "CITIZEN_DELETED",
+  EXPUNGEMENT_REQUEST_STATUS: "EXPUNGEMENT_REQUEST_STATUS",
+  TOW_CALL_CREATED: "TOW_CALL_CREATED",
+  TAXI_CALL_CREATED: "TAXI_CALL_CREATED",
 } as const;
 
 export type DiscordWebhookType = (typeof DiscordWebhookType)[keyof typeof DiscordWebhookType];
@@ -363,3 +376,12 @@ export const PublishStatus = {
 } as const;
 
 export type PublishStatus = (typeof PublishStatus)[keyof typeof PublishStatus];
+
+export const EmsFdReportType = {
+  MEDICAL: "MEDICAL",
+  FIRE: "FIRE",
+  FIRE_INVESTIGATION: "FIRE_INVESTIGATION",
+  INSPECTION: "INSPECTION",
+} as const;
+
+export type EmsFdReportType = (typeof EmsFdReportType)[keyof typeof EmsFdReportType];

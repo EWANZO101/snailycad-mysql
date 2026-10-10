@@ -389,7 +389,16 @@
     "counts": "Räkningar",
     "stats": "Statistik",
     "deletedPenalCode": "Borttagen Straffbalk",
-    "exportCriminalRecord": "Exportera Brottsregister"
+    "exportCriminalRecord": "Exportera Brottsregister",
+    "reportType": "Report Type",
+    "reportType_MEDICAL": "Medical",
+    "reportType_FIRE": "Fire",
+    "reportType_FIRE_INVESTIGATION": "Fire Investigation",
+    "reportType_INSPECTION": "Fire Inspection",
+    "causeOfFire": "Cause of Fire",
+    "inspectionFindings": "Inspection Findings",
+    "inspectionResult": "Inspection Result",
+    "propertyDamage": "Property Damage / Estimated Loss"
   },
   "Bolos": {
     "activeBolos": "Aktiva Bolos",

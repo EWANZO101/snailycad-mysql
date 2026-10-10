@@ -10,6 +10,7 @@ import {
 } from "@snailycad/ui";
 import { classNames } from "lib/classNames";
 import { Permissions, usePermission } from "hooks/usePermission";
+import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 
 export function EmsFdDropdown() {
   const router = useRouter();
@@ -17,6 +18,9 @@ export function EmsFdDropdown() {
   const isActive = (route: string) => router.pathname.startsWith(route);
 
   const { hasPermissions } = usePermission();
+  const { CALLS_911 } = useFeatureEnabled();
+  const hasCallHistoryPermissions =
+    CALLS_911 && hasPermissions([Permissions.ViewCallHistory, Permissions.ManageCallHistory]);
   const hasIncidentPermissions = hasPermissions([
     Permissions.ManageEmsFdIncidents,
     Permissions.ViewEmsFdIncidents,
@@ -53,6 +57,11 @@ export function EmsFdDropdown() {
         {hasIncidentPermissions ? (
           <DropdownMenuLinkItem href="/ems-fd/incidents">
             {t("emsFdIncidents")}
+          </DropdownMenuLinkItem>
+        ) : null}
+        {hasCallHistoryPermissions ? (
+          <DropdownMenuLinkItem href="/officer/call-history">
+            {t("callHistory")}
           </DropdownMenuLinkItem>
         ) : null}
         {hasHospitalServicePermissions ? (

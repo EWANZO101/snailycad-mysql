@@ -7,6 +7,8 @@ import { Form, Formik } from "formik";
 import { Loader, Button, SelectField } from "@snailycad/ui";
 import useFetch from "lib/useFetch";
 import type { GetCustomRolesData, PutManageUserByIdRolesData } from "@snailycad/types/api";
+import { usePermission } from "hooks/usePermission";
+import type { Permissions } from "@snailycad/permissions";
 
 interface Props {
   user: User;
@@ -19,6 +21,17 @@ export function ManageRolesModal({ roles, user, onUpdate }: Props) {
   const common = useTranslations("Common");
   const modalState = useModal();
   const { state, execute } = useFetch();
+  const { hasPermissions } = usePermission();
+
+  /**
+   * users can only assign/remove custom roles of which they have every permission themselves
+   * (owners are unrestricted). this is also enforced by the API.
+   */
+  function canManageRole(role: GetCustomRolesData["customRoles"][number]) {
+    return role.permissions.every((permission) =>
+      hasPermissions([permission as Permissions]),
+    );
+  }
 
   async function onSubmit(data: typeof INITIAL_VALUES) {
     const { json } = await execute<PutManageUserByIdRolesData>({
@@ -65,6 +78,7 @@ export function ManageRolesModal({ roles, user, onUpdate }: Props) {
                 options={roles.customRoles.map((role) => ({
                   label: role.name,
                   value: role.id,
+                  isDisabled: !canManageRole(role),
                 }))}
                 onSelectionChange={(keys) => setFieldValue("roles", keys)}
               />

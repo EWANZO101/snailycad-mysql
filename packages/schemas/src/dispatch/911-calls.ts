@@ -35,7 +35,13 @@ export const CALL_911_SCHEMA = z.object({
 });
 
 export const LINK_INCIDENT_TO_CALL_SCHEMA = z.object({
-  incidentIds: z.array(z.any()),
+  incidentIds: z.array(z.any()).optional(),
+  emsFdIncidentId: z.string().nullish(),
+});
+
+/** used for bulk actions on 911 calls (bulk-end & bulk-delete/purge) */
+export const BULK_911_CALLS_SCHEMA = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(250),
 });
 
 export const CALL_911_EVENT_SCHEMA = z.object({

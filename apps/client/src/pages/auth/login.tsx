@@ -12,6 +12,7 @@ import { LoginForm } from "components/auth/login/login-form";
 import { useRouter } from "next/router";
 import { requestAll } from "lib/utils";
 import { ApiVerification } from "components/auth/api-verification";
+import Link from "next/link";
 
 interface Props {
   isLocalhost: boolean;
@@ -22,6 +23,7 @@ interface Props {
 export default function Login(props: Props) {
   const { cad } = useAuth();
   const t = useTranslations("Auth");
+  const recoveryT = useTranslations("Recovery");
   const router = useRouter();
 
   async function handleSubmit({ from }: { from: string }) {
@@ -39,6 +41,13 @@ export default function Login(props: Props) {
         <DemoDetector />
 
         <LoginForm onFormSubmitted={handleSubmit} />
+
+        <Link
+          href="/auth/recovery"
+          className="mt-3 text-sm underline text-neutral-500 hover:text-neutral-700 dark:text-gray-500 dark:hover:text-gray-300"
+        >
+          {recoveryT("recoveryLink")}
+        </Link>
 
         <VersionDisplay cad={cad} />
 
@@ -83,7 +92,10 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, req }) =>
       cad: data,
       userSavedLocale,
       userSavedIsDarkTheme,
-      messages: await getTranslations(["auth"], userSavedLocale ?? locale),
+      messages: {
+        ...(await getTranslations(["recovery"], "en")),
+        ...(await getTranslations(["auth", "recovery"], userSavedLocale ?? locale)),
+      },
     },
   };
 };

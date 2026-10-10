@@ -19,6 +19,7 @@ import type { z } from "zod";
 import { validateRecordData } from "./validate-record-data";
 import { captureException } from "@sentry/node";
 import { userProperties } from "~/lib/auth/getSessionUser";
+import { syncCitizensArrestedStatus } from "lib/leo/jail";
 
 interface UpsertRecordOptions {
   data: z.infer<typeof CREATE_TICKET_SCHEMA | typeof CREATE_TICKET_SCHEMA_BUSINESS>;
@@ -145,13 +146,6 @@ export async function upsertRecord(options: UpsertRecordOptions) {
     courtEntry = { ...courtEntry, dates };
   }
 
-  if (ticket.type === "ARREST_REPORT" && !options.recordId && citizen) {
-    await prisma.citizen.update({
-      where: { id: citizen.id },
-      data: { arrested: true },
-    });
-  }
-
   const validatedViolationsResults = await Promise.allSettled(
     options.data.violations.map((v) =>
       validateRecordData({ ...v, ticketId: ticket.id, cad: options.cad }),
@@ -228,6 +222,11 @@ export async function upsertRecord(options: UpsertRecordOptions) {
       });
     }),
   );
+
+  if (ticket.type === "ARREST_REPORT" && ticket.citizenId) {
+    // the citizen's "arrested" status is derived from their active (published & unreleased) arrest reports
+    await syncCitizensArrestedStatus([ticket.citizenId]);
+  }
 
   return { ...ticket, violations, seizedItems, courtEntry };
 }

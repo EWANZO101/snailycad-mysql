@@ -14,6 +14,9 @@ export enum Permissions {
   ViewLicenseExams = "ViewLicenseExams",
   ManageLicenseExams = "ManageLicenseExams",
   SetUserDefinedCallsignOnOfficer = "SetUserDefinedCallsignOnOfficer",
+  // leo supervisor: scoped officer management
+  ManageOfficerRank = "ManageOfficerRank",
+  ManageOfficerCallsign = "ManageOfficerCallsign",
 
   ViewCustomFields = "ViewCustomFields",
   ManageCustomFields = "ManageCustomFields",
@@ -29,6 +32,11 @@ export enum Permissions {
   LeoManageCitizenProfile = "LeoManageCitizenProfile",
 
   Dispatch = "Dispatch",
+  /**
+   * staff-only: see every connected player on the live map. Without this permission, the live map
+   * only shows players that are linked to an on-duty LEO or EMS/FD unit.
+   */
+  ViewAllPlayersOnLiveMap = "ViewAllPlayersOnLiveMap",
   ManageSmartSigns = "ManageSmartSigns",
   ManageSmartMotorwaySigns = "ManageSmartMotorwaySigns",
 
@@ -59,10 +67,14 @@ export enum Permissions {
   ManageUsers = "ManageUsers",
   BanUsers = "BanUsers",
   DeleteUsers = "DeleteUsers",
+  /** only allows accepting/declining pending users */
+  ManagePendingUsers = "ManagePendingUsers",
 
   ViewCitizens = "ViewCitizens",
   ManageCitizens = "ManageCitizens",
   DeleteCitizens = "DeleteCitizens",
+  /** accept/decline requests from users to claim an unowned citizen */
+  ManageCitizenClaims = "ManageCitizenClaims",
 
   ViewUnits = "ViewUnits",
   ManageUnits = "ManageUnits",

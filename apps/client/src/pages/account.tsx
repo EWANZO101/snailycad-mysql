@@ -51,6 +51,7 @@ export default function Account({ availableSounds }: Props) {
 
   const errors = {
     discordAccountAlreadyLinked: errorT("discordAccountAlreadyLinked"),
+    discordAuthIssue: errorT("discordAuthIssue"),
   };
   const error = errors[router.query.error as keyof typeof errors];
 
@@ -62,6 +63,7 @@ export default function Account({ availableSounds }: Props) {
 
   const tab = router.query.tab;
   const discordValue = DISCORD_AUTH ? (tab === "discord" ? "connections" : undefined) : undefined;
+  const defaultTabValue = tab === "userApiToken" ? "userApiToken" : discordValue;
 
   const TABS_TITLES = [
     { name: t("accountInfo"), value: "accountInfo" },
@@ -84,7 +86,7 @@ export default function Account({ availableSounds }: Props) {
 
       <div className="flex justify-center w-full">
         <div className="w-full max-w-4xl">
-          <TabList defaultValue={discordValue} tabs={TABS_TITLES}>
+          <TabList defaultValue={defaultTabValue} tabs={TABS_TITLES}>
             <AccountInfoTab />
             <AccountSettingsTab />
             <AppearanceTab availableSounds={availableSounds} />

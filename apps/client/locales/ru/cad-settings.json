@@ -355,7 +355,11 @@
     "OPEN_LAW_BOOK": "Открыть кодексы",
     "OPEN_LAW_BOOK-description": "Когда включено, позволяет каждому пользователю CAD просматривать кодексы",
     "CITIZEN_RECORD_PAYMENTS": "Платежи граждан",
-    "CITIZEN_RECORD_PAYMENTS-description": "Когда включено, позволяет пользователю отмечать его собственные записи, как оплаченные."
+    "CITIZEN_RECORD_PAYMENTS-description": "Когда включено, позволяет пользователю отмечать его собственные записи, как оплаченные.",
+    "MODERN_CITIZEN_THEME": "Modern Citizen Theme",
+    "MODERN_CITIZEN_THEME-description": "When enabled, the citizen page uses the new card dashboard design. Disable it to use the default SnailyCAD design.",
+    "API_TOKEN_REMINDER": "API Token Reminder",
+    "API_TOKEN_REMINDER-description": "When enabled, users who have not set up their personal API token (used for in-game integrations such as the FiveM script) will see a dismissible reminder banner at the top of the CAD."
   },
   "Permissions": {
     "defaultPermissions": "Стандартные разрешения",
@@ -381,6 +385,7 @@
     "ViewCallHistory": "Просмотр истории вызовов",
     "ManageCallHistory": "Редактирование истории вызовов",
     "LiveMap": "Карта",
+    "ViewAllPlayersOnLiveMap": "Live Map: View All Players (staff)",
     "ViewCitizenLogs": "Просмотр логов граждан",
     "ViewLicenseExams": "Просмотр экзаменов на водительскую лицензию",
     "ManageLicenseExams": "Редактирование экзаменов на водительскую лицензию",

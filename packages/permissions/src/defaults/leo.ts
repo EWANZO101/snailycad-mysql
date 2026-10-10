@@ -26,7 +26,23 @@ export const defaultLeoPermissions = [
   Permissions.LeoManageCitizenProfile,
 ];
 
+/**
+ * narrowly scoped LEO supervisor permissions. these are intentionally **not** part of
+ * `defaultLeoPermissions` (which are granted to every new LEO user).
+ */
+export const defaultLeoSupervisorPermissions = [
+  Permissions.ManageOfficerRank,
+  Permissions.ManageOfficerCallsign,
+];
+
 export const defaultDispatchPermissions = [Permissions.Dispatch, Permissions.LiveMap];
+
+/**
+ * staff-only live map permissions. these are intentionally **not** part of
+ * `defaultDispatchPermissions` (which are granted to every dispatcher): regular dispatchers
+ * only see on-duty LEO/EMS-FD units on the live map, not every player's location.
+ */
+export const defaultLiveMapStaffPermissions = [Permissions.ViewAllPlayersOnLiveMap];
 
 export const defaultEmsFdPermissions = [
   Permissions.EmsFd,

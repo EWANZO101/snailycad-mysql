@@ -15,13 +15,29 @@ import { updateMemberRolesLogin } from "lib/discord/auth";
 import { ContentType, Description } from "@tsed/schema";
 import { isFeatureEnabled } from "lib/upsert-cad";
 import { setUserTokenCookies } from "lib/auth/setUserTokenCookies";
+import { sendUserRegisteredWebhook } from "lib/discord/extra-webhooks";
 import { getAPIUrl } from "@snailycad/utils/api-url";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
 import { encode } from "lib/discord/utils";
+import { setCookie } from "utils/set-cookie";
 
 const callbackUrl = makeCallbackURL(getAPIUrl());
+const authorizeUrl = makeAuthorizeURL(getAPIUrl());
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
+
+/**
+ * set after a successful Discord OAuth2 flow. Indicates that this browser has already
+ * authorized the application, so Discord's consent screen can be skipped (`prompt=none`).
+ */
+const DISCORD_AUTHORIZED_COOKIE = "snaily-cad-discord-authorized";
+const DISCORD_AUTHORIZED_COOKIE_EXPIRES_MS = 60 * 60 * 24 * 365 * 1000; // 1 year
+
+/**
+ * errors Discord can return when `prompt=none` is used for a user that has not (or no longer)
+ * authorized the application. When this happens, we retry the flow with `prompt=consent`.
+ */
+const PROMPT_NONE_RETRY_ERRORS = ["consent_required", "interaction_required", "login_required"];
 
 @Controller("/auth/discord")
 @ContentType("application/json")
@@ -29,7 +45,11 @@ const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 export class DiscordAuth {
   @Get("/")
   @Description("Redirect to Discord OAuth2 URL")
-  async handleRedirectToDiscordOAuthAPI(@Res() res: Res) {
+  async handleRedirectToDiscordOAuthAPI(
+    @Res() res: Res,
+    @Req() req: Req,
+    @QueryParams("consent", Boolean) forceConsent = false,
+  ) {
     const url = new URL(`${DISCORD_API_URL}/oauth2/authorize`);
     const redirectURL = findRedirectURL();
 
@@ -46,7 +66,15 @@ export class DiscordAuth {
 
     url.searchParams.append("client_id", DISCORD_CLIENT_ID);
     url.searchParams.append("redirect_uri", callbackUrl);
-    url.searchParams.append("prompt", "consent");
+    /**
+     * - `consent`: forced after Discord rejected a `prompt=none` request (user revoked/never authorized).
+     * - `none`: the user already authorized the application before -> skip the consent screen.
+     * - omitted: first-time authorization; Discord shows its regular authorization screen.
+     */
+    const prompt = forceConsent ? "consent" : await getDiscordOAuthPrompt(req, res);
+    if (prompt) {
+      url.searchParams.append("prompt", prompt);
+    }
     url.searchParams.append("response_type", "code");
     url.searchParams.append("scope", "identify role_connections.write");
 
@@ -59,21 +87,51 @@ export class DiscordAuth {
     @QueryParams("code") code: string,
     @Res() res: Res,
     @Req() req: Req,
+    @QueryParams("error") discordError?: string,
   ) {
     const redirectURL = findRedirectURL();
+
+    /**
+     * Discord redirects back with `?error=...` (and no code) when the user cancels the authorization
+     * or when `prompt=none` cannot be used (the user has not authorized the application yet).
+     */
+    if (discordError) {
+      if (PROMPT_NONE_RETRY_ERRORS.includes(discordError)) {
+        clearDiscordAuthorizedCookie(res);
+        return res.redirect(`${authorizeUrl}?consent=true`);
+      }
+
+      const sessionUser = await getSessionUser({ req, res, returnNullOnError: true }).catch(
+        () => null,
+      );
+
+      if (sessionUser) {
+        return res.redirect(`${redirectURL}/account?tab=discord&error=discordAuthIssue`);
+      }
+
+      return res.redirect(`${redirectURL}/auth/login?error=discordAuthIssue`);
+    }
 
     if (!code) {
       return res.redirect(`${redirectURL}/auth/login?error=invalidCode`);
     }
 
     const [data, authUser] = await Promise.all([
-      getDiscordData(code),
+      getDiscordData(code).catch(() => null),
       getSessionUser({ req, res, returnNullOnError: true }),
     ]);
 
     if (!data?.id) {
       return res.redirect(`${redirectURL}/auth/login?error=discordAuthIssue`);
     }
+
+    // this browser has now authorized the application; future logins can skip the consent screen.
+    setCookie({
+      res,
+      name: DISCORD_AUTHORIZED_COOKIE,
+      value: "true",
+      expires: DISCORD_AUTHORIZED_COOKIE_EXPIRES_MS,
+    });
 
     const users = await prisma.user.count();
     if (users <= 0) {
@@ -126,6 +184,8 @@ export class DiscordAuth {
           whitelistStatus: cad?.whitelisted ? WhitelistStatus.PENDING : WhitelistStatus.ACCEPTED,
         },
       });
+
+      sendUserRegisteredWebhook({ user, method: "discord" });
 
       const updatedWithRoles = await updateMemberRolesLogin(user, discordRolesId);
       // authenticate user with cookie
@@ -281,4 +341,33 @@ export function findRedirectURL() {
 
 function makeCallbackURL(base: string) {
   return `${new URL(base)}/auth/discord/callback`;
+}
+
+function makeAuthorizeURL(base: string) {
+  return `${new URL(base)}/auth/discord`;
+}
+
+function clearDiscordAuthorizedCookie(res: Res) {
+  setCookie({ res, name: DISCORD_AUTHORIZED_COOKIE, value: "", expires: 0 });
+}
+
+/**
+ * only use `prompt=none` when we know the user has authorized the application before, since
+ * Discord returns an error for `prompt=none` if the user has not authorized it yet.
+ * (that error is handled in the callback by retrying with `prompt=consent`)
+ */
+async function getDiscordOAuthPrompt(req: Req, res: Res): Promise<"none" | undefined> {
+  if (req.cookies?.[DISCORD_AUTHORIZED_COOKIE] === "true") {
+    return "none";
+  }
+
+  const sessionUser = await getSessionUser({ req, res, returnNullOnError: true }).catch(
+    () => null,
+  );
+
+  if (sessionUser?.discordId) {
+    return "none";
+  }
+
+  return undefined;
 }

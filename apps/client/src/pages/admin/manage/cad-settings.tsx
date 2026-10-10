@@ -5,6 +5,7 @@ import { requestAll } from "lib/utils";
 import dynamic from "next/dynamic";
 import { GeneralSettingsTab } from "components/admin/manage/cad-settings/general/general-settings-tab";
 import { CadSettingsLayout } from "components/admin/cad-settings/layout";
+import type { LocaleFolderInfo } from "components/admin/manage/cad-settings/misc-features/custom-locales-tab";
 
 const Tabs = {
   WhitelistTab: dynamic(
@@ -83,6 +84,12 @@ const Tabs = {
         .OtherMiscTab,
     { ssr: false },
   ),
+  CustomLocalesTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/custom-locales-tab"))
+        .CustomLocalesTab,
+    { ssr: false },
+  ),
   BlacklistedWordsTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/general/blacklisted-words-tab"))
@@ -91,7 +98,11 @@ const Tabs = {
   ),
 };
 
-export default function CadSettings() {
+interface Props {
+  localeFolders?: LocaleFolderInfo[];
+}
+
+export default function CadSettings(props: Props) {
   return (
     <CadSettingsLayout>
       <GeneralSettingsTab />
@@ -110,6 +121,7 @@ export default function CadSettings() {
       <Tabs.DiscordWebhooksTab />
       <Tabs.RawWebhooksTab />
       <Tabs.BlacklistedWordsTab />
+      <Tabs.CustomLocalesTab localeFolders={props.localeFolders ?? []} />
     </CadSettingsLayout>
   );
 }
@@ -117,6 +129,7 @@ export default function CadSettings() {
 export const getServerSideProps: GetServerSideProps = async ({ locale, res, req }) => {
   const user = await getSessionUser(req);
   const [data] = await requestAll(req, [["/admin/manage/cad-settings", []]]);
+  const localeFolders = await getLocaleFolders();
 
   // https://nextjs.org/docs/going-to-production#caching
   res.setHeader("Cache-Control", "public, s-maxage=10, stale-while-revalidate=59");
@@ -124,6 +137,7 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, res, req 
   return {
     props: {
       cad: data,
+      localeFolders,
       session: user,
       messages: {
         ...(await getTranslations(
@@ -134,3 +148,27 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, res, req 
     },
   };
 };
+
+/**
+ * read-only: lists the locale folders in `apps/client/locales` (server side only) so the
+ * "Custom Locales" tab can show which locales exist on disk vs. which are registered.
+ */
+async function getLocaleFolders(): Promise<LocaleFolderInfo[]> {
+  try {
+    const { readdir } = await import("node:fs/promises");
+    const path = await import("node:path");
+    const localesDir = path.join(process.cwd(), "locales");
+
+    const entries = await readdir(localesDir, { withFileTypes: true });
+    const folders = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+
+    return Promise.all(
+      folders.sort().map(async (name) => {
+        const files = await readdir(path.join(localesDir, name)).catch(() => [] as string[]);
+        return { name, files: files.filter((file) => file.endsWith(".json")).sort() };
+      }),
+    );
+  } catch {
+    return [];
+  }
+}

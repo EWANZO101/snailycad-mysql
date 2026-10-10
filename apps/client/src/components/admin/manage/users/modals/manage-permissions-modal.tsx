@@ -9,6 +9,7 @@ import useFetch from "lib/useFetch";
 import { Loader, Button, TextField, SwitchField } from "@snailycad/ui";
 import type { GetManageUserByIdData, PutManageUserPermissionsByIdData } from "@snailycad/types/api";
 import { usePermissionsModal } from "hooks/use-permissions-modal";
+import { usePermission } from "hooks/usePermission";
 
 interface Props {
   user: Pick<GetManageUserByIdData, "permissions" | "id" | "roles" | "rank">;
@@ -25,7 +26,23 @@ export function ManagePermissionsModal({ user, onUpdate, isReadOnly }: Props) {
   const modalState = useModal();
   const userPermissions = getPermissions(user);
   const { state, execute } = useFetch();
-  const { DEPRECATED_PERMISSIONS, groups, handleToggleAll } = usePermissionsModal({ isReadOnly });
+  const { hasPermissions } = usePermission();
+
+  /**
+   * users can only grant/remove permissions they have themselves (owners are unrestricted).
+   * this is also enforced by the API.
+   */
+  function canManagePermission(permission: Permissions) {
+    return hasPermissions([permission]);
+  }
+
+  const { DEPRECATED_PERMISSIONS, groups, handleToggleAll } = usePermissionsModal({
+    isReadOnly,
+    canManagePermission,
+  });
+  const hasUnmanageablePermissions =
+    !isReadOnly &&
+    groups.some((group) => group.permissions.some((p) => !canManagePermission(p)));
 
   async function onSubmit(data: typeof INITIAL_VALUES) {
     if (isReadOnly) return;
@@ -56,6 +73,12 @@ export function ManagePermissionsModal({ user, onUpdate, isReadOnly }: Props) {
       <Formik onSubmit={onSubmit} initialValues={INITIAL_VALUES}>
         {({ setFieldValue, setValues, values }) => (
           <Form>
+            {hasUnmanageablePermissions ? (
+              <p className="my-2 text-neutral-700 dark:text-gray-400">
+                {tPermission("cannotManagePermissionYouDoNotHave")}
+              </p>
+            ) : null}
+
             <TextField
               label={common("search")}
               className="my-2"
@@ -94,9 +117,9 @@ export function ManagePermissionsModal({ user, onUpdate, isReadOnly }: Props) {
                     <div className="grid grid-cols-1 md:grid-cols-3">
                       {filtered.map((permission) => {
                         const formattedName = tPermission(permission);
-                        const isDisabled = user.roles?.some((r) =>
-                          r.permissions.includes(permission),
-                        );
+                        const isDisabled =
+                          user.roles?.some((r) => r.permissions.includes(permission)) ||
+                          !canManagePermission(permission);
 
                         if (DEPRECATED_PERMISSIONS.includes(permission)) {
                           return null;

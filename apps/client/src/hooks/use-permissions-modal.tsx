@@ -14,6 +14,11 @@ const filteredAdminPermissions = defaultPermissions.allDefaultAdminPermissions.f
 
 interface UsePermissionsModalOptions {
   isReadOnly?: boolean;
+  /**
+   * whether the authenticated user is allowed to toggle this permission.
+   * users can only grant/remove permissions they have themselves.
+   */
+  canManagePermission?(permission: Permissions): boolean;
 }
 
 export function usePermissionsModal(options: UsePermissionsModalOptions) {
@@ -37,9 +42,14 @@ export function usePermissionsModal(options: UsePermissionsModalOptions) {
       ],
     },
     {
+      name: t("leoSupervisor"),
+      permissions: defaultPermissions.defaultLeoSupervisorPermissions,
+    },
+    {
       name: t("dispatch"),
       permissions: [
         ...defaultPermissions.defaultDispatchPermissions,
+        ...defaultPermissions.defaultLiveMapStaffPermissions,
         Permissions.ManageSmartSigns,
         Permissions.ManageSmartMotorwaySigns,
       ],
@@ -76,8 +86,15 @@ export function usePermissionsModal(options: UsePermissionsModalOptions) {
   ) {
     if (options.isReadOnly) return;
 
+    const canManagePermission = (permission: Permissions) =>
+      options.canManagePermission?.(permission) ?? true;
+
+    // only toggle the permissions the authenticated user is allowed to manage
     const groupPermissionValues = Object.entries(values).filter(([permission]) => {
-      return group.permissions.includes(permission as Permissions);
+      return (
+        group.permissions.includes(permission as Permissions) &&
+        canManagePermission(permission as Permissions)
+      );
     });
     const areAllChecked = groupPermissionValues.every(([, b]) => b);
 
@@ -89,7 +106,7 @@ export function usePermissionsModal(options: UsePermissionsModalOptions) {
 
       setValues({ ...values, ...obj });
     } else {
-      const obj = group.permissions.reduce(
+      const obj = group.permissions.filter(canManagePermission).reduce(
         (ac, cv) => ({
           ...ac,
           [cv]: true,
