@@ -326,5 +326,24 @@
     "noMessages": "No messages yet.",
     "message": "Message",
     "send": "Send"
+  },
+  "MiniCad": {
+    "miniCad": "Mini-CAD",
+    "settings": "Mini-CAD settings",
+    "close": "Close",
+    "previous": "Previous call",
+    "next": "Next call",
+    "attach": "Attach",
+    "detach": "Detach",
+    "unitsAttached": "{count, plural, =0 {No units attached} one {# unit attached} other {# units attached}}",
+    "noCalls": "No active 911 calls.",
+    "keybinds": "Keybinds",
+    "pressAKey": "Press a key…",
+    "position": "Position",
+    "top-left": "Top left",
+    "top-right": "Top right",
+    "bottom-left": "Bottom left",
+    "bottom-right": "Bottom right",
+    "resetKeybinds": "Reset keybinds"
   }
 }

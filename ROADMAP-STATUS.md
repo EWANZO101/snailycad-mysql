@@ -35,7 +35,9 @@ Legend: **Done** = implemented (syntax-checked, not yet tested in a browser) · 
 | 9.3 | Officer rank / callsign permissions | Done | `ManageOfficerRank`, `ManageOfficerCallsign` |
 | 10.x | Discord webhooks / bot hours | Partial | 11 extra webhook types (registrations, bans, BOLOs, warrants, calls, citizens, expungements, tow/taxi); bot side is a separate repo |
 | 11.1 | Duty clocking | Done | `/admin/manage/duty-hours` report + session editing |
-| 12.x | Mobile / Mini-CAD | Todo | |
+| 12.1 | Mobile and iPad support | Todo | |
+| 12.2 | Dedicated mobile app | Needs decision | Evaluation item (PWA vs native) |
+| 12.3 | Mini-CAD overlay | Done | "Mini-CAD" toggle on the LEO and EMS-FD dashboards: compact floating panel with the latest active call, units attached, previous/next and attach/detach. Keybinds (default ←/→/↑) and corner position are editable and saved per browser; keys are ignored while typing or in a modal |
 | 13.x | Penal code / locales | Partial | Grouped penal codes in the law book, penal code export, custom locales tab |
 | 14.1 | Discord OAuth prompt | Done | `prompt=none` only for known-authorised users; consent fallback |
 | 15.x | Integration docs | Partial | NGINX example + system requirements |
