@@ -97,6 +97,7 @@ const FEATURE_CATEGORIES: Record<Exclude<FeatureCategory, "other">, Feature[]> =
     Feature.CALL_911_APPROVAL,
     Feature.ACTIVE_DISPATCHERS,
     Feature.ACTIVE_INCIDENTS,
+    Feature.UNIT_PRIVATE_MESSAGES,
     Feature.RADIO_CHANNEL_MANAGEMENT,
     Feature.TONES,
     Feature.AOP,

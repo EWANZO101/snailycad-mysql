@@ -432,5 +432,19 @@
   "Bof": {
     "bureauOfFirearms": "Feuerwaffenamt",
     "noWeaponsPendingBof": "Es stehen keine Waffen zur zulassung zu."
+  },
+  "UnitMessages": {
+    "title": "Unit messages",
+    "open": "Open",
+    "newMessageTitle": "New private message",
+    "privacyNote": "Only you and the other unit can see these messages. They are not sent to dispatch or the radio.",
+    "newMessage": "New message",
+    "selectUnit": "Select an on-duty unit",
+    "noUnitsOnDuty": "No other units are on duty",
+    "noConversations": "No conversations yet.",
+    "selectConversation": "Select a conversation or start a new one.",
+    "noMessages": "No messages yet.",
+    "message": "Message",
+    "send": "Send"
   }
 }

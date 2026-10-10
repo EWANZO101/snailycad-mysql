@@ -1333,6 +1333,20 @@ model DispatchChat {
   incidentId String?
 }
 
+// private messages between two units (officers or EMS-FD deputies). Unit ids are polymorphic
+// (Officer.id or EmsFdDeputy.id), like DispatchChat.unitId.
+model UnitPrivateMessage {
+  id              String    @id @default(cuid())
+  createdAt       DateTime  @default(now())
+  message         String    @db.Text
+  senderUnitId    String
+  recipientUnitId String
+  readAt          DateTime?
+
+  @@index([senderUnitId, recipientUnitId])
+  @@index([recipientUnitId, readAt])
+}
+
 model ChatCreator {
   id                String             @id @default(uuid())
   officer           Officer?           @relation(fields: [officerId], references: [id])
@@ -2080,6 +2094,7 @@ enum Feature {
   CITIZEN_RECORD_PAYMENTS
   MODERN_CITIZEN_THEME
   API_TOKEN_REMINDER
+  UNIT_PRIVATE_MESSAGES
 }
 
 enum DashboardLayoutCardType {

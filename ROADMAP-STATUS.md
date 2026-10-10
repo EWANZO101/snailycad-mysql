@@ -18,7 +18,10 @@ Legend: **Done** = implemented (syntax-checked, not yet tested in a browser) · 
 | 4.2–4.7 | FiveM scripts (ID card, routing, radio, ANPR, map tiles) | Needs decision | Live in separate FiveM resource repos |
 | 5.1 | Restrict all-players live map | Done | `ViewAllPlayersOnLiveMap`; filtering is client-side (the FiveM live_map socket still sends all players) |
 | 5.2 | Live map permission review | Done | |
-| 6.x | Private messages / radio / tones | Todo | |
+| 6.1 | Private officer-to-officer messages | Done | `UNIT_PRIVATE_MESSAGES` feature (on by default). Officers and EMS-FD deputies message each other from their dashboard; unread badge, conversation list, read receipts. Sockets only carry unit ids, never message text. Combined units message from the member's own unit. No oversight/audit view yet |
+| 6.2 | Snaily radio system | Needs decision | Exploration item: built-in vs separate integration, hosting cost |
+| 6.3 | Multiple department and call tones | Todo | |
+| 6.4 | Change radio channels from dispatch | Needs decision | Depends on 4.4 (FiveM radio resource) |
 | 7.1 | Officers edit/end calls | Done | Via `ManageCallHistory` |
 | 7.2 | Bulk call management | Done | `POST /911-calls/bulk-end` + "End selected" in call history |
 | 7.3 | FD incident permissions | Done | Create/edit/delete with `ManageEmsFdIncidents`; creator is the EMS-FD deputy |

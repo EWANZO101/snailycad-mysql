@@ -21,6 +21,7 @@ import { ActiveCallColumn } from "components/dispatch/active-units/officers/colu
 import { ActiveIncidentColumn } from "components/dispatch/active-units/officers/columns/active-incident-column";
 import { PrivateMessagesButton } from "components/leo/private-messages/private-messages-button";
 import { PrivateMessagesModal } from "components/dispatch/active-units/private-messages/private-messages-modal";
+import { UnitMessagesButton } from "components/leo/unit-messages/unit-messages";
 
 const TonesModal = dynamic(
   async () => (await import("components/dispatch/modals/tones-modal")).TonesModal,
@@ -134,6 +135,8 @@ export function ModalButtons({
             <span className="font-semibold">{t("Leo.privateMessages")}: </span>
             <PrivateMessagesButton unit={activeDeputy} />
           </p>
+
+          <UnitMessagesButton activeUnit={activeDeputy} />
 
           <PrivateMessagesModal />
         </div>
