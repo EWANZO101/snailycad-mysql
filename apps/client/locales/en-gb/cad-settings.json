@@ -526,6 +526,7 @@
     "applyAndRebuild": "Apply & rebuild",
     "rebuildStartedTitle": "Rebuilding the CAD",
     "rebuildStartedMessage": "The CAD is restarting with your changes. A progress page is shown until it is back, then it reloads automatically.",
+    "rebuildManuallyMessage": "This server can't restart the CAD by itself (for example on Windows or in Docker). Stop SnailyCAD, then run these commands in the SnailyCAD folder:",
     "languageAdded": "Language added",
     "languageAddedMessage": "{code} was added. Apply the changes to make it available.",
     "loadFailed": "Unable to load the languages",

@@ -42,6 +42,7 @@ async function git(args: string[], timeout = 15_000) {
 function canRunUpdater(mode: UpdateMode) {
   const isInContainer = existsSync("/.dockerenv");
   if (isInContainer) return false;
+  if (process.platform !== "linux") return false;
   if (mode === "docker") return true;
   return existsSync("/run/systemd/system");
 }
@@ -96,11 +97,12 @@ export class UpdateCadController {
       manualCommands:
         mode === "docker"
           ? [
-              "git stash && git pull origin main",
+              "git stash",
+              "git pull origin main",
               "docker compose -f production.docker-compose.yml build",
               "docker compose -f production.docker-compose.yml up -d",
             ]
-          : ["git stash && git pull origin main", "pnpm install", "pnpm run build", "pnpm run start"],
+          : ["git stash", "git pull origin main", "pnpm install", "pnpm run build", "pnpm run start"],
     };
   }
 

@@ -34,6 +34,8 @@ interface LocalesData {
   locales: LocaleInfo[];
   defaultLocale: string;
   rebuildPending: boolean;
+  canRebuild: boolean;
+  manualRebuildCommands: string[];
 }
 
 const DOCS_URL =
@@ -160,10 +162,22 @@ export function CustomLocalesTab(_props: Props) {
             <p className="text-sm text-neutral-600 dark:text-gray-400">
               {t("rebuildNeededMessage")}
             </p>
+            {data.canRebuild ? null : (
+              <>
+                <p className="mt-2 text-sm text-neutral-600 dark:text-gray-400">
+                  {t("rebuildManuallyMessage")}
+                </p>
+                <pre className="mt-2 rounded-lg bg-gray-100 dark:bg-primary border border-gray-200 dark:border-quaternary px-3 py-2 text-sm overflow-x-auto thin-scrollbar">
+                  {data.manualRebuildCommands.join("\n")}
+                </pre>
+              </>
+            )}
           </div>
-          <Button variant="amber" onPress={handleRebuild} disabled={isLoading}>
-            {t("applyAndRebuild")}
-          </Button>
+          {data.canRebuild ? (
+            <Button variant="amber" onPress={handleRebuild} disabled={isLoading}>
+              {t("applyAndRebuild")}
+            </Button>
+          ) : null}
         </div>
       ) : null}
 

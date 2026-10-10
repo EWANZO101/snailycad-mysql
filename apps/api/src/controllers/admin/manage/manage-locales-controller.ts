@@ -1,5 +1,14 @@
 import { spawn } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams, Context, PathParams } from "@tsed/platform-params";
@@ -38,8 +47,33 @@ function getPaths() {
     localesDir: join(clientRoot, "locales"),
     configPath: join(clientRoot, "i18n.config.mjs"),
     pendingPath: join(projectRoot, ".snaily-cache", "locales-pending"),
+    buildIdPath: join(clientRoot, ".next", "BUILD_ID"),
   };
 }
+
+/** the CAD can only restart itself when it runs as a systemd service on the host (not Windows or Docker) */
+function canRestartService() {
+  return (
+    process.platform === "linux" &&
+    existsSync("/run/systemd/system") &&
+    !existsSync("/.dockerenv")
+  );
+}
+
+/** changes are pending until the client is built again, whether from the UI or by hand */
+function isRebuildPending() {
+  const { pendingPath, buildIdPath } = getPaths();
+  if (!existsSync(pendingPath)) return false;
+  if (!existsSync(buildIdPath)) return true;
+
+  if (statSync(buildIdPath).mtimeMs > statSync(pendingPath).mtimeMs) {
+    rmSync(pendingPath, { force: true });
+    return false;
+  }
+  return true;
+}
+
+const MANUAL_REBUILD_COMMANDS = ["pnpm run build", "pnpm run start"];
 
 function readConfig() {
   const { configPath } = getPaths();
@@ -99,7 +133,7 @@ export class ManageLocalesController {
   @Description("List the locales on disk and in i18n.config.mjs")
   @UsePermissions({ permissions: [Permissions.ManageCADSettings] })
   async getLocales() {
-    const { localesDir, pendingPath } = getPaths();
+    const { localesDir } = getPaths();
     const config = readConfig();
     const enFiles = listJsonFiles(join(localesDir, "en"));
 
@@ -130,7 +164,9 @@ export class ManageLocalesController {
     return {
       locales,
       defaultLocale: config.defaultLocale,
-      rebuildPending: existsSync(pendingPath),
+      rebuildPending: isRebuildPending(),
+      canRebuild: canRestartService(),
+      manualRebuildCommands: MANUAL_REBUILD_COMMANDS,
     };
   }
 
@@ -244,6 +280,10 @@ export class ManageLocalesController {
   @UsePermissions({ permissions: [Permissions.ManageCADSettings] })
   async rebuild(@Context("user") user: User) {
     await assertNotDemoAccount(user.id);
+
+    if (!canRestartService()) {
+      throw new BadRequest("rebuildManually");
+    }
 
     await new Promise<void>((resolvePromise, reject) => {
       // --no-block: systemd restarts the service (and this process) after we've responded
