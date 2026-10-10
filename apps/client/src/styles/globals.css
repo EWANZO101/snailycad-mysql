@@ -2,17 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+/* new theme (default) */
+:root {
+  --color-primary: 15 17 23;
+  --color-secondary: 42 46 58;
+  --color-tertiary: 23 26 34;
+  --color-quaternary: 37 41 53;
+  --color-quinary: 59 64 80;
+}
+
+/* classic SnailyCAD theme, chosen per user (see lib/ui-theme.ts) */
+html[data-ui-theme="classic"] {
+  --color-primary: 22 21 26;
+  --color-secondary: 53 52 60;
+  --color-tertiary: 31 30 38;
+  --color-quaternary: 47 46 52;
+  --color-quinary: 69 67 73;
+}
+
+html[data-ui-theme="classic"] #__next {
+  @apply bg-white;
+}
+
+html[data-ui-theme="classic"] .dark #__next,
+html[data-ui-theme="classic"] body.dark #__next {
+  background-color: rgb(var(--color-primary));
+}
+
+html[data-ui-theme="classic"] .card {
+  @apply rounded-md bg-gray-200/60 border-transparent shadow-none dark:border-quinary dark:bg-tertiary;
+}
+
 html {
   scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: rgb(59 130 246 / 0.3);
 }
 
 @layer components {
   .card {
-    @apply rounded-md bg-gray-200/60 dark:border-quinary dark:bg-tertiary;
+    @apply rounded-xl bg-white border border-gray-200 shadow-sm dark:border-quaternary dark:bg-tertiary dark:shadow-black/20;
   }
 
   .card > header:first-of-type {
-    @apply rounded-t-md;
+    @apply rounded-t-xl;
   }
 
   .truncate-custom {
@@ -34,7 +71,12 @@ html {
 }
 
 #__next {
-  @apply min-h-screen dark:bg-primary;
+  @apply min-h-screen bg-gray-50 text-neutral-900 dark:bg-primary dark:text-gray-100;
+}
+
+/* subtle row hover for every table, without overriding row colors set by the page */
+tbody > tr:hover > td {
+  background-image: linear-gradient(rgb(127 127 127 / 0.07), rgb(127 127 127 / 0.07));
 }
 
 p,
@@ -44,7 +86,7 @@ li {
 
 code {
   font-size: theme("fontSize.sm");
-  background-color: theme("colors.secondary");
+  background-color: rgb(var(--color-secondary));
   padding: theme("padding.1") theme("padding[1.5]");
   border-radius: theme("borderRadius.md");
 }
@@ -93,7 +135,7 @@ strong {
 }
 
 .tabs-list[data-state="active"] {
-  @apply text-black dark:text-white border-b-2 border-neutral-500 dark:border-[#4c4f55];
+  @apply text-black dark:text-white border-b-2 border-blue-500 dark:border-blue-400;
 }
 
 .accordion-state[data-state="open"] .accordion-state-transform {
@@ -110,11 +152,12 @@ strong {
 }
 
 .thin-scrollbar::-webkit-scrollbar-track {
-  background: #161618; /* color of the tracking area */
+  background: transparent; /* color of the tracking area */
 }
 
 .thin-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #5e5e5f; /* color of the scroll thumb */
+  background-color: rgb(127 127 127 / 0.45); /* color of the scroll thumb */
+  border-radius: 9999px;
   border: none; /* creates padding around scroll thumb */
 }
 
@@ -171,20 +214,20 @@ strong {
 }
 
 .leaflet-popup-content-wrapper {
-  background-color: theme("colors.primary");
-  border: theme("borderWidth.DEFAULT") solid theme("colors.secondary");
+  background-color: rgb(var(--color-primary));
+  border: theme("borderWidth.DEFAULT") solid rgb(var(--color-secondary));
   color: white;
   box-shadow: theme("boxShadow.lg");
   border-radius: theme("borderRadius.lg");
 }
 
 .leaflet-popup-tip {
-  background-color: theme("colors.primary");
-  border: theme("borderWidth.DEFAULT") solid theme("colors.secondary");
+  background-color: rgb(var(--color-primary));
+  border: theme("borderWidth.DEFAULT") solid rgb(var(--color-secondary));
 }
 
 .leaflet-popup-content {
-  background-color: theme("colors.primary");
+  background-color: rgb(var(--color-primary));
   color: white;
 }
 

@@ -1,6 +1,7 @@
 import type { User } from "@snailycad/types";
 import { classNames } from "lib/classNames";
 import Document, { Html, Head, Main, NextScript } from "next/document";
+import { UI_THEME_INIT_SCRIPT } from "lib/ui-theme";
 
 class CustomDocument extends Document {
   render() {
@@ -16,10 +17,12 @@ class CustomDocument extends Document {
     const lang = session?.locale || userSavedLocale || "en";
 
     return (
-      <Html lang={lang}>
+      <Html lang={lang} data-ui-theme="new">
         <Head>
           <meta charSet="UTF-8" />
           <link rel="shortcut icon" type="image/png" href="/favicon.png" />
+          {/* eslint-disable-next-line react/no-danger */}
+          <script dangerouslySetInnerHTML={{ __html: UI_THEME_INIT_SCRIPT }} />
         </Head>
 
         <body className={classNames("antialiased", darkMode && "dark")}>

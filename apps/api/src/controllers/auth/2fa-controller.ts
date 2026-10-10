@@ -1,3 +1,4 @@
+import { assertNotDemoAccount } from "lib/demo/demo-mode";
 import { User } from "@prisma/client";
 import process from "node:process";
 import { authenticator } from "otplib";
@@ -35,6 +36,7 @@ export class UserTwoFactorAuthenticationController {
     @Context("user") user: User,
     @BodyParams("currentPassword") currentPassword: string,
   ): Promise<APITypes.PostEnable2FAData> {
+    await assertNotDemoAccount(user.id);
     const u = (await prisma.user.findUnique({
       where: { id: user.id },
       select: { password: true },

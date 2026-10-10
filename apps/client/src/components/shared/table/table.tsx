@@ -60,7 +60,7 @@ export function Table<TData extends _RowData>({
   const tableActionsAlignment = user?.tableActionsAlignment ?? TableActionsAlignment.LEFT;
   const stickyBgColor = features?.isWithinCardOrModal
     ? "bg-gray-100 dark:bg-tertiary"
-    : "dark:bg-primary bg-white";
+    : "dark:bg-primary bg-gray-50";
 
   const tableColumns = React.useMemo(() => {
     const cols = orderColumnsByTableActionsAlignment(tableActionsAlignment, columns);

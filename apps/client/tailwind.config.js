@@ -14,11 +14,12 @@ module.exports = {
         nav: "900px",
       },
       colors: {
-        primary: "#16151a",
-        secondary: "#35343c",
-        tertiary: "#1f1e26",
-        quaternary: "#2f2e34",
-        quinary: "#454349",
+        // values live in globals.css so users can switch between the classic and new themes
+        primary: "rgb(var(--color-primary) / <alpha-value>)",
+        secondary: "rgb(var(--color-secondary) / <alpha-value>)",
+        tertiary: "rgb(var(--color-tertiary) / <alpha-value>)",
+        quaternary: "rgb(var(--color-quaternary) / <alpha-value>)",
+        quinary: "rgb(var(--color-quinary) / <alpha-value>)",
       },
       animation: {
         enter: "enter 200ms ease-out",

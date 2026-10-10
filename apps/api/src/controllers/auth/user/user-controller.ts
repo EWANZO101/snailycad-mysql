@@ -1,3 +1,4 @@
+import { assertNotDemoAccount } from "lib/demo/demo-mode";
 import { Context, Res, BodyParams, QueryParams } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { UseBefore } from "@tsed/platform-middlewares";
@@ -75,6 +76,9 @@ export class UserController {
     @Context("user") user: User,
   ): Promise<APITypes.PatchUserData> {
     const data = validateSchema(CHANGE_USER_SCHEMA, body);
+    if (data.username !== user.username) {
+      await assertNotDemoAccount(user.id);
+    }
 
     const existing = await prisma.user.findUnique({
       where: { username: data.username },
@@ -139,6 +143,7 @@ export class UserController {
   @Delete("/")
   @Description("Delete the authenticated user's account")
   async deleteAuthUser(@Context("user") user: User) {
+    await assertNotDemoAccount(user.id);
     if (user.rank === Rank.OWNER) {
       throw new ExtendedBadRequest({ rank: "cannotDeleteOwner" });
     }
@@ -244,6 +249,7 @@ export class UserController {
     @Context("user") user: User,
     @BodyParams() body: unknown,
   ): Promise<APITypes.PostUserPasswordData> {
+    await assertNotDemoAccount(user.id);
     const data = validateSchema(CHANGE_PASSWORD_SCHEMA, body);
 
     const u = await prisma.user.findUnique({ where: { id: user.id } });

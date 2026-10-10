@@ -13,6 +13,7 @@ import { registerDiscordRolesMetadata } from "lib/discord/register-metadata";
 import { canSecureCookiesBeEnabled } from "utils/validate-environment-variables";
 import { areRequiredCommandsInstalled } from "./utils/validate-requirements";
 import { ensureRecoveryToken } from "lib/recovery/recovery-token";
+import { startDemoMode } from "lib/demo/demo-mode";
 
 const rootDir = __dirname;
 
@@ -33,6 +34,7 @@ async function bootstrap() {
     });
 
     await platform.listen();
+    await startDemoMode();
     const versions = await getCADVersion();
     const versionStr = versions
       ? `with version ${versions.currentVersion} - ${versions.currentCommitHash}`

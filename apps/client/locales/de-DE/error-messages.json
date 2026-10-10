@@ -29,6 +29,7 @@
     "dateGreaterThanOrEquals": "Das Datum muss größer oder gleich sein als {expected}",
     "dateGreaterThan": "Das Datum muss größer sein als {expected}",
     "dateSmallerThanOrEquals": "Das Datum muss kleiner oder gleich sein als {expected}",
-    "dateSmallerThan": "Das Datum muss kleiner sein als {expected}"
+    "dateSmallerThan": "Das Datum muss kleiner sein als {expected}",
+    "demoAccountIsProtected": "The demo account can't be changed, banned or deleted. Changes are reset automatically."
   }
 }

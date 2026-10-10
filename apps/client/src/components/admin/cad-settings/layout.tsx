@@ -55,7 +55,7 @@ export function CadSettingsLayout(props: { children: React.ReactNode }) {
     <>
       <Nav maxWidth="none" />
 
-      <main className="text-white">
+      <main className="text-neutral-900 dark:text-white">
         <Tabs.Root defaultValue={SettingsTabs.GeneralSettings} className="flex">
           <Title renderLayoutTitle={false}>{t("MANAGE_CAD_SETTINGS")}</Title>
 
@@ -127,14 +127,18 @@ function CadSettingsSidebar() {
     <Tabs.List>
       <aside
         style={{ height: "calc(100vh - 3.5rem)" }}
-        className="top-14 pt-5 pb-3 pr-4 bg-gray-100 dark:bg-tertiary flex flex-col overflow-x-hidden overflow-y-auto transition-[width] duration-100 thin-scrollbar sticky w-14 nav:w-72 justify-end nav:justify-start items-center nav:items-start"
+        className="top-14 pt-5 pb-3 px-2 bg-white border-r border-gray-200 dark:border-quaternary dark:bg-tertiary flex flex-col overflow-x-hidden overflow-y-auto transition-[width] duration-100 thin-scrollbar sticky w-14 nav:w-72 justify-end nav:justify-start items-center nav:items-start"
       >
-        <header className="px-4 mb-3">
-          <h1 className="text-xl mb-2 font-semibold dark:text-white">{t("MANAGE_CAD_SETTINGS")}</h1>
-
-          <Link className="flex items-center gap-1 underline" href="/admin">
-            <ArrowLeft /> Back to Admin
+        <header className="px-3 mb-2 w-full">
+          <Link
+            className="inline-flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-900 dark:text-gray-400 dark:hover:text-white"
+            href="/admin"
+          >
+            <ArrowLeft aria-hidden /> Back to Admin
           </Link>
+          <h1 className="mt-2 text-xl font-semibold text-neutral-900 dark:text-white">
+            {t("MANAGE_CAD_SETTINGS")}
+          </h1>
         </header>
 
         {SIDEBAR_ITEMS.map((category) => {
@@ -142,7 +146,7 @@ function CadSettingsSidebar() {
             <SidebarSection marginTop="mt-4" icon={null} title={category.name} key={category.name}>
               {category.items.map((key) => (
                 <Tabs.Trigger asChild value={key} key={key}>
-                  <li className="w-full cursor-pointer flex items-center justify-between transition-colors rounded-md px-3 py-1 dark:text-white hover:bg-gray-200 dark:hover:bg-secondary data-[state=active]:bg-secondary">
+                  <li className="w-full cursor-pointer flex items-center justify-between transition-colors rounded-lg px-3 py-1.5 text-[15px] text-neutral-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-secondary/70 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:font-medium dark:data-[state=active]:bg-blue-500/15 dark:data-[state=active]:text-blue-200">
                     {t(key)}
                   </li>
                 </Tabs.Trigger>

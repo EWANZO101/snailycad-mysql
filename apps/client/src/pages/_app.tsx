@@ -5,6 +5,7 @@ import "styles/nprogress.css";
 import * as React from "react";
 import type { AppProps } from "next/app";
 import { NextIntlClientProvider } from "next-intl";
+import { useEmergencyNumberMessages } from "lib/emergency-number";
 import { AuthProvider } from "context/AuthContext";
 import { ValuesProvider } from "context/ValuesContext";
 import { CitizenProvider } from "context/CitizenContext";
@@ -61,10 +62,13 @@ export default function App({ Component, router, pageProps, ...rest }: AppProps)
     };
   }, [router.events]);
 
+  // "911" in every translation follows the user's chosen emergency number (e.g. 999 or 112)
+  const messages = useEmergencyNumberMessages(pageProps.messages);
+
   React.useEffect(() => {
     // set error map for localized form error messages
-    setErrorMap({ messages: pageProps.messages, locale });
-  }, [locale, pageProps.messages]);
+    setErrorMap({ messages, locale });
+  }, [locale, messages]);
 
   React.useEffect(() => {
     _setSentryTags({
@@ -88,7 +92,7 @@ export default function App({ Component, router, pageProps, ...rest }: AppProps)
             timeZone={timeZone}
             onError={console.warn}
             locale={locale}
-            messages={pageProps.messages}
+            messages={messages}
             now={new Date()}
             getMessageFallback={(key) => key.key}
           >

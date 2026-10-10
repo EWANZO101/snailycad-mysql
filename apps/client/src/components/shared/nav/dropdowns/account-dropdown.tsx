@@ -1,4 +1,6 @@
 import * as React from "react";
+import { openWhatsNew } from "components/shared/whats-new-modal";
+import { openThemePicker } from "lib/ui-theme";
 import { PersonCircle } from "react-bootstrap-icons";
 import { logout } from "lib/auth";
 import { useTranslations } from "next-intl";
@@ -87,6 +89,13 @@ export function AccountDropdown(props: AccountDropdownProps) {
               </DropdownMenuItem>
             </>
           ) : null}
+
+          <DropdownMenuItem className="flex items-center gap-2" onClick={() => openWhatsNew()}>
+            What's new (Oct 2026)
+          </DropdownMenuItem>
+          <DropdownMenuItem className="flex items-center gap-2" onClick={() => openThemePicker()}>
+            Theme & emergency number
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 

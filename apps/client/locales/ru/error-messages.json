@@ -29,6 +29,7 @@
     "dateGreaterThanOrEquals": "Дата должна быть больше или равна {expected}",
     "dateGreaterThan": "Дата должна быть больше {expected}",
     "dateSmallerThanOrEquals": "Дата должна быть меньше или равна {expected}",
-    "dateSmallerThan": "Дата должна быть меньше {expected}"
+    "dateSmallerThan": "Дата должна быть меньше {expected}",
+    "demoAccountIsProtected": "The demo account can't be changed, banned or deleted. Changes are reset automatically."
   }
 }

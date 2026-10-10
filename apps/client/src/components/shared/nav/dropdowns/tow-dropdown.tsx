@@ -23,7 +23,7 @@ export function TowDropdown() {
         <Button
           className={classNames(
             "flex gap-1 items-center px-2",
-            isActive("/tow") && "font-semibold",
+            isActive("/tow") && "font-semibold bg-gray-100 dark:bg-secondary",
           )}
           variant="transparent"
         >

@@ -24,7 +24,7 @@ export function DispatchDropdown() {
           role="listitem"
           className={classNames(
             "flex gap-1 items-center px-2",
-            isActive("/dispatch") && "font-semibold",
+            isActive("/dispatch") && "font-semibold bg-gray-100 dark:bg-secondary",
           )}
           variant="transparent"
         >

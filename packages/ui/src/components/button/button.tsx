@@ -5,20 +5,24 @@ import { type VariantProps, cva } from "class-variance-authority";
 import { cn } from "mxcn";
 
 export const buttonVariants = cva(
-  "rounded-md disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer",
+  "rounded-lg font-medium disabled:opacity-60 disabled:cursor-not-allowed transition-[color,background-color,border-color,box-shadow,filter] duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent",
   {
     variants: {
       variant: {
         default:
-          "bg-gray-300 hover:bg-gray-400 text-black dark:hover:brightness-150 dark:bg-secondary dark:text-white border border-gray-400 dark:border-quinary",
-        cancel: "bg-transparent hover:bg-transparent text-gray-800 dark:text-gray-200",
-        danger: "bg-red-500 hover:bg-red-600 border border-red-800 text-black",
-        success: "bg-emerald-500 hover:bg-emerald-600 border border-emerald-800 text-black",
-        transparent: "bg-transparent text-black dark:text-white",
+          "bg-white hover:bg-gray-100 text-neutral-900 shadow-sm border border-gray-300 dark:bg-secondary dark:hover:bg-quinary dark:text-white dark:border-quinary",
+        cancel:
+          "bg-transparent hover:bg-gray-200/70 text-gray-800 dark:text-gray-200 dark:hover:bg-secondary/70",
+        danger:
+          "bg-red-600 hover:bg-red-700 border border-red-700 text-white shadow-sm dark:border-red-500/40",
+        success:
+          "bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white shadow-sm dark:border-emerald-500/40",
+        transparent:
+          "bg-transparent text-black dark:text-white hover:bg-gray-100 dark:hover:bg-secondary/70",
         link: "bg-transparent hover:bg-transparent text-gray-800 dark:text-gray-200 px-0 p-1 underline",
-        blue: "bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 dark:border dark:border-blue-800 text-black",
+        blue: "bg-blue-600 hover:bg-blue-700 border border-blue-700 text-white shadow-sm dark:border-blue-500/40",
         amber:
-          "text-black bg-orange-500 dark:bg-orange-500 border border-amber-800 hover:bg-orange-600 dark:hover:bg-orange-600",
+          "bg-amber-500 hover:bg-amber-600 border border-amber-600 text-black shadow-sm dark:border-amber-400/40",
       },
       size: {
         xs: "p-0.5 px-2",

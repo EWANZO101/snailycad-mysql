@@ -1,11 +1,21 @@
 import { defaultPermissions, Permissions } from "@snailycad/permissions";
 import { type Feature, ValueType } from "@snailycad/types";
 
+export type SidebarGroup = "people" | "units" | "community" | "system";
+
 export interface SidebarRoute {
   permissions: Permissions[];
   type: ValueType | string;
   hidden?(features: Record<Feature, boolean>): boolean;
 }
+
+/** groups the management routes into smaller sections, so the sidebar is easier to scan */
+export const managementRouteGroups: Record<SidebarGroup, string[]> = {
+  people: ["USERS", "CITIZENS", "CITIZEN_CLAIMS", "CUSTOM_ROLES"],
+  units: ["UNITS", "DUTY_HOURS"],
+  community: ["BUSINESSES", "COURTHOUSE"],
+  system: ["CUSTOM_FIELDS", "CAD_SETTINGS", "AUDIT_LOGS"],
+};
 
 export const managementRoutes: SidebarRoute[] = [
   {

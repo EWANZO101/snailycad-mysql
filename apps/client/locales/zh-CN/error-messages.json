@@ -29,6 +29,7 @@
     "dateGreaterThanOrEquals": "日期必须大于或等于 {expected}",
     "dateGreaterThan": "日期必须大于 {expected}",
     "dateSmallerThanOrEquals": "日期必须小于或等于 {expected}",
-    "dateSmallerThan": "日期必须小于 {expected}"
+    "dateSmallerThan": "日期必须小于 {expected}",
+    "demoAccountIsProtected": "The demo account can't be changed, banned or deleted. Changes are reset automatically."
   }
 }

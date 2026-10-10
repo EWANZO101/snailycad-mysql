@@ -18,6 +18,17 @@ import { usePermission } from "hooks/usePermission";
 import { defaultPermissions, Permissions } from "@snailycad/permissions";
 import { ImageWrapper } from "components/shared/image-wrapper";
 import { AdminLink } from "./dropdowns/admin-link";
+import dynamic from "next/dynamic";
+
+const ThemePickerModal = dynamic(
+  async () => (await import("components/shared/theme-picker-modal")).ThemePickerModal,
+  { ssr: false },
+);
+
+const WhatsNewModal = dynamic(
+  async () => (await import("components/shared/whats-new-modal")).WhatsNewModal,
+  { ssr: false },
+);
 
 interface Props {
   maxWidth?: string;
@@ -49,7 +60,7 @@ export function Nav({ maxWidth, isAccountPending }: Props) {
   }, [viewport]);
 
   return (
-    <nav className="bg-white dark:bg-tertiary shadow-sm sticky top-0 z-30">
+    <nav className="bg-white/90 dark:bg-tertiary/90 backdrop-blur-md border-b border-gray-200 dark:border-quaternary shadow-sm sticky top-0 z-30">
       <div style={{ maxWidth: maxWidth ?? "100rem" }} className="mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between h-14">
           <button
@@ -121,8 +132,8 @@ export function Nav({ maxWidth, isAccountPending }: Props) {
                     role="listitem"
                     href="/courthouse"
                     className={classNames(
-                      "p-1 nav:px-2 text-gray-700 dark:text-gray-200 transition duration-300",
-                      isActive("/courthouse") && "font-semibold",
+                      "p-1 nav:px-2.5 nav:py-1.5 rounded-lg text-gray-700 dark:text-gray-200 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-secondary/70",
+                      isActive("/courthouse") && "font-semibold bg-gray-100 dark:bg-secondary",
                     )}
                   >
                     {t("courthouse")}
@@ -146,6 +157,8 @@ export function Nav({ maxWidth, isAccountPending }: Props) {
           </div>
         </div>
       </div>
+      {user && !isAccountPending ? <ThemePickerModal /> : null}
+      {user && !isAccountPending ? <WhatsNewModal /> : null}
     </nav>
   );
 }

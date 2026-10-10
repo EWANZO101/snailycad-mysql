@@ -122,7 +122,7 @@ export function OfficerDropdown() {
           role="listitem"
           className={classNames(
             "flex gap-1 items-center px-2",
-            isActive("/officer") && "font-semibold",
+            isActive("/officer") && "font-semibold bg-gray-100 dark:bg-secondary",
           )}
           variant="transparent"
         >

@@ -5,13 +5,36 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useTranslations } from "use-intl";
 import { useViewport } from "@casperiv/useful/hooks/useViewport";
-import { importRoutes, managementRoutes, type SidebarRoute, valueRoutes } from "./Sidebar/routes";
+import {
+  importRoutes,
+  managementRouteGroups,
+  managementRoutes,
+  type SidebarGroup,
+  type SidebarRoute,
+  valueRoutes,
+} from "./Sidebar/routes";
 import { usePermission } from "hooks/usePermission";
 import { defaultPermissions, Permissions } from "@snailycad/permissions";
 import { SidebarSection } from "./Sidebar/SidebarSection";
 import useFetch from "lib/useFetch";
 import { useQuery } from "@tanstack/react-query";
-import { DatabaseAdd, DatabaseGear, PersonGear } from "react-bootstrap-icons";
+import {
+  Building,
+  DatabaseAdd,
+  DatabaseGear,
+  Gear,
+  People,
+  PersonBadge,
+  Speedometer2,
+} from "react-bootstrap-icons";
+
+const groupNames: SidebarGroup[] = ["people", "units", "community", "system"];
+const groupIcons: Record<SidebarGroup, React.ReactNode> = {
+  people: <People className="w-4 h-4" aria-hidden />,
+  units: <PersonBadge className="w-4 h-4" aria-hidden />,
+  community: <Building className="w-4 h-4" aria-hidden />,
+  system: <Gear className="w-4 h-4" aria-hidden />,
+};
 
 type AdminNotificationKeys =
   | "pendingUnitsForDepartments"
@@ -22,6 +45,7 @@ type AdminNotificationKeys =
 
 export function AdminSidebar() {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
   const viewport = useViewport();
 
   const { execute } = useFetch();
@@ -73,25 +97,66 @@ export function AdminSidebar() {
       <aside
         style={{ height: "calc(100vh - 3.5rem)" }}
         className={classNames(
-          "top-14 pt-5 pb-3 px-2 bg-gray-100 dark:bg-tertiary flex flex-col overflow-x-hidden overflow-y-auto transition-[width] duration-100 thin-scrollbar",
+          "top-14 pt-4 pb-3 px-2 bg-white border-r border-gray-200 dark:border-quaternary dark:bg-tertiary flex flex-col overflow-x-hidden overflow-y-auto transition-[width] duration-100 thin-scrollbar",
           menuOpen
             ? "fixed z-40 w-72 justify-start items-start"
             : "sticky w-14 nav:w-72 justify-end nav:justify-start items-center nav:items-start",
         )}
       >
         <div className={menuOpen ? "block" : "hidden nav:block w-full"} id="sidebar-content">
-          <SidebarSection
-            permissions={[
-              ...defaultPermissions.defaultManagementPermissions,
-              ...defaultPermissions.defaultOwnerPermissions,
-              ...defaultPermissions.defaultCourthousePermissions,
-              ...defaultPermissions.defaultScopedAdminPermissions,
-            ]}
-            icon={<PersonGear className="w-5 h-5" aria-hidden />}
-            title={man("management")}
-          >
-            <>
-              {managementRoutes.map((route) => {
+          <div className="px-1 mb-4">
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={man("searchAdminPages")}
+              aria-label={man("searchAdminPages")}
+              className="w-full px-3 py-1.5 text-sm rounded-lg border outline-none bg-white dark:bg-secondary dark:text-white border-gray-200 dark:border-quinary focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+            />
+          </div>
+
+          <ul className="flex flex-col mb-2">
+            <SidebarItem
+              route={null}
+              isActive={router.pathname === "/admin"}
+              href="/admin"
+              text={man("adminDashboard")}
+              onRouteClick={() => setMenuOpen(false)}
+              icon={<Speedometer2 className="w-4 h-4" aria-hidden />}
+              search={search}
+            />
+          </ul>
+
+          {groupNames.map((group) => (
+            <SidebarSection
+              key={group}
+              permissions={[
+                ...defaultPermissions.defaultManagementPermissions,
+                ...defaultPermissions.defaultOwnerPermissions,
+                ...defaultPermissions.defaultCourthousePermissions,
+                ...defaultPermissions.defaultScopedAdminPermissions,
+              ]}
+              icon={groupIcons[group]}
+              title={man(`group_${group}`)}
+            >
+              {managementRouteGroups[group].map((type) => {
+                if (type === "CAD_SETTINGS") {
+                  return (
+                    <SidebarItem
+                      key={type}
+                      route={{ permissions: [Permissions.ManageCADSettings], type: "CAD_SETTINGS" }}
+                      isActive={isMActive("/admin/manage/cad-settings")}
+                      href="/admin/manage/cad-settings"
+                      text={man("MANAGE_CAD_SETTINGS")}
+                      onRouteClick={() => setMenuOpen(false)}
+                      search={search}
+                    />
+                  );
+                }
+
+                const route = managementRoutes.find((route) => route.type === type);
+                if (!route) return null;
+
                 return (
                   <SidebarItem
                     route={route}
@@ -103,24 +168,20 @@ export function AdminSidebar() {
                     notificationCount={
                       notificationsForPath[`/admin/manage/${makeType(route.type)}`]
                     }
+                    search={search}
                   />
                 );
               })}
-
-              <SidebarItem
-                route={{ permissions: [Permissions.ManageCADSettings], type: "CAD_SETTINGS" }}
-                isActive={isMActive("/admin/manage/cad-settings")}
-                href="/admin/manage/cad-settings"
-                text={man("MANAGE_CAD_SETTINGS")}
-                onRouteClick={() => setMenuOpen(false)}
-              />
-            </>
-          </SidebarSection>
+            </SidebarSection>
+          ))}
 
           <SidebarSection
             permissions={defaultPermissions.defaultImportPermissions}
             title={man("import")}
-            icon={<DatabaseAdd className="w-5 h-5" aria-hidden />}
+            icon={<DatabaseAdd className="w-4 h-4" aria-hidden />}
+            collapsibleId="import"
+            defaultOpen={router.pathname.startsWith("/admin/import")}
+            forceOpen={Boolean(search)}
           >
             {importRoutes.map((route) => {
               return (
@@ -131,6 +192,7 @@ export function AdminSidebar() {
                   href={`/admin/import/${route.type.toLowerCase()}`}
                   text={man(`IMPORT_${route.type}`)}
                   onRouteClick={() => setMenuOpen(false)}
+                  search={search}
                 />
               );
             })}
@@ -139,7 +201,10 @@ export function AdminSidebar() {
           <SidebarSection
             permissions={defaultPermissions.defaultValuePermissions}
             title={t("Values.values")}
-            icon={<DatabaseGear className="w-5 h-5" aria-hidden />}
+            icon={<DatabaseGear className="w-4 h-4" aria-hidden />}
+            collapsibleId="values"
+            defaultOpen={router.pathname.startsWith("/admin/values")}
+            forceOpen={Boolean(search)}
           >
             {valueRoutes.map((route) => {
               return (
@@ -150,6 +215,7 @@ export function AdminSidebar() {
                   href={`/admin/values/${makeType(route.type).toLowerCase()}`}
                   text={t(`${route.type.replace(/-/g, "_")}.MANAGE`)}
                   onRouteClick={() => setMenuOpen(false)}
+                  search={search}
                 />
               );
             })}
@@ -162,9 +228,9 @@ export function AdminSidebar() {
           onClick={() => setMenuOpen((o) => !o)}
           className={classNames("flex flex-col nav:hidden w-7", menuOpen ? "mt-5 ml-3" : "mb-10")}
         >
-          <span className="my-0.5 rounded-md h-0.5 w-full bg-white" />
-          <span className="my-0.5 rounded-md h-0.5 w-full bg-white" />
-          <span className="my-0.5 rounded-md h-0.5 w-full bg-white" />
+          <span className="my-0.5 rounded-md h-0.5 w-full bg-neutral-800 dark:bg-white" />
+          <span className="my-0.5 rounded-md h-0.5 w-full bg-neutral-800 dark:bg-white" />
+          <span className="my-0.5 rounded-md h-0.5 w-full bg-neutral-800 dark:bg-white" />
         </button>
       </aside>
     </div>
@@ -178,13 +244,29 @@ interface ItemProps {
   onRouteClick(): void;
   route: SidebarRoute | null;
   notificationCount?: number;
+  icon?: React.ReactNode;
+  search?: string;
 }
 
-function SidebarItem({ route, href, text, isActive, notificationCount, onRouteClick }: ItemProps) {
+function SidebarItem({
+  route,
+  href,
+  text,
+  isActive,
+  notificationCount,
+  onRouteClick,
+  icon,
+  search,
+}: ItemProps) {
   const features = useFeatureEnabled();
   const { hasPermissions } = usePermission();
 
   if (route && (route.hidden?.(features) || !hasPermissions(route.permissions))) {
+    return null;
+  }
+
+  const query = search?.trim().toLowerCase();
+  if (query && !text.toLowerCase().includes(query)) {
     return null;
   }
 
@@ -194,14 +276,16 @@ function SidebarItem({ route, href, text, isActive, notificationCount, onRouteCl
         prefetch={false}
         onClick={onRouteClick}
         className={classNames(
-          "flex items-center justify-between transition-colors rounded-md px-3 py-1 dark:text-white hover:bg-gray-200 dark:hover:bg-secondary",
-          isActive && "bg-gray-300 dark:bg-secondary dark:text-white",
+          "flex items-center gap-2 transition-colors rounded-lg px-3 py-1.5 text-[15px] text-neutral-700 dark:text-gray-300 hover:bg-gray-100 hover:text-neutral-900 dark:hover:bg-secondary/70 dark:hover:text-white",
+          isActive &&
+            "bg-blue-50 text-blue-700 font-medium dark:bg-blue-500/15 dark:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-500/15",
         )}
         href={href}
       >
-        {text}
+        {icon}
+        <span className="truncate">{text}</span>
         {notificationCount ? (
-          <span className="bg-primary h-6 min-w-[24px] grid place-content-center rounded-full text-sm">
+          <span className="ml-auto bg-blue-600 text-white h-5 min-w-[20px] px-1.5 grid place-content-center rounded-full text-xs font-semibold">
             {notificationCount}
           </span>
         ) : null}

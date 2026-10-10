@@ -37,7 +37,7 @@ export function EmsFdDropdown() {
           role="listitem"
           className={classNames(
             "flex gap-1 items-center px-2",
-            isActive("/ems-fd") && "font-semibold",
+            isActive("/ems-fd") && "font-semibold bg-gray-100 dark:bg-secondary",
           )}
           variant="transparent"
         >

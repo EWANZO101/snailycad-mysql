@@ -29,6 +29,7 @@
     "dateGreaterThanOrEquals": "Datumet måste vara större än eller lika med {expected}",
     "dateGreaterThan": "Datumet måste vara större än {expected}",
     "dateSmallerThanOrEquals": "Datumet måste vara mindre än eller lika med {expected}",
-    "dateSmallerThan": "Datumet måste vara mindre än {expected}"
+    "dateSmallerThan": "Datumet måste vara mindre än {expected}",
+    "demoAccountIsProtected": "The demo account can't be changed, banned or deleted. Changes are reset automatically."
   }
 }

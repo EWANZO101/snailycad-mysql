@@ -28,7 +28,7 @@ export function AdminLink() {
       role="listitem"
       href="/admin"
       className={classNames(
-        "p-1 nav:px-2 text-gray-700 dark:text-gray-200 transition duration-300",
+        "p-1 nav:px-2.5 nav:py-1.5 rounded-lg text-gray-700 dark:text-gray-200 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-secondary/70",
         isActive && "font-semibold",
       )}
     >

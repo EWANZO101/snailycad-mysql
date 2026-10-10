@@ -34,8 +34,8 @@ export function TableHeader<TData extends RowData>({
   return (
     <th
       className={classNames(
-        "m-0 top-0 sticky p-2 px-3 font-semibold bg-gray-200 dark:bg-secondary lg:table-cell text-left select-none",
-        "uppercase text-sm text-neutral-700 dark:text-gray-400 first:rounded-tl-md last:rounded-tr-md",
+        "m-0 top-0 sticky py-2.5 px-3 font-semibold bg-gray-100 dark:bg-tertiary lg:table-cell text-left select-none",
+        "uppercase text-xs tracking-wider text-neutral-600 dark:text-gray-400 border-b border-gray-200 dark:border-quaternary first:rounded-tl-lg last:rounded-tr-lg",
         isActions ? `${dir} z-10 w-[100px]` : "sticky",
         canSort && "cursor-pointer select-none",
       )}

@@ -1,3 +1,4 @@
+import { assertNotDemoAccount } from "lib/demo/demo-mode";
 /* eslint-disable unicorn/number-literal-case */
 import {
   Rank,
@@ -293,6 +294,7 @@ export class ManageUsersController {
     @PathParams("id") userId: string,
     @BodyParams() body: unknown,
   ): Promise<APITypes.PutManageUserPermissionsByIdData> {
+    await assertNotDemoAccount(userId);
     const data = validateSchema(PERMISSIONS_SCHEMA, body);
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -347,6 +349,7 @@ export class ManageUsersController {
     @PathParams("id") userId: string,
     @BodyParams() body: unknown,
   ): Promise<APITypes.PutManageUserByIdRolesData> {
+    await assertNotDemoAccount(userId);
     const data = validateSchema(ROLES_SCHEMA, body);
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -417,6 +420,7 @@ export class ManageUsersController {
     @PathParams("id") userId: string,
     @BodyParams() body: unknown,
   ): Promise<APITypes.PutManageUserByIdData> {
+    await assertNotDemoAccount(userId);
     const data = validateSchema(UPDATE_USER_SCHEMA, body);
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -460,6 +464,7 @@ export class ManageUsersController {
     @Context("sessionUserId") sessionUserId: string,
     @PathParams("id") userId: string,
   ): Promise<APITypes.PostManageUsersGiveTempPasswordData> {
+    await assertNotDemoAccount(userId);
     const user = await prisma.user.findFirst({
       where: {
         id: userId,
@@ -512,6 +517,7 @@ export class ManageUsersController {
     @PathParams("type") banType: "ban" | "unban",
     @BodyParams() body: unknown,
   ): Promise<APITypes.PostManageUserBanUnbanData> {
+    await assertNotDemoAccount(userId);
     if (!["ban", "unban"].includes(banType)) {
       throw new NotFound("notFound");
     }
@@ -574,6 +580,7 @@ export class ManageUsersController {
     @Context("sessionUserId") sessionUserId: string,
     @PathParams("id") userId: string,
   ): Promise<APITypes.DeleteManageUsersData> {
+    await assertNotDemoAccount(userId);
     const user = await prisma.user.findFirst({
       where: {
         id: userId,

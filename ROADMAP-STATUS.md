@@ -45,6 +45,18 @@ Legend: **Done** = implemented (syntax-checked, not yet tested in a browser) · 
 - EMS-FD incidents page/table now gate create/edit/delete on `ManageEmsFdIncidents` (was `ManageIncidents`); `vehicleInvolved` is now actually saved
 - `sh/docs/nginx-snailycad.conf.example`, `sh/docs/SYSTEM-REQUIREMENTS.md`
 
+## Demo mode (added 2026-10-10)
+- `DEMO_MODE=true` in `.env` (plus optional `DEMO_USERNAME`, `DEMO_PASSWORD`, `DEMO_RESET_MINUTES`, default 10)
+- Creates the demo account as owner, shows its login details and a reset countdown on the login page, and a banner in the CAD
+- On first start takes a data-only snapshot (`apps/api/.demo-baseline.sql`, 0600, gitignored); every N minutes (aligned to the clock) truncates all tables and reloads it in one transaction
+- The demo account can't have its password/username changed, be banned, demoted, deleted, given a temp password or 2FA
+- New baseline: delete `apps/api/.demo-baseline.sql` and restart the API
+
+## UI refresh (added 2026-10-10)
+- New dark palette and base styles (cards, buttons, inputs, dropdowns, modals, tables, nav); menus unchanged
+- Admin: grouped + searchable sidebar, collapsible Values/Import, new dashboard (stat cards, needs attention, quick links)
+- "What's new: October 2026" popup shown once per user after sign-in; reopen from the account menu (`components/shared/whats-new-modal.tsx`, bump `WHATS_NEW_RELEASE_ID` for the next batch)
+
 ## To deploy
 ```bash
 cd /home/snaily-cadv4

@@ -17,7 +17,7 @@ export const DropdownMenuContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "z-50 p-2 bg-gray-100 rounded-md shadow-md dark:shadow-primary dropdown-fade w-40 dark:bg-primary border border-secondary",
+        "z-50 p-1.5 bg-white rounded-xl shadow-lg dark:shadow-black/40 dropdown-fade w-44 dark:bg-tertiary border border-gray-200 dark:border-quaternary",
         className,
       )}
       {...props}
@@ -47,7 +47,7 @@ export const DropdownMenuItem = React.forwardRef<
       className={buttonVariants({
         variant: "transparent",
         className: cn(
-          "cursor-pointer my-0.5 rounded-md transition-colors w-full text-left bg-transparent hover:bg-gray-400 focus:bg-gray-400 dark:hover:bg-secondary dark:focus:bg-secondary focus-visible:outline-none",
+          "cursor-pointer my-0.5 rounded-md transition-colors w-full text-left bg-transparent hover:bg-gray-100 focus:bg-gray-100 dark:hover:bg-secondary dark:focus:bg-secondary focus-visible:outline-none",
           className,
           size,
           variant,
@@ -70,7 +70,7 @@ export const DropdownMenuLinkItem = React.forwardRef<
       // todo: cn
       className={buttonVariants({
         className: cn(
-          "outline-none block rounded-md transition-colors w-full text-left bg-transparent dark:hover:bg-secondary hover:bg-gray-400 focus:bg-gray-400 dark:focus:bg-secondary focus-visible:outline-none",
+          "outline-none block rounded-md transition-colors w-full text-left bg-transparent dark:hover:bg-secondary hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-secondary focus-visible:outline-none",
           className,
         ),
         size: "sm",

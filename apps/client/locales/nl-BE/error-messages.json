@@ -29,6 +29,7 @@
     "dateGreaterThanOrEquals": "Datum moet later dan of gelijk aan {expected} zijn",
     "dateGreaterThan": "Datum moet later zijn dan {expected}",
     "dateSmallerThanOrEquals": "Datum moet vroeger dan of gelijk aan {expected} zijn",
-    "dateSmallerThan": "Datum moet vroeger zijn dan {expected}"
+    "dateSmallerThan": "Datum moet vroeger zijn dan {expected}",
+    "demoAccountIsProtected": "The demo account can't be changed, banned or deleted. Changes are reset automatically."
   }
 }

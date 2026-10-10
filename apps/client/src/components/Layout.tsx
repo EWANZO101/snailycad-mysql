@@ -6,6 +6,7 @@ import { useHasPermissionForLayout } from "hooks/auth/useHasPermissionForLayout"
 import { useSocketError } from "hooks/global/useSocketError";
 import { useSocket } from "@casperiv/use-socket.io";
 import { ApiTokenReminder } from "./shared/api-token-reminder";
+import { DemoModeBanner } from "./shared/demo-mode-banner";
 
 import dynamic from "next/dynamic";
 
@@ -57,6 +58,7 @@ export function Layout({
       <main className={`mt-5 px-4 md:px-6 pb-5 container max-w-[100rem] mx-auto ${className}`}>
         <Component enabled={roleplayStopped && !hideAlerts} audio={audio} />
         {showError ? <SocketErrorComponent /> : null}
+        <DemoModeBanner />
         {hideAlerts ? null : <ApiTokenReminder />}
 
         {children}

@@ -54,7 +54,7 @@ export function Modal({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-black/40" />
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px]" />
           </Transition.Child>
 
           {/* this element is to trick the browser into centering the modal contents. */}
@@ -87,7 +87,7 @@ export function Modal({
                   : {}
               }
               className={cn(
-                "max-w-[100%] inline-block text-left transition-all transform bg-white border border-secondary dark:bg-tertiary dark:text-white shadow-xl rounded-lg",
+                "max-w-[100%] inline-block text-left transition-all transform bg-white border border-gray-200 dark:border-quaternary dark:bg-tertiary dark:text-white shadow-2xl rounded-xl",
                 isFullscreen ? "p-2" : "align-middle p-4 px-6 my-8",
                 isAlert ? "z-[998]" : "z-30",
                 className,

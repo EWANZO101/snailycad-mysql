@@ -47,3 +47,7 @@ build-storybook.log
 .recovery-token.json
 .recovery-token*.tmp
 start.log
+
+# Demo mode baseline snapshot (contains a copy of the database)
+.demo-baseline.sql
+.demo-reset.*.sql

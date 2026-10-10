@@ -3,7 +3,7 @@ import { getTranslations } from "lib/getTranslation";
 import { Title } from "components/shared/Title";
 import { AuthScreenImages } from "components/auth/auth-screen-images";
 import { LocalhostDetector } from "components/auth/localhost-detector";
-import { DemoDetector } from "components/auth/demo-detector";
+import { DemoDetector, type DemoStatus } from "components/auth/demo-detector";
 import { parseCookies } from "nookies";
 import { VersionDisplay } from "components/shared/VersionDisplay";
 import { useAuth } from "context/AuthContext";
@@ -18,6 +18,7 @@ interface Props {
   isLocalhost: boolean;
   isCORSError: boolean;
   CORS_ORIGIN_URL: string | null;
+  demo: DemoStatus | null;
 }
 
 export default function Login(props: Props) {
@@ -38,7 +39,7 @@ export default function Login(props: Props) {
         <AuthScreenImages />
         <LocalhostDetector isLocalhost={props.isLocalhost} />
         <ApiVerification isCORSError={props.isCORSError} CORS_ORIGIN_URL={props.CORS_ORIGIN_URL} />
-        <DemoDetector />
+        <DemoDetector demo={props.demo} />
 
         <LoginForm onFormSubmitted={handleSubmit} />
 
@@ -69,7 +70,10 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, req }) =>
   const userSavedLocale = cookies.sn_locale ?? null;
   const userSavedIsDarkTheme = cookies.sn_isDarkTheme ?? null;
 
-  const [data] = await requestAll(req, [["/admin/manage/cad-settings", null]]);
+  const [data, demo] = await requestAll(req, [
+    ["/admin/manage/cad-settings", null],
+    ["/demo", null],
+  ]);
 
   const CORS_ORIGIN_URL = process.env.CORS_ORIGIN_URL ?? null;
   const NEXT_PUBLIC_CLIENT_URL = process.env.NEXT_PUBLIC_CLIENT_URL ?? null;
@@ -80,15 +84,18 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, req }) =>
     false;
 
   const isDefaultENvValue = CORS_ORIGIN_URL === "http://192.168.x.x:3000";
+  // CORS_ORIGIN_URL may be a comma separated list (the API supports that too)
+  const corsOrigins = (CORS_ORIGIN_URL ?? "").split(",").map((url) => toOrigin(url.trim()));
   const doURLsMatch = isWildcard
     ? true
-    : CORS_ORIGIN_URL === NEXT_PUBLIC_CLIENT_URL && !isDefaultENvValue;
+    : corsOrigins.includes(toOrigin(NEXT_PUBLIC_CLIENT_URL ?? "")) && !isDefaultENvValue;
 
   return {
     props: {
       isLocalhost,
       isCORSError: !doURLsMatch,
       CORS_ORIGIN_URL,
+      demo,
       cad: data,
       userSavedLocale,
       userSavedIsDarkTheme,
@@ -99,3 +106,12 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, req }) =>
     },
   };
 };
+
+function toOrigin(url: string) {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return url;
+  }
+}

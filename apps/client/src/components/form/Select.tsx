@@ -123,14 +123,14 @@ export function styles({
       background: option.isFocused
         ? backgroundColor === "white"
           ? "#D4D4D4"
-          : "#1f1e26"
+          : "rgb(var(--color-tertiary))"
         : "transparent",
       ":hover": {
         background: option.isDisabled
           ? "none"
           : backgroundColor === "white"
             ? "#D4D4D4"
-            : "#1f1e26",
+            : "rgb(var(--color-tertiary))",
       },
     }),
     menu: (prov) => ({
@@ -144,8 +144,8 @@ export function styles({
     multiValue: (base) => ({
       ...base,
       color: "#000",
-      borderColor: backgroundColor === "white" ? "#D4D4D4" : "#1f1e26",
-      backgroundColor: backgroundColor === "white" ? "#D4D4D4" : "#1f1e26",
+      borderColor: backgroundColor === "white" ? "#D4D4D4" : "rgb(var(--color-tertiary))",
+      backgroundColor: backgroundColor === "white" ? "#D4D4D4" : "rgb(var(--color-tertiary))",
     }),
     noOptionsMessage: (base) => ({
       ...base,
@@ -153,7 +153,7 @@ export function styles({
     }),
     multiValueLabel: (base) => ({
       ...base,
-      backgroundColor: backgroundColor === "white" ? "#D4D4D4" : "#1f1e26",
+      backgroundColor: backgroundColor === "white" ? "#D4D4D4" : "rgb(var(--color-tertiary))",
       color,
       padding: "0.2rem",
       borderRadius: "2px 0 0 2px",
@@ -165,7 +165,7 @@ export function styles({
 
       return {
         ...base,
-        backgroundColor: backgroundColor === "white" ? "#D4D4D4" : "#1f1e26",
+        backgroundColor: backgroundColor === "white" ? "#D4D4D4" : "rgb(var(--color-tertiary))",
         color,
         borderRadius: "0 2px 2px 0",
         cursor: "pointer",
