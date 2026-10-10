@@ -30,8 +30,12 @@ services:
     networks:
       - cad_web
     restart: always
+    environment:
+      # keeps the recovery token (shown once on /admin) across image rebuilds
+      RECOVERY_TOKEN_FILE: /snailycad/data/.recovery-token
     volumes:
       - ./apps/api/public:/snailycad/apps/api/public
+      - ./.snailycad-data:/snailycad/data
 
   client:
     container_name: "snaily-cad-client"

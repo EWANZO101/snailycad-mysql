@@ -7,3 +7,12 @@ Dockerfile
 __tests__/
 coverage/
 dist/
+# secrets and local state from a standalone install (never bake these into an image)
+**/.recovery-token
+**/.recovery-token.json
+**/.recovery-token*.tmp
+**/.demo-baseline.sql
+**/.demo-reset.*.sql
+.snaily-cache/
+.snailycad-data/
+.data/

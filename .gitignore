@@ -51,3 +51,6 @@ start.log
 # Demo mode baseline snapshot (contains a copy of the database)
 .demo-baseline.sql
 .demo-reset.*.sql
+
+# Docker: persisted API data (recovery token)
+.snailycad-data

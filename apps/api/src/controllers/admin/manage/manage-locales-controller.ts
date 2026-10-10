@@ -54,9 +54,7 @@ function getPaths() {
 /** the CAD can only restart itself when it runs as a systemd service on the host (not Windows or Docker) */
 function canRestartService() {
   return (
-    process.platform === "linux" &&
-    existsSync("/run/systemd/system") &&
-    !existsSync("/.dockerenv")
+    process.platform === "linux" && existsSync("/run/systemd/system") && !existsSync("/.dockerenv")
   );
 }
 
@@ -73,7 +71,25 @@ function isRebuildPending() {
   return true;
 }
 
+/**
+ * in Docker the client runs in its own container, so locale files edited from the API container never
+ * reach it (and are lost on the next image build). Locales are then managed on the host instead.
+ */
+function isReadOnly() {
+  return existsSync("/.dockerenv");
+}
+
+function assertWritable() {
+  if (isReadOnly()) {
+    throw new BadRequest("localesReadOnlyInDocker");
+  }
+}
+
 const MANUAL_REBUILD_COMMANDS = ["pnpm run build", "pnpm run start"];
+const DOCKER_REBUILD_COMMANDS = [
+  "docker compose -f production.docker-compose.yml build",
+  "docker compose -f production.docker-compose.yml up -d",
+];
 
 function readConfig() {
   const { configPath } = getPaths();
@@ -164,9 +180,10 @@ export class ManageLocalesController {
     return {
       locales,
       defaultLocale: config.defaultLocale,
-      rebuildPending: isRebuildPending(),
+      rebuildPending: !isReadOnly() && isRebuildPending(),
       canRebuild: canRestartService(),
-      manualRebuildCommands: MANUAL_REBUILD_COMMANDS,
+      readOnly: isReadOnly(),
+      manualRebuildCommands: isReadOnly() ? DOCKER_REBUILD_COMMANDS : MANUAL_REBUILD_COMMANDS,
     };
   }
 
@@ -179,6 +196,7 @@ export class ManageLocalesController {
     @Context("user") user: User,
   ) {
     await assertNotDemoAccount(user.id);
+    assertWritable();
     const code = validateCode(rawCode);
     const copyFrom = rawCopyFrom ? validateCode(rawCopyFrom) : "en";
     const { localesDir } = getPaths();
@@ -212,6 +230,7 @@ export class ManageLocalesController {
   @UsePermissions({ permissions: [Permissions.ManageCADSettings] })
   async fillMissing(@PathParams("code") rawCode: string, @Context("user") user: User) {
     await assertNotDemoAccount(user.id);
+    assertWritable();
     const code = validateCode(rawCode);
     const { localesDir } = getPaths();
     const target = join(localesDir, code);
@@ -236,6 +255,7 @@ export class ManageLocalesController {
   @UsePermissions({ permissions: [Permissions.ManageCADSettings] })
   async setDefault(@BodyParams("code") rawCode: unknown, @Context("user") user: User) {
     await assertNotDemoAccount(user.id);
+    assertWritable();
     const code = validateCode(rawCode);
     const config = readConfig();
 
@@ -253,6 +273,7 @@ export class ManageLocalesController {
   @UsePermissions({ permissions: [Permissions.ManageCADSettings] })
   async removeLocale(@PathParams("code") rawCode: string, @Context("user") user: User) {
     await assertNotDemoAccount(user.id);
+    assertWritable();
     const code = validateCode(rawCode);
     const config = readConfig();
 
@@ -280,6 +301,7 @@ export class ManageLocalesController {
   @UsePermissions({ permissions: [Permissions.ManageCADSettings] })
   async rebuild(@Context("user") user: User) {
     await assertNotDemoAccount(user.id);
+    assertWritable();
 
     if (!canRestartService()) {
       throw new BadRequest("rebuildManually");

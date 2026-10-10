@@ -25,8 +25,9 @@ const DOCS_URLS: Record<UpdateMode, string> = {
 
 function getUpdateMode(): UpdateMode {
   const mode = process.env.UPDATE_MODE?.trim().toLowerCase();
-  if (mode === "local" || mode === "docker") return mode;
-  return "git";
+  if (mode === "local" || mode === "docker" || mode === "git") return mode;
+  // the API image has no git checkout: a containerised CAD is updated with Docker Compose
+  return existsSync("/.dockerenv") ? "docker" : "git";
 }
 
 function getProjectRoot() {
@@ -102,7 +103,13 @@ export class UpdateCadController {
               "docker compose -f production.docker-compose.yml build",
               "docker compose -f production.docker-compose.yml up -d",
             ]
-          : ["git stash", "git pull origin main", "pnpm install", "pnpm run build", "pnpm run start"],
+          : [
+              "git stash",
+              "git pull origin main",
+              "pnpm install",
+              "pnpm run build",
+              "pnpm run start",
+            ],
     };
   }
 
@@ -142,7 +149,9 @@ export class UpdateCadController {
           "--collect",
           `--setenv=UPDATE_MODE=${mode}`,
           `--setenv=PROJECT_DIR=${getProjectRoot()}`,
-          ...(process.env.UPDATE_BRANCH ? [`--setenv=UPDATE_BRANCH=${process.env.UPDATE_BRANCH}`] : []),
+          ...(process.env.UPDATE_BRANCH
+            ? [`--setenv=UPDATE_BRANCH=${process.env.UPDATE_BRANCH}`]
+            : []),
           "/bin/bash",
           script,
         ]

@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { existsSync, readFileSync, writeFileSync, renameSync, chmodSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, renameSync, chmodSync, mkdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 /**
@@ -50,6 +50,7 @@ export function getRecoveryTokenPaths() {
 }
 
 function writeSecureFile(path: string, content: string) {
+  mkdirSync(dirname(path), { recursive: true });
   const tmpPath = `${path}.${process.pid}.tmp`;
   writeFileSync(tmpPath, content, { encoding: "utf8", mode: 0o600 });
   chmodSync(tmpPath, 0o600);

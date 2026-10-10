@@ -35,6 +35,7 @@ interface LocalesData {
   defaultLocale: string;
   rebuildPending: boolean;
   canRebuild: boolean;
+  readOnly: boolean;
   manualRebuildCommands: string[];
 }
 
@@ -181,58 +182,70 @@ export function CustomLocalesTab(_props: Props) {
         </div>
       ) : null}
 
-      <section className="card p-4 mb-6">
-        <h3 className="font-semibold text-lg">{t("addLanguage")}</h3>
-        <p className="text-sm text-neutral-600 dark:text-gray-400 mb-3">
-          {t("addLanguageDescription")}
-        </p>
+      {data?.readOnly ? (
+        <section className="card p-4 mb-6">
+          <h3 className="font-semibold text-lg">{t("dockerReadOnlyTitle")}</h3>
+          <p className="text-sm text-neutral-600 dark:text-gray-400">
+            {t("dockerReadOnlyMessage")}
+          </p>
+          <pre className="mt-2 rounded-lg bg-gray-100 dark:bg-primary border border-gray-200 dark:border-quaternary px-3 py-2 text-sm overflow-x-auto thin-scrollbar">
+            {data.manualRebuildCommands.join("\n")}
+          </pre>
+        </section>
+      ) : (
+        <section className="card p-4 mb-6">
+          <h3 className="font-semibold text-lg">{t("addLanguage")}</h3>
+          <p className="text-sm text-neutral-600 dark:text-gray-400 mb-3">
+            {t("addLanguageDescription")}
+          </p>
 
-        <div className="flex flex-col gap-3 md:flex-row md:items-end">
-          <TextField
-            className="w-full md:max-w-xs"
-            label={t("languageCode")}
-            errorMessage={
-              trimmedCode && !isCodeValid
-                ? t("invalidCode")
-                : codeExists
-                  ? t("alreadyExists")
-                  : undefined
-            }
-            value={code}
-            onChange={setCode}
-            placeholder="es-ES"
-          />
+          <div className="flex flex-col gap-3 md:flex-row md:items-end">
+            <TextField
+              className="w-full md:max-w-xs"
+              label={t("languageCode")}
+              errorMessage={
+                trimmedCode && !isCodeValid
+                  ? t("invalidCode")
+                  : codeExists
+                    ? t("alreadyExists")
+                    : undefined
+              }
+              value={code}
+              onChange={setCode}
+              placeholder="es-ES"
+            />
 
-          <SelectField
-            className="w-full md:max-w-xs"
-            label={t("copyFrom")}
-            selectedKey={copyFrom}
-            onSelectionChange={(value) => setCopyFrom((value as string | null) ?? "en")}
-            options={(data?.locales ?? [])
-              .filter((locale) => locale.hasFolder)
-              .map((locale) => ({
-                value: locale.code,
-                label: `${languageName(locale.code)} (${locale.code})`,
-              }))}
-          />
+            <SelectField
+              className="w-full md:max-w-xs"
+              label={t("copyFrom")}
+              selectedKey={copyFrom}
+              onSelectionChange={(value) => setCopyFrom((value as string | null) ?? "en")}
+              options={(data?.locales ?? [])
+                .filter((locale) => locale.hasFolder)
+                .map((locale) => ({
+                  value: locale.code,
+                  label: `${languageName(locale.code)} (${locale.code})`,
+                }))}
+            />
 
-          <Button
-            variant="blue"
-            className="flex items-center gap-2 md:mb-0.5 w-fit"
-            onPress={handleAdd}
-            disabled={!isCodeValid || codeExists || isLoading}
-          >
-            {isLoading ? <Loader /> : null}
-            {t("addLanguage")}
-          </Button>
-        </div>
+            <Button
+              variant="blue"
+              className="flex items-center gap-2 md:mb-0.5 w-fit"
+              onPress={handleAdd}
+              disabled={!isCodeValid || codeExists || isLoading}
+            >
+              {isLoading ? <Loader /> : null}
+              {t("addLanguage")}
+            </Button>
+          </div>
 
-        <p className="mt-2 text-sm text-neutral-600 dark:text-gray-400">
-          {trimmedCode && isCodeValid
-            ? t("willBeAddedAs", { name: languageName(trimmedCode) })
-            : t("languageCodeExample")}
-        </p>
-      </section>
+          <p className="mt-2 text-sm text-neutral-600 dark:text-gray-400">
+            {trimmedCode && isCodeValid
+              ? t("willBeAddedAs", { name: languageName(trimmedCode) })
+              : t("languageCodeExample")}
+          </p>
+        </section>
+      )}
 
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-gray-400">
         {t("availableLocales")}
@@ -278,36 +291,38 @@ export function CustomLocalesTab(_props: Props) {
                   </p>
                 )}
 
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {isComplete ? null : (
-                    <Button
-                      size="xs"
-                      onPress={() => handleFillMissing(locale.code)}
-                      disabled={isLoading}
-                    >
-                      {t("fillMissing")}
-                    </Button>
-                  )}
-                  {locale.isDefault || !locale.isRegistered ? null : (
-                    <Button
-                      size="xs"
-                      onPress={() => handleSetDefault(locale.code)}
-                      disabled={isLoading}
-                    >
-                      {t("makeDefault")}
-                    </Button>
-                  )}
-                  {locale.isBuiltIn || locale.isDefault ? null : (
-                    <Button
-                      size="xs"
-                      variant="danger"
-                      onPress={() => handleRemove(locale.code)}
-                      disabled={isLoading}
-                    >
-                      {t("remove")}
-                    </Button>
-                  )}
-                </div>
+                {data.readOnly ? null : (
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {isComplete ? null : (
+                      <Button
+                        size="xs"
+                        onPress={() => handleFillMissing(locale.code)}
+                        disabled={isLoading}
+                      >
+                        {t("fillMissing")}
+                      </Button>
+                    )}
+                    {locale.isDefault || !locale.isRegistered ? null : (
+                      <Button
+                        size="xs"
+                        onPress={() => handleSetDefault(locale.code)}
+                        disabled={isLoading}
+                      >
+                        {t("makeDefault")}
+                      </Button>
+                    )}
+                    {locale.isBuiltIn || locale.isDefault ? null : (
+                      <Button
+                        size="xs"
+                        variant="danger"
+                        onPress={() => handleRemove(locale.code)}
+                        disabled={isLoading}
+                      >
+                        {t("remove")}
+                      </Button>
+                    )}
+                  </div>
+                )}
               </article>
             );
           })}
