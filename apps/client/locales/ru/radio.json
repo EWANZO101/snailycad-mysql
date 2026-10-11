@@ -14,6 +14,7 @@
     "noChannels": "There are no radio channels you can use yet.",
     "transmitting": "Transmitting…",
     "holdToTalk": "Hold to talk on {channel} ({key})",
+    "holdToTalkOn": "Hold to talk on {channel}",
     "pickChannel": "Pick a channel to talk on",
     "tx": "TX",
     "rxOnly": "RX only",
