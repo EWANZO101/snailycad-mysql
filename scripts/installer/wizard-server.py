@@ -912,6 +912,13 @@ def run_docker_retry():
         save_state()
 
 
+def api_answers():
+    port = (JOB.get("settings") or {}).get("apiPort")
+    if not port:
+        return True
+    return quiet(["curl", "-s", "-o", "/dev/null", "-m", "3", f"http://127.0.0.1:{port}/v1"])[0]
+
+
 def service_progress():
     """Standalone: start.sh's status files drive the last three steps."""
     status = read_json(os.path.join(STATUS_DIR, "status.json")) or {}
@@ -919,6 +926,11 @@ def service_progress():
     phase = status.get("phase")
     order = ["dependencies", "build", "start"]
     active = {"preparing": 0, "installing": 0, "building": 1, "starting": 2}.get(phase)
+    if phase == "running" and not api_answers():
+        # start.sh marks the CAD running when the website answers; the API may still be applying
+        # its first migrations
+        phase = "starting"
+        active = 2
     if phase == "running":
         for step_id in order:
             JOB["steps"][step_id] = "done"
