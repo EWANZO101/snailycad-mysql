@@ -1,5 +1,7 @@
 {
   "CadSettings": {
+    "loginNotice": "Login page notice",
+    "loginNoticeDescription": "Shown under the login and register forms, e.g. where players get help (your Discord or staff). Leave empty for the default text.",
     "templateSection": "Sjablonen",
     "callsignTemplate": "Roepnaam Sjabloon",
     "callsignTemplateInfo": "Dit is het sjabloon voor eenheidsoproepen. U kunt de volgende variabelen gebruiken: {variables}",

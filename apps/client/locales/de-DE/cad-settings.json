@@ -1,5 +1,7 @@
 {
   "CadSettings": {
+    "loginNotice": "Login page notice",
+    "loginNoticeDescription": "Shown under the login and register forms, e.g. where players get help (your Discord or staff). Leave empty for the default text.",
     "generalSettings": "Allgemeine Einstellungen",
     "cadName": "CAD-Name",
     "cadNameDescription": "Der Name Ihrer SnailyCAD-Instanz. Dies kann der Name Ihrer Community oder Ihres Servers sein, etc.",

@@ -1,5 +1,7 @@
 {
   "CadSettings": {
+    "loginNotice": "Login page notice",
+    "loginNoticeDescription": "Shown under the login and register forms, e.g. where players get help (your Discord or staff). Leave empty for the default text.",
     "templateSection": "Шаблоны",
     "callsignTemplate": "Шаблон позывного",
     "callsignTemplateInfo": "Это шаблон позывного юнита. Можно использовать следующие переменные: {variables}",

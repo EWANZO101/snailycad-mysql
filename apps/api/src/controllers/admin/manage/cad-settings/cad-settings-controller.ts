@@ -163,6 +163,8 @@ export class CADSettingsController {
         miscCadSettings: {
           update: {
             cadOGDescription: data.cadOGDescription || null,
+            loginNotice:
+              data.loginNotice === undefined ? undefined : data.loginNotice?.trim() || null,
             roleplayEnabled: data.roleplayEnabled,
             authScreenBgImageId:
               data.authScreenBgImageId === null ? null : data.authScreenBgImageId || undefined,

@@ -15,6 +15,7 @@ export const CAD_SETTINGS_SCHEMA = z.object({
   authScreenBgImageId: z.any().or(z.string()).optional(),
   authScreenHeaderImageId: z.any().or(z.string()).optional(),
   cadOGDescription: z.string().nullish(),
+  loginNotice: z.string().max(1000).nullish(),
 });
 
 export const LIVE_MAP_SETTINGS = z.object({

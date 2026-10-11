@@ -123,6 +123,7 @@ export function GeneralSettingsTab() {
     registrationCode: cad.registrationCode ?? "",
     roleplayEnabled: cad.miscCadSettings?.roleplayEnabled ?? true,
     cadOGDescription: cad.miscCadSettings?.cadOGDescription ?? "",
+    loginNotice: cad.miscCadSettings?.loginNotice ?? "",
     timeZone: cad?.timeZone ?? null,
   };
 
@@ -156,6 +157,20 @@ export function GeneralSettingsTab() {
                 name="cadOGDescription"
                 value={values.cadOGDescription}
                 onChange={handleChange}
+              />
+            </SettingsFormField>
+
+            <SettingsFormField
+              label={t("loginNotice")}
+              description={t("loginNoticeDescription")}
+              errorMessage={errors.loginNotice}
+              optional
+            >
+              <Textarea
+                name="loginNotice"
+                value={values.loginNotice}
+                onChange={handleChange}
+                maxLength={1000}
               />
             </SettingsFormField>
 

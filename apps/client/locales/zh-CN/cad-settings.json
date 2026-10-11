@@ -1,5 +1,7 @@
 {
   "CadSettings": {
+    "loginNotice": "Login page notice",
+    "loginNoticeDescription": "Shown under the login and register forms, e.g. where players get help (your Discord or staff). Leave empty for the default text.",
     "generalSettings": "常规设置",
     "cadName": "CAD名称",
     "cadNameDescription": "您的 SnailyCAD 实例的名称。这可以是您社区或服务器的名称等。",

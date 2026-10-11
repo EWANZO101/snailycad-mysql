@@ -1,5 +1,7 @@
 {
   "CadSettings": {
+    "loginNotice": "Login page notice",
+    "loginNoticeDescription": "Shown under the login and register forms, e.g. where players get help (your Discord or staff). Leave empty for the default text.",
     "templateSection": "Templates",
     "callsignTemplate": "Callsign Template",
     "callsignTemplateInfo": "This is the template for unit callsigns. You can use the following variables: {variables}",

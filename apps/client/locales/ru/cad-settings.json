@@ -1,5 +1,7 @@
 {
   "CadSettings": {
+    "loginNotice": "Login page notice",
+    "loginNoticeDescription": "Shown under the login and register forms, e.g. where players get help (your Discord or staff). Leave empty for the default text.",
     "generalSettings": "Основные настройки",
     "cadName": "Название CAD",
     "cadNameDescription": "Название CAD, это может быть названием вашего сообщества, сервера и т.д. <span>Примечание:</span> может потребоваться перезагрузка страницы.",
