@@ -1,0 +1,25 @@
+{
+  "FivemFramework": {
+    "title": "FiveM framework",
+    "intro": "The snailycad-framework FiveM resource sends ESX, QBCore and Qbox characters, their vehicles and duty changes to the CAD. Characters become citizens, owned vehicles become registered vehicles, and units go on or off duty with the player.",
+    "lastSync": "Last sync from a game server",
+    "never": "No game server has synced yet.",
+    "server": "Server",
+    "framework": "Framework",
+    "version": "Resource version",
+    "characters": "Characters synced",
+    "linkedCharacters": "Linked to a CAD account",
+    "unlinkedCharacters": "Without a CAD account",
+    "vehicles": "Vehicles synced",
+    "enabled": "Enable the FiveM framework sync",
+    "enabledDescription": "When off, the CAD ignores everything game servers send.",
+    "syncCitizens": "Citizens",
+    "syncCitizensDescription": "Create and update citizens from game characters.",
+    "syncVehicles": "Vehicles",
+    "syncVehiclesDescription": "Register the characters' owned vehicles.",
+    "syncDuty": "Duty",
+    "syncDutyDescription": "Set units on and off duty when players go on or off duty in game.",
+    "setup": "Setup",
+    "setupInfo": "Turn on the CAD API token (API Token tab). Install the snailycad-framework resource on your FiveM server, then run this in the server console with your token. See the docs: Integrations, FiveM framework."
+  }
+}
