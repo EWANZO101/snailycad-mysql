@@ -49,10 +49,11 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=6144
 
       - name: Run turbo typecheck
-        run: pnpm turbo run typecheck --concurrency=2
+        run: pnpm turbo run typecheck --concurrency=1
         env:
-          # the API's types need more than the default heap
-          NODE_OPTIONS: --max-old-space-size=6144
+          # the API's and client's types need far more than the default heap; one at a time so
+          # each can use most of the runner's 16 GB
+          NODE_OPTIONS: --max-old-space-size=12288
 
       - name: Build apps
         run: pnpm turbo run build --filter="{apps/*}"
