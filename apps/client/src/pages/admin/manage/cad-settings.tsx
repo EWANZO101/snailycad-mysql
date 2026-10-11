@@ -111,6 +111,13 @@ const Tabs = {
         .OpsPhoneTab,
     { ssr: false },
   ),
+
+  FivemFrameworkTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/fivem-framework-tab"))
+        .FivemFrameworkTab,
+    { ssr: false },
+  ),
   BlacklistedWordsTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/general/blacklisted-words-tab"))
@@ -140,6 +147,8 @@ export default function CadSettings(props: Props) {
       <Tabs.ApiTokenTab />
       <Tabs.OpsPhoneTab />
       <Tabs.ErlcTab />
+
+      <Tabs.FivemFrameworkTab />
       <Tabs.DiscordRolesTab />
       <Tabs.DiscordWebhooksTab />
       <Tabs.RawWebhooksTab />
@@ -166,7 +175,16 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, res, req 
       session: user,
       messages: {
         ...(await getTranslations(
-          ["admin", "values", "common", "cad-settings", "radio", "ops-phone", "erlc"],
+          [
+            "admin",
+            "values",
+            "common",
+            "cad-settings",
+            "radio",
+            "ops-phone",
+            "erlc",
+            "fivem-framework",
+          ],
           user?.locale ?? locale,
         )),
       },

@@ -34,6 +34,7 @@ export enum SettingsTabs {
   APIToken = "API_TOKEN",
   OpsPhone = "OPS_PHONE",
   Erlc = "ERLC",
+  FivemFramework = "FIVEM_FRAMEWORK",
 
   /** permissions */
   DefaultPermissions = "DEFAULT_PERMISSIONS",
@@ -126,6 +127,8 @@ function CadSettingsSidebar() {
         SettingsTabs.APIToken,
         SettingsTabs.OpsPhone,
         SettingsTabs.Erlc,
+
+        SettingsTabs.FivemFramework,
       ],
     },
     {
