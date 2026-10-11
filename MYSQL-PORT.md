@@ -55,6 +55,17 @@ Tested with MySQL 8.0.46 and MariaDB 11.4.12.
    row count of every table afterwards. Requires `psql` on the machine.
 4. Start the CAD and sign in.
 
+### Only the values
+
+To give a new CAD the departments, statuses, call types, penal codes, vehicles and so on of another
+CAD, without its users or other data:
+
+```bash
+PG_URL=... DATABASE_URL=... node ../../scripts/mysql/migrate-data.mjs --values
+```
+
+The value tables must be empty in the target. Accounts and settings of the new CAD are kept.
+
 ## Changing the schema
 
 `prisma migrate diff` / `migrate dev` leave the JSON defaults out of the SQL they generate. After

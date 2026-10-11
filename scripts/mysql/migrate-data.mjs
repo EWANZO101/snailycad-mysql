@@ -9,7 +9,11 @@
  *
  * usage (from apps/api):
  *   PG_URL=postgresql://user:pass@host:5432/db DATABASE_URL=mysql://user:pass@host:3306/db \
- *     node ../../scripts/mysql/migrate-data.mjs [--dry-run]
+ *     node ../../scripts/mysql/migrate-data.mjs [--dry-run] [--only Table1,Table2] [--values]
+ *
+ * --only   copy only these tables (they must be empty in the target)
+ * --values copy only the CAD values (departments, statuses, penal codes, ...), e.g. into a new CAD
+ *          that already has its owner account
  */
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
@@ -22,6 +26,43 @@ const { PrismaClient } = require("@prisma/client");
 const PG_URL = process.env.PG_URL;
 const isDryRun = process.argv.includes("--dry-run");
 const BATCH_SIZE = 200;
+
+/** the value tables only reference each other, so they can be copied into a CAD that has users */
+const VALUE_TABLES = [
+  "Value",
+  "AddressValue",
+  "CallTypeValue",
+  "DepartmentValue",
+  "DepartmentValueLink",
+  "DivisionValue",
+  "DriversLicenseCategoryValue",
+  "EmergencyVehicleValue",
+  "EmployeeValue",
+  "QualificationValue",
+  "StatusValue",
+  "VehicleValue",
+  "WeaponValue",
+  "PenalCodeGroup",
+  "PenalCode",
+  "WarningApplicable",
+  "WarningNotApplicable",
+  "_DepartmentValueToEmergencyVehicleValue",
+  "_DepartmentValueToQualificationValue",
+  "_DivisionValueToEmergencyVehicleValue",
+  "_officerRankDepartments",
+  "_vehicleTrimLevels",
+];
+
+function getOnlyTables() {
+  if (process.argv.includes("--values")) return new Set(VALUE_TABLES);
+  const index = process.argv.indexOf("--only");
+  if (index < 0) return null;
+  return new Set(
+    String(process.argv[index + 1] ?? "")
+      .split(",")
+      .filter(Boolean),
+  );
+}
 
 if (!PG_URL || !process.env.DATABASE_URL?.startsWith("mysql://")) {
   console.error("Set PG_URL (source PostgreSQL) and DATABASE_URL (target mysql://...).");
@@ -80,12 +121,18 @@ async function main() {
   // PostgreSQL row_to_json prints timestamps in the session time zone: force UTC
   process.env.PGTZ = "UTC";
 
-  const tables = await prisma.$queryRaw`
+  const onlyTables = getOnlyTables();
+  const allTables = await prisma.$queryRaw`
     SELECT TABLE_NAME AS name FROM information_schema.TABLES
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'
       AND TABLE_NAME <> '_prisma_migrations'
     ORDER BY TABLE_NAME
   `;
+  const tables = onlyTables ? allTables.filter((t) => onlyTables.has(t.name)) : allTables;
+  if (onlyTables) {
+    const missing = [...onlyTables].filter((name) => !allTables.some((t) => t.name === name));
+    if (missing.length) throw new Error(`Unknown tables: ${missing.join(", ")}`);
+  }
 
   const columnsRows = await prisma.$queryRaw`
     SELECT c.TABLE_NAME AS tableName, c.COLUMN_NAME AS columnName, c.DATA_TYPE AS dataType,
