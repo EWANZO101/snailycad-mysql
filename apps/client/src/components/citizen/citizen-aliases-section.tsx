@@ -43,7 +43,7 @@ export function CitizenAliasesSection({ citizenId, initialAliases }: Props) {
       } as any,
     });
 
-    if (json?.id) {
+    if (json.id) {
       setAliases((prev) => [...prev, json]);
       setName("");
       setSurname("");
@@ -57,7 +57,7 @@ export function CitizenAliasesSection({ citizenId, initialAliases }: Props) {
       method: "DELETE",
     });
 
-    if (json === true) {
+    if (json) {
       setAliases((prev) => prev.filter((v) => v.id !== alias.id));
     }
   }

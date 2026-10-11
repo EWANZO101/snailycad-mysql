@@ -224,13 +224,14 @@ export class ImportPostgresController {
 
     const [version, users] = await Promise.all([
       psql(pgUrl, "SHOW server_version"),
+      // eslint-disable-next-line quotes
       psql(pgUrl, 'SELECT COUNT(*) FROM "User"'),
     ]);
 
     const duplicateUsernames = (
       await psql(
         pgUrl,
-        `SELECT string_agg(username, ' / ') FROM "User" GROUP BY lower(username) HAVING COUNT(*) > 1`,
+        "SELECT string_agg(username, ' / ') FROM \"User\" GROUP BY lower(username) HAVING COUNT(*) > 1",
       )
     )
       .split("\n")

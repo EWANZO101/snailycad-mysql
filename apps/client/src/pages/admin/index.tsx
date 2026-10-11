@@ -206,9 +206,7 @@ function StatCard({
 
           return (
             <li key={detail.label} className="flex items-center justify-between gap-2">
-              <span className="text-neutral-600 dark:text-gray-400 capitalize">
-                {detail.label}
-              </span>
+              <span className="text-neutral-600 dark:text-gray-400 capitalize">{detail.label}</span>
               <span className="font-medium tabular-nums">
                 {detail.value}
                 {percentage !== null ? (
@@ -399,7 +397,10 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ locale, re
       messages: {
         // English fallback for the recovery strings (only en/recovery.json exists for now)
         ...(await getTranslations(["recovery"], "en")),
-        ...(await getTranslations(["admin", "values", "common", "recovery"], user?.locale ?? locale)),
+        ...(await getTranslations(
+          ["admin", "values", "common", "recovery"],
+          user?.locale ?? locale,
+        )),
       },
     },
   };

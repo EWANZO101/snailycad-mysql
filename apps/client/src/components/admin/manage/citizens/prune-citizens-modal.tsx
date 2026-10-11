@@ -57,6 +57,7 @@ function makeFiltersBody(filters: PruneCitizensFilters) {
 
 function csvEscape(value: unknown) {
   const str = value === null || value === undefined ? "" : String(value);
+  // eslint-disable-next-line quotes
   return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 }
 
@@ -112,7 +113,7 @@ export function PruneCitizensModal({ onPruned }: Props) {
       data: makeFiltersBody(filters),
     });
 
-    if (json && Array.isArray(json.citizens)) {
+    if (Array.isArray(json.citizens)) {
       setPreview(json);
       setPreviewFilters(filters);
       setConfirm("");
@@ -126,7 +127,7 @@ export function PruneCitizensModal({ onPruned }: Props) {
       data: makeFiltersBody(filters),
     });
 
-    if (!json || !Array.isArray(json.citizens)) return;
+    if (!Array.isArray(json.citizens)) return;
 
     const header = [
       "id",
@@ -179,7 +180,7 @@ export function PruneCitizensModal({ onPruned }: Props) {
       data: { filters: makeFiltersBody(previewFilters), confirm: confirm.trim() },
     });
 
-    if (typeof json?.count === "number") {
+    if (typeof json.count === "number") {
       toastMessage({
         icon: "success",
         title: common("success"),
@@ -226,10 +227,7 @@ export function PruneCitizensModal({ onPruned }: Props) {
           </span>
         </TextField>
         <div className="flex flex-col gap-3 mt-3">
-          <SwitchField
-            isSelected={filters.noUser}
-            onChange={(value) => setFilter("noUser", value)}
-          >
+          <SwitchField isSelected={filters.noUser} onChange={(value) => setFilter("noUser", value)}>
             {t("noUser")}
           </SwitchField>
           <SwitchField

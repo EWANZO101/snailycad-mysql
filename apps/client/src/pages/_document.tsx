@@ -21,7 +21,7 @@ class CustomDocument extends Document {
         <Head>
           <meta charSet="UTF-8" />
           <link rel="shortcut icon" type="image/png" href="/favicon.png" />
-          {/* eslint-disable-next-line react/no-danger */}
+          {}
           <script dangerouslySetInnerHTML={{ __html: UI_THEME_INIT_SCRIPT }} />
         </Head>
 

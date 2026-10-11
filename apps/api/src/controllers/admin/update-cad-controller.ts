@@ -1,6 +1,6 @@
 import { execFile, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, resolve as resolvePath } from "node:path";
 import { promisify } from "node:util";
 import { Controller, UseBeforeEach } from "@tsed/common";
 import { Context } from "@tsed/platform-params";
@@ -31,7 +31,7 @@ function getUpdateMode(): UpdateMode {
 }
 
 function getProjectRoot() {
-  return resolve(findApiRoot(), "..", "..");
+  return resolvePath(findApiRoot(), "..", "..");
 }
 
 async function git(args: string[], timeout = 15_000) {
@@ -157,16 +157,16 @@ export class UpdateCadController {
         ]
       : ["/bin/bash", script];
 
-    await new Promise<void>((resolvePromise, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const child = spawn(command, args, { env, detached: true, stdio: "ignore" });
       child.on("error", () => reject(new BadRequest("unableToStartUpdate")));
       if (hasSystemdRun) {
         child.on("close", (code) =>
-          code === 0 ? resolvePromise() : reject(new BadRequest("unableToStartUpdate")),
+          code === 0 ? resolve() : reject(new BadRequest("unableToStartUpdate")),
         );
       } else {
         child.unref();
-        resolvePromise();
+        resolve();
       }
     });
 

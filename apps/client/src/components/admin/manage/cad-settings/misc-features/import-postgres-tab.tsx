@@ -136,7 +136,7 @@ export function ImportPostgresTab() {
     });
 
     if (error) setError(translateError(error));
-    else if (json && "canImport" in json) setCheck(json);
+    else if ("canImport" in json) setCheck(json);
   }
 
   async function handleStart() {
@@ -156,7 +156,7 @@ export function ImportPostgresTab() {
 
     if (error) {
       setError(translateError(error));
-    } else if (json?.started) {
+    } else if (json.started) {
       setConfirmation("");
       setJob({ state: "running", mode, lines: [], error: null, needsRestart: false });
     }
@@ -192,7 +192,7 @@ export function ImportPostgresTab() {
             <SelectField
               label={t("connectWith")}
               selectedKey={sourceType}
-              onSelectionChange={(value) => setSourceType((value as SourceType) ?? "env")}
+              onSelectionChange={(value) => setSourceType((value ?? "env") as SourceType)}
               options={[
                 { value: "env", label: t("sourceEnv") },
                 { value: "fields", label: t("sourceFields") },
@@ -253,7 +253,7 @@ export function ImportPostgresTab() {
             <SelectField
               label={t("whatToImport")}
               selectedKey={mode}
-              onSelectionChange={(value) => setMode((value as Mode) ?? "values")}
+              onSelectionChange={(value) => setMode((value ?? "values") as Mode)}
               options={[
                 { value: "values", label: t("modeValues") },
                 { value: "replace", label: t("modeReplace") },

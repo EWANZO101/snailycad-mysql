@@ -72,7 +72,7 @@ export class UnitMessagesController {
 
     const conversations = new Map<
       string,
-      { lastMessage: (typeof messages)[number]; unreadCount: number }
+      { lastMessage: NonNullable<typeof messages>[number]; unreadCount: number }
     >();
 
     for (const message of messages) {

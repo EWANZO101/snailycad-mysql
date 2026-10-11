@@ -14,7 +14,10 @@ export const EMERGENCY_NUMBER_PRESETS = [
 
 /** digits, letters, spaces and dashes only, so it's safe to show anywhere */
 export function sanitizeEmergencyNumber(value: string) {
-  return value.replace(/[^\p{L}\p{N} -]/gu, "").trim().slice(0, 12);
+  return value
+    .replace(/[^\p{L}\p{N} -]/gu, "")
+    .trim()
+    .slice(0, 12);
 }
 
 export function getSavedEmergencyNumber(): string {

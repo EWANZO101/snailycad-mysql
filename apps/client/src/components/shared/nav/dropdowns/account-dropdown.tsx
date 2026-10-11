@@ -91,7 +91,7 @@ export function AccountDropdown(props: AccountDropdownProps) {
           ) : null}
 
           <DropdownMenuItem className="flex items-center gap-2" onClick={() => openWhatsNew()}>
-            What's new (Oct 2026)
+            What&apos;s new (Oct 2026)
           </DropdownMenuItem>
           <DropdownMenuItem className="flex items-center gap-2" onClick={() => openThemePicker()}>
             Theme & emergency number

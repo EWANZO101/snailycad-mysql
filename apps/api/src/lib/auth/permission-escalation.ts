@@ -3,10 +3,10 @@ import { Forbidden } from "@tsed/exceptions";
 
 export const CANNOT_MANAGE_PERMISSION_ERROR = "cannotManagePermissionYouDoNotHave";
 
-type PermissionsHolder = {
-  permissions: string[];
+interface PermissionsHolder {
+  permissions?: string[] | null;
   roles?: { permissions: string[] }[] | null;
-};
+}
 
 /**
  * get all the effective permissions of a user (directly assigned + via custom roles).

@@ -83,7 +83,7 @@ export function ClaimCitizenModal() {
     });
     setSubmittingId(null);
 
-    if (json?.id) {
+    if (json.id) {
       setReason("");
       setClaims((prev) => [json, ...prev]);
       setResults((prev) =>
@@ -214,9 +214,7 @@ export function ClaimCitizenModal() {
       )}
 
       <footer className="flex justify-end mt-5">
-        <Button onPress={() => modalState.closeModal(ModalIds.ClaimCitizen)}>
-          {common("ok")}
-        </Button>
+        <Button onPress={() => modalState.closeModal(ModalIds.ClaimCitizen)}>{common("ok")}</Button>
       </footer>
     </Modal>
   );

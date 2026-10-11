@@ -51,8 +51,8 @@ export function builtInSound(name: BuiltInToneName) {
 }
 
 function playBuiltIn(name: string) {
+  if (!(name in BUILT_IN_TONES)) return;
   const steps = BUILT_IN_TONES[name as BuiltInToneName];
-  if (!steps) return;
 
   const AudioContextClass =
     window.AudioContext ??

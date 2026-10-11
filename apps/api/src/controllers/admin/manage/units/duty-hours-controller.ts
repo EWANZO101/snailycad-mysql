@@ -4,7 +4,7 @@ import { Controller } from "@tsed/di";
 import { NotFound } from "@tsed/exceptions";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { ContentType, Description, Get, Put } from "@tsed/schema";
-import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
+import { type AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
@@ -296,7 +296,7 @@ export class AdminDutyHoursController {
     }
     const weekIndexByTime = new Map(weeks.map((week, idx) => [week.weekStart.getTime(), idx]));
 
-    type UnitEntry = {
+    interface UnitEntry {
       unitId: string;
       type: DutyUnitType;
       unit: any;
@@ -306,9 +306,9 @@ export class AdminDutyHoursController {
       flaggedSessions: number;
       firstSeen: Date;
       lastSeen: Date;
-    };
+    }
 
-    type UserEntry = {
+    interface UserEntry {
       /** `null` for units that are not linked to a user (e.g. temporary units) */
       userId: string | null;
       username: string | null;
@@ -321,7 +321,7 @@ export class AdminDutyHoursController {
       /** seconds per week, same order as `weeks` */
       weeks: number[];
       units: UnitEntry[];
-    };
+    }
 
     const unitEntries = new Map<string, UnitEntry>();
     for (const row of statsRows) {

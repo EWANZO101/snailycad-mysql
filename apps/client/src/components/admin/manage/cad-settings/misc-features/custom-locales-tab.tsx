@@ -73,7 +73,7 @@ export function CustomLocalesTab(_props: Props) {
         path: "/admin/manage/locales",
         noToast: true,
       });
-      if (error || !json) throw new Error(String(error ?? "unable to load locales"));
+      if (error) throw new Error(String(error));
       return json;
     },
   });
@@ -94,7 +94,7 @@ export function CustomLocalesTab(_props: Props) {
       data: { code: trimmedCode, copyFrom },
     });
 
-    if (json?.locales) {
+    if (Array.isArray(json.locales)) {
       setData(json);
       setCode("");
       toastMessage({
@@ -138,7 +138,7 @@ export function CustomLocalesTab(_props: Props) {
       method: "POST",
     });
 
-    if (json?.restarting) {
+    if (json.restarting) {
       setIsRestarting(true);
     }
   }

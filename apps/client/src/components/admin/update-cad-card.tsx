@@ -44,7 +44,7 @@ export function UpdateCadCard() {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       const { json } = await execute<UpdateInfo>({ path: "/admin/update", noToast: true });
-      return json && "mode" in json ? json : null;
+      return "mode" in json ? json : null;
     },
   });
 
@@ -69,7 +69,7 @@ export function UpdateCadCard() {
       method: "POST",
     });
 
-    if (json?.started) {
+    if (json.started) {
       window.location.href = `/__snaily_update?since=${json.startedAt}`;
     }
   }
@@ -166,10 +166,10 @@ export function UpdateCadCard() {
               {data.isDemoAccount
                 ? "Updates are disabled for the demo account."
                 : !data.isOwner
-                ? "Only the CAD owner can run updates."
-                : data.isInContainer
-                  ? "This CAD runs in a container. Run the commands below on the Docker host."
-                  : "One-click updates aren't available on this server. Use the commands below."}
+                  ? "Only the CAD owner can run updates."
+                  : data.isInContainer
+                    ? "This CAD runs in a container. Run the commands below on the Docker host."
+                    : "One-click updates aren't available on this server. Use the commands below."}
             </p>
           )
         ) : null}
@@ -178,8 +178,15 @@ export function UpdateCadCard() {
       {data && !data.canUpdate && data.isOwner && !data.isDemoAccount ? (
         <div className="mt-4 rounded-lg bg-gray-100 dark:bg-primary border border-gray-200 dark:border-quaternary">
           <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-quaternary">
-            <span className="text-xs text-neutral-500 dark:text-gray-400">Run in the CAD folder</span>
-            <Button size="xs" variant="transparent" onPress={handleCopy} className="flex items-center gap-1">
+            <span className="text-xs text-neutral-500 dark:text-gray-400">
+              Run in the CAD folder
+            </span>
+            <Button
+              size="xs"
+              variant="transparent"
+              onPress={handleCopy}
+              className="flex items-center gap-1"
+            >
               <Clipboard aria-hidden className="w-3 h-3" />
               {copied ? "Copied" : "Copy"}
             </Button>

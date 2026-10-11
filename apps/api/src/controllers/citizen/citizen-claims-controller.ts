@@ -3,7 +3,13 @@ import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-params";
 import { ContentType, Delete, Description, Get, Post } from "@tsed/schema";
 import { BadRequest, NotFound } from "@tsed/exceptions";
-import { type User, type cad, type MiscCadSettings, Prisma, WhitelistStatus } from "@prisma/client";
+import {
+  type User,
+  type cad,
+  type MiscCadSettings,
+  type Prisma,
+  WhitelistStatus,
+} from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";

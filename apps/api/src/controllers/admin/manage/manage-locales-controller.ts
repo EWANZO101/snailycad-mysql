@@ -9,12 +9,12 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, resolve as resolvePath } from "node:path";
 import { Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams, Context, PathParams } from "@tsed/platform-params";
 import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
 import { BadRequest, NotFound } from "@tsed/exceptions";
-import type { User } from "@prisma/client";
+import { User } from "@prisma/client";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { findApiRoot } from "lib/recovery/recovery-token";
@@ -41,8 +41,8 @@ const LOCALE_CODE_REGEX = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/;
 const SERVICE_NAME = process.env.SNAILYCAD_SERVICE_NAME || "start-snaily-cadv4";
 
 function getPaths() {
-  const clientRoot = resolve(findApiRoot(), "..", "client");
-  const projectRoot = resolve(findApiRoot(), "..", "..");
+  const clientRoot = resolvePath(findApiRoot(), "..", "client");
+  const projectRoot = resolvePath(findApiRoot(), "..", "..");
   return {
     localesDir: join(clientRoot, "locales"),
     configPath: join(clientRoot, "i18n.config.mjs"),
@@ -127,7 +127,7 @@ function listJsonFiles(dir: string) {
 function markPending() {
   const { pendingPath } = getPaths();
   try {
-    mkdirSync(resolve(pendingPath, ".."), { recursive: true });
+    mkdirSync(resolvePath(pendingPath, ".."), { recursive: true });
     writeFileSync(pendingPath, new Date().toISOString(), "utf8");
   } catch {
     // not critical
@@ -307,14 +307,14 @@ export class ManageLocalesController {
       throw new BadRequest("rebuildManually");
     }
 
-    await new Promise<void>((resolvePromise, reject) => {
+    await new Promise<void>((resolve, reject) => {
       // --no-block: systemd restarts the service (and this process) after we've responded
       const child = spawn("systemctl", ["restart", "--no-block", SERVICE_NAME], {
         stdio: "ignore",
       });
       child.on("error", () => reject(new BadRequest("unableToRestartService")));
       child.on("close", (code) =>
-        code === 0 ? resolvePromise() : reject(new BadRequest("unableToRestartService")),
+        code === 0 ? resolve() : reject(new BadRequest("unableToRestartService")),
       );
     });
 

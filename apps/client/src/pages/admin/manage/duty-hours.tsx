@@ -95,7 +95,7 @@ export default function DutyHoursPage() {
       method: "GET",
     });
 
-    if (json && Array.isArray(json.users)) {
+    if (Array.isArray(json.users)) {
       setReport(json);
     }
   }, [period, parsedMaxHours]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -115,7 +115,7 @@ export default function DutyHoursPage() {
 
   function getUserName(user: DutyHoursReport["users"][number]) {
     if (user.username) return user.username;
-    const firstUnit = user.units[0];
+    const [firstUnit] = user.units;
     return firstUnit ? `${getUnitLabel(firstUnit.unit)} (${t("noUser")})` : t("noUser");
   }
 

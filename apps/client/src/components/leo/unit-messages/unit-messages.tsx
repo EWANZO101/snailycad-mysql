@@ -74,7 +74,7 @@ export function UnitMessagesButton({ activeUnit }: { activeUnit: ActiveUnit }) {
         path: `/unit-messages/${unitId}`,
         noToast: true,
       });
-      return json?.conversations ? json : { totalUnread: 0, conversations: [] };
+      return Array.isArray(json.conversations) ? json : { totalUnread: 0, conversations: [] };
     },
   });
 
@@ -154,7 +154,7 @@ function UnitMessagesModal() {
     queryKey: ["unit-messages", unitId],
     queryFn: async () => {
       const { json } = await execute<ConversationsData>({ path: `/unit-messages/${unitId}` });
-      return json?.conversations ? json : { totalUnread: 0, conversations: [] };
+      return Array.isArray(json.conversations) ? json : { totalUnread: 0, conversations: [] };
     },
   });
 
@@ -258,7 +258,7 @@ function Thread({ unitId, otherUnitId }: { unitId: string; otherUnitId: string }
       });
       // opening the thread marks its messages read
       queryClient.invalidateQueries({ queryKey: ["unit-messages", unitId] });
-      return json?.messages ? json : null;
+      return Array.isArray(json.messages) ? json : null;
     },
   });
 
@@ -284,7 +284,7 @@ function Thread({ unitId, otherUnitId }: { unitId: string; otherUnitId: string }
       data: { message: trimmed },
     });
 
-    if (json?.id) {
+    if (json.id) {
       setMessage("");
       refetch();
       queryClient.invalidateQueries({ queryKey: ["unit-messages", unitId] });

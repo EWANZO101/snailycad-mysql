@@ -224,10 +224,7 @@ export function CADFeaturesTab() {
 
   const initialFeatures = INITIAL_VALUES.features;
 
-  function isFeatureEnabled(
-    features: typeof INITIAL_VALUES.features,
-    feature: Feature,
-  ): boolean {
+  function isFeatureEnabled(features: typeof INITIAL_VALUES.features, feature: Feature): boolean {
     return (
       features[feature]?.isEnabled ??
       // @ts-expect-error - this is fine

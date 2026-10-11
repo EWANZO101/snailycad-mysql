@@ -31,11 +31,12 @@ export const ExtraWebhookType = {
   TAXI_CALL_CREATED: "TAXI_CALL_CREATED",
 } as const satisfies Record<string, DiscordWebhookType>;
 
-type Translator =Awaited<ReturnType<typeof getTranslator>>;
+type Translator = Awaited<ReturnType<typeof getTranslator>>;
 
 const MAX_FIELD_LENGTH = 1024;
 const MAX_DESCRIPTION_LENGTH = 2048;
 
+/* eslint-disable unicorn/number-literal-case */
 export const WEBHOOK_COLORS = {
   created: 0x22c55e,
   updated: 0x3b82f6,
@@ -43,6 +44,7 @@ export const WEBHOOK_COLORS = {
   neutral: 0x6b7280,
   warning: 0xf59e0b,
 } as const;
+/* eslint-enable unicorn/number-literal-case */
 
 interface ExtraWebhookField {
   name: string;

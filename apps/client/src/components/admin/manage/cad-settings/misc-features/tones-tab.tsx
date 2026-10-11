@@ -85,7 +85,7 @@ export function TonesTab() {
       },
     });
 
-    if (json?.id) {
+    if (json.id) {
       handleCancel();
       await queryClient.invalidateQueries({ queryKey: ["tone-presets"] });
     }

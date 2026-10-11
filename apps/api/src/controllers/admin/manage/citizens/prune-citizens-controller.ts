@@ -3,7 +3,7 @@ import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { BodyParams, Context } from "@tsed/platform-params";
 import { ContentType, Description, Post } from "@tsed/schema";
 import { BadRequest } from "@tsed/exceptions";
-import { Prisma } from "@prisma/client";
+import { type Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";

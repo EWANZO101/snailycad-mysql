@@ -17,7 +17,7 @@ export function DemoModeBanner() {
 
     (async () => {
       const { json } = await execute<DemoStatus>({ path: "/demo", method: "GET", noToast: true });
-      if (json && typeof json.enabled === "boolean") {
+      if (typeof json.enabled === "boolean") {
         cachedStatus = json;
         setStatus(json);
       }
@@ -30,7 +30,7 @@ export function DemoModeBanner() {
 
     const timeout = setTimeout(async () => {
       const { json } = await execute<DemoStatus>({ path: "/demo", method: "GET", noToast: true });
-      if (json) {
+      if (typeof json.enabled === "boolean") {
         cachedStatus = json;
         setStatus(json);
       }
@@ -43,8 +43,8 @@ export function DemoModeBanner() {
   return (
     <div className="my-2 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-400/60 bg-amber-100/80 px-4 py-2 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
       <span>
-        <strong>Demo CAD:</strong> everything you change here is reset every{" "}
-        {status.resetMinutes} minutes.
+        <strong>Demo CAD:</strong> everything you change here is reset every {status.resetMinutes}{" "}
+        minutes.
       </span>
       {countdown ? (
         <span>

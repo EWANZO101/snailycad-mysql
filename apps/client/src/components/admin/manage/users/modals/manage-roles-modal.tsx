@@ -28,9 +28,7 @@ export function ManageRolesModal({ roles, user, onUpdate }: Props) {
    * (owners are unrestricted). this is also enforced by the API.
    */
   function canManageRole(role: GetCustomRolesData["customRoles"][number]) {
-    return role.permissions.every((permission) =>
-      hasPermissions([permission as Permissions]),
-    );
+    return role.permissions.every((permission) => hasPermissions([permission as Permissions]));
   }
 
   async function onSubmit(data: typeof INITIAL_VALUES) {

@@ -41,8 +41,7 @@ export function ManagePermissionsModal({ user, onUpdate, isReadOnly }: Props) {
     canManagePermission,
   });
   const hasUnmanageablePermissions =
-    !isReadOnly &&
-    groups.some((group) => group.permissions.some((p) => !canManagePermission(p)));
+    !isReadOnly && groups.some((group) => group.permissions.some((p) => !canManagePermission(p)));
 
   async function onSubmit(data: typeof INITIAL_VALUES) {
     if (isReadOnly) return;

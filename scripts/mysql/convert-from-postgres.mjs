@@ -24,12 +24,12 @@
  */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline/promises";
 import { createRequire } from "node:module";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const ROOT = resolvePath(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const API_DIR = join(ROOT, "apps", "api");
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
@@ -38,7 +38,7 @@ const option = (name) => {
   return index >= 0 ? args[index + 1] : undefined;
 };
 
-const color = (code) => (text) => (process.stdout.isTTY ? `\x1b[${code}m${text}\x1b[0m` : text);
+const color = (code) => (text) => (process.stdout.isTTY ? `\x1B[${code}m${text}\x1B[0m` : text);
 const bold = color("1");
 const green = color("32");
 const yellow = color("33");
@@ -117,7 +117,7 @@ async function main() {
   let pgUrl = option("pg-url");
   const fromEnv = option("from-env");
   if (fromEnv) {
-    const path = resolve(fromEnv);
+    const path = resolvePath(fromEnv);
     if (!existsSync(path)) fail(`${path} does not exist.`);
     oldEnv = readEnvFile(path);
     pgUrl ??= oldEnv.DATABASE_URL;
@@ -144,6 +144,7 @@ async function main() {
   }
   try {
     const version = psql(pgUrl, "SHOW server_version");
+    // eslint-disable-next-line quotes
     const users = psql(pgUrl, 'SELECT COUNT(*) FROM "User"');
     ok(`PostgreSQL ${version} reachable, ${users} user(s)`);
   } catch (error) {
@@ -196,7 +197,7 @@ async function main() {
   if (!valueOnly) {
     const duplicates = psql(
       pgUrl,
-      `SELECT string_agg(username, ' / ') FROM "User" GROUP BY lower(username) HAVING COUNT(*) > 1`,
+      "SELECT string_agg(username, ' / ') FROM \"User\" GROUP BY lower(username) HAVING COUNT(*) > 1",
     );
     if (duplicates) {
       problems.push(
@@ -215,8 +216,9 @@ async function main() {
     cwd: API_DIR,
     env: { ...process.env, DATABASE_URL: mysqlUrl },
   });
-  if (migrate.status !== 0)
+  if (migrate.status !== 0) {
     fail(`prisma migrate deploy failed:\n${migrate.stdout}${migrate.stderr}`);
+  }
   ok("Tables are up to date");
 
   // ---- 5. preview
@@ -230,8 +232,9 @@ async function main() {
     cwd: API_DIR,
     env: childEnv,
   });
-  if (preview.status !== 0)
+  if (preview.status !== 0) {
     fail(`Reading the old CAD failed:\n${preview.stderr || preview.stdout}`);
+  }
   const summary = preview.stdout.split("\n").find((line) => line.startsWith("Read ")) ?? "";
   ok(summary.replace(/\.$/, "") + (valueOnly ? " (values only)" : ""));
 
@@ -244,7 +247,7 @@ async function main() {
   // ---- 6. copy
   step(6, "Copying (one transaction: all or nothing)");
   await prisma.$disconnect();
-  const exitCode = await new Promise((resolvePromise) => {
+  const exitCode = await new Promise((resolve) => {
     const child = spawn(process.execPath, copyArgs, {
       cwd: API_DIR,
       env: childEnv,
@@ -259,11 +262,12 @@ async function main() {
     child.stderr.on("data", (chunk) => (stderr += chunk));
     child.on("close", (code) => {
       if (code !== 0) console.error(`  ${red(stderr.trim() || "copy failed")}`);
-      resolvePromise(code);
+      resolve(code);
     });
   });
-  if (exitCode !== 0)
+  if (exitCode !== 0) {
     fail("The copy failed and was rolled back. The MySQL/MariaDB database is unchanged.");
+  }
 
   // ---- 7. encryption token
   step(7, "Encryption token");

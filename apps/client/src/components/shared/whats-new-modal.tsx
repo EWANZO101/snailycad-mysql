@@ -123,10 +123,7 @@ const UPDATES: UpdateSection[] = [
   },
   {
     title: "Citizens",
-    items: [
-      "Citizen aliases.",
-      "Optional modern citizen theme.",
-    ],
+    items: ["Citizen aliases.", "Optional modern citizen theme."],
   },
   {
     title: "Sign-in & performance",
@@ -209,8 +206,8 @@ export function WhatsNewModal() {
       <div className="flex items-start gap-3 mb-4 rounded-lg p-3 bg-blue-50 text-blue-900 dark:bg-blue-500/10 dark:text-blue-100">
         <Stars aria-hidden className="w-5 h-5 mt-0.5 shrink-0" />
         <p className="text-sm">
-          Here's everything added to this CAD in October 2026, plus what's planned next. You can
-          open this list again at any time from your account menu.
+          Here&apos;s everything added to this CAD in October 2026, plus what&apos;s planned next.
+          You can open this list again at any time from your account menu.
         </p>
       </div>
 

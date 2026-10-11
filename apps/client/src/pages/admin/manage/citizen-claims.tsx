@@ -63,7 +63,7 @@ export default function ManageCitizenClaims({ data: initialData }: Props) {
       params: { status: newStatus, includeAll: true },
     });
 
-    if (json && Array.isArray(json.claims)) {
+    if (Array.isArray(json.claims)) {
       setData(json);
     }
   }
@@ -82,7 +82,7 @@ export default function ManageCitizenClaims({ data: initialData }: Props) {
     });
     setReviewingId(null);
 
-    if (json?.id) {
+    if (json.id) {
       // accepting a claim also declines other pending claims for the same citizen
       await fetchClaims(status);
     }
@@ -119,10 +119,7 @@ export default function ManageCitizenClaims({ data: initialData }: Props) {
           data={data.claims.map((claim) => ({
             id: claim.id,
             citizen: hasManageCitizensPermissions ? (
-              <Link
-                href={`/admin/manage/citizens/${claim.citizen.id}`}
-                className="underline"
-              >
+              <Link href={`/admin/manage/citizens/${claim.citizen.id}`} className="underline">
                 {claim.citizen.name} {claim.citizen.surname}
               </Link>
             ) : (

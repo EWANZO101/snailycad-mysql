@@ -42,7 +42,8 @@ if (!STATUS_PATH || !LOG_PATH || !OUT_PATH) {
 
 // --- log filtering ------------------------------------------------------------
 
-const ANSI = /\x1b\[[0-9;]*[A-Za-z]/g;
+// eslint-disable-next-line no-control-regex
+const ANSI = /\x1B\[[0-9;]*[A-Za-z]/g;
 const TURBO_PREFIX = /^(?:@snailycad\/[\w-]+:[\w-]+: )+/;
 const PACKAGE = /^@snailycad\/([\w-]+):[\w-]+:/;
 const CONCURRENTLY_PREFIX = /^\[\d\] /;
@@ -72,7 +73,8 @@ const ALLOW = [
   [/(Failed to compile|Type error)/, "Error: $1 (see server logs)"],
 ];
 
-const SECRET = /((?:token|secret|password|passwd|key|auth|cookie|session|dsn)[\w-]*\s*[=:]\s*)\S+/gi;
+const SECRET =
+  /((?:token|secret|password|passwd|key|auth|cookie|session|dsn)[\w-]*\s*[=:]\s*)\S+/gi;
 const URL_CREDENTIALS = /(\w+:\/\/)[^/\s:@]+:[^/\s@]+@/g;
 
 function sanitize(text) {
@@ -205,13 +207,20 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === "/__snaily_log.json") {
     res.writeHead(200, { ...noStore, "Content-Type": "application/json" });
+    // eslint-disable-next-line quotes
     res.end(readFileOr(OUT_PATH, '{"lines":[]}'));
     return;
   }
 
   const status = url.pathname === "/__snaily_update" ? 200 : 503;
-  res.writeHead(status, { ...noStore, "Content-Type": "text/html; charset=utf-8", "Retry-After": "30" });
-  res.end(readFileOr(PAGE_PATH, "<h1>The CAD is updating</h1><p>Please try again in a few minutes.</p>"));
+  res.writeHead(status, {
+    ...noStore,
+    "Content-Type": "text/html; charset=utf-8",
+    "Retry-After": "30",
+  });
+  res.end(
+    readFileOr(PAGE_PATH, "<h1>The CAD is updating</h1><p>Please try again in a few minutes.</p>"),
+  );
 });
 
 let listening = false;
@@ -227,7 +236,7 @@ function releasePort() {
   if (!listening) return;
   listening = false;
   server.close();
-  server.closeAllConnections?.();
+  server.closeAllConnections();
 }
 
 process.on("SIGUSR1", releasePort);

@@ -58,6 +58,11 @@ export class AdminRecoveryTokenController {
     const { tokenPath } = getRecoveryTokenPaths();
     console.info(`[recovery] Recovery token rotated by user ${user.id}.`);
 
-    return { token, path: tokenPath, tokenAcknowledged: false, createdAt: new Date().toISOString() };
+    return {
+      token,
+      path: tokenPath,
+      tokenAcknowledged: false,
+      createdAt: new Date().toISOString(),
+    };
   }
 }

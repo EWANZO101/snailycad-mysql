@@ -58,8 +58,8 @@ export function DemoDetector({ demo }: { demo?: DemoStatus | null }) {
     return (
       <Alert className="max-w-md w-full mb-5" type="warning" title="Try the SnailyCAD demo">
         <p>
-          Log in with the demo account below. It has full admin access, so feel free to explore
-          and change anything.
+          Log in with the demo account below. It has full admin access, so feel free to explore and
+          change anything.
         </p>
 
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 mt-3 font-mono text-sm">

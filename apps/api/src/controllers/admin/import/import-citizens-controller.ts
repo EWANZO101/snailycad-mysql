@@ -1,6 +1,6 @@
 import { Controller } from "@tsed/di";
 import { Get, Post, Description, ContentType } from "@tsed/schema";
-import { Prisma } from "@prisma/client";
+import { type Prisma } from "@prisma/client";
 import { prisma } from "lib/data/prisma";
 import {
   QueryParams,

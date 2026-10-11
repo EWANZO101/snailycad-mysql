@@ -24,7 +24,7 @@ import process from "node:process";
 import type * as APITypes from "@snailycad/types/api";
 import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 import { defaultPermissions } from "@snailycad/permissions";
-import type { User } from "@snailycad/types";
+import { User } from "@snailycad/types";
 import {
   assertActorHoldsPermissions,
   assertCanChangePermissions,

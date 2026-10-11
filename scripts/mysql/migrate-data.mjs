@@ -175,6 +175,7 @@ async function main() {
   for (const { name } of tables) {
     const columns = columnsByTable.get(name);
     const exists = await psqlValue(
+      // eslint-disable-next-line quotes
       `SELECT to_regclass('public."${name.replace(/"/g, '""')}"') IS NOT NULL`,
     );
     if (exists !== "t") {
@@ -184,8 +185,10 @@ async function main() {
       continue;
     }
 
+    // eslint-disable-next-line quotes
     const select = columns.map((c) => `t."${c.name.replace(/"/g, '""')}"`).join(", ");
     const { lines, done } = psqlLines(
+      // eslint-disable-next-line quotes
       `SELECT row_to_json(r) FROM (SELECT ${select} FROM "${name.replace(/"/g, '""')}" t) r`,
     );
     const rows = [];
@@ -263,8 +266,8 @@ async function main() {
 }
 
 main()
+  .finally(() => prisma.$disconnect())
   .catch((error) => {
     console.error(error.message ?? error);
     process.exitCode = 1;
-  })
-  .finally(() => prisma.$disconnect());
+  });

@@ -54,7 +54,7 @@ export function RecoveryTokenCard() {
       method: "POST",
     });
 
-    if (json === true) {
+    if (json) {
       setData((prev) => (prev ? { ...prev, token: null, tokenAcknowledged: true } : prev));
       setCopied(false);
     }
@@ -66,7 +66,7 @@ export function RecoveryTokenCard() {
       method: "POST",
     });
 
-    if (json && typeof json === "object" && json.token) {
+    if (json.token) {
       setData(json);
       setIsConfirmingRotate(false);
       setCopied(false);

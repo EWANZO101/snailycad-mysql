@@ -146,8 +146,9 @@ export function getPeriod(
       if (to.getTime() <= from.getTime()) return null;
       return { from, to };
     }
-    default:
+    default: {
       return null;
+    }
   }
 }
 
@@ -164,6 +165,7 @@ export function formatDuration(seconds: number) {
 
 function escapeCsv(value: unknown) {
   const str = value === null || value === undefined ? "" : String(value);
+  // eslint-disable-next-line quotes
   return /[",\r\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
 }
 

@@ -68,19 +68,25 @@ function getUnitDepartmentIds(unit: ActiveUnit) {
 
 function isToneForUnit(event: PlayToneEvent, unit: ActiveUnit, type: ActiveToneType) {
   switch (event.target) {
-    case "ALL":
+    case "ALL": {
       return true;
-    case "LEO":
+    }
+    case "LEO": {
       return type === ActiveToneType.LEO;
-    case "EMS_FD":
+    }
+    case "EMS_FD": {
       return type === ActiveToneType.EMS_FD;
-    case "DEPARTMENT":
+    }
+    case "DEPARTMENT": {
       return getUnitDepartmentIds(unit).includes(event.departmentId);
+    }
     case "UNIT":
-    case "CALL":
+    case "CALL": {
       return event.unitIds?.includes(unit.id) ?? false;
-    default:
+    }
+    default: {
       return false;
+    }
   }
 }
 
@@ -182,7 +188,7 @@ export function PlayToneSection() {
       data: { target, targetId: needsTargetId ? targetId : null, description: description || null },
     });
 
-    if (json?.played) {
+    if (json.played) {
       setDescription("");
       toastMessage({
         icon: "success",
@@ -229,7 +235,7 @@ export function PlayToneSection() {
           label={t("playFor")}
           selectedKey={target}
           onSelectionChange={(value) => {
-            setTarget((value as ToneTarget) ?? "ALL");
+            setTarget((value ?? "ALL") as ToneTarget);
             setTargetId(null);
           }}
           options={(["ALL", "LEO", "EMS_FD", "DEPARTMENT", "UNIT", "CALL"] as const).map(

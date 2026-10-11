@@ -47,11 +47,13 @@ export function DrugTestsTab({ citizenId }: Props) {
       path: `/leo/drug-tests/${citizenId}`,
       method: "GET",
       noToast: true,
-    }).then(({ json }) => {
-      if (isMounted && Array.isArray(json)) {
-        setDrugTests(json);
-      }
-    });
+    })
+      .then(({ json }) => {
+        if (isMounted && Array.isArray(json)) {
+          setDrugTests(json);
+        }
+      })
+      .catch(() => null);
 
     return () => {
       isMounted = false;
@@ -72,7 +74,7 @@ export function DrugTestsTab({ citizenId }: Props) {
       } as any,
     });
 
-    if (json?.id) {
+    if (json.id) {
       setDrugTests((prev) => [json, ...prev]);
       setSubstances("");
       setResult("NEGATIVE");

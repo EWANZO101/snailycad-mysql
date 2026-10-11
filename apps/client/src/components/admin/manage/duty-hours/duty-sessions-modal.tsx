@@ -47,7 +47,7 @@ export function DutySessionsModal(props: Props) {
       method: "GET",
     });
 
-    setSessions(Array.isArray(json?.sessions) ? json.sessions : []);
+    setSessions(Array.isArray(json.sessions) ? json.sessions : []);
     setHasLoaded(true);
   }, [target, period, maxSessionHours]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -179,7 +179,7 @@ function EditSessionForm({
       },
     });
 
-    if (json?.id) {
+    if (json.id) {
       onSaved();
     }
   }
