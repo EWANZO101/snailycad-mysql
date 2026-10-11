@@ -547,7 +547,10 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, req }) =>
     props: {
       session: user,
       messages: {
-        ...(await getTranslations(["admin", "leo", "ems-fd", "common"], user?.locale ?? locale)),
+        ...(await getTranslations(
+          ["admin", "values", "leo", "ems-fd", "common"],
+          user?.locale ?? locale,
+        )),
       },
     },
   };
