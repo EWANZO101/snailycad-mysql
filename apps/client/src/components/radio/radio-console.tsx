@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronUp,
   Gear,
+  Headphones,
   MicFill,
   MicMuteFill,
   People,
@@ -146,6 +147,20 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
       ) : null}
 
       {isEditing ? <RadioSettings hub={hub} /> : null}
+
+      {channels.length > 1 ? (
+        <div className="mb-1.5 flex items-center justify-between gap-2 text-xs text-neutral-500 dark:text-gray-400">
+          <span className="truncate">{t("channelsHint")}</span>
+          <span className="flex gap-1 shrink-0">
+            <Button size="xs" onPress={() => hub.send({ name: "listenAll" })}>
+              {t("listenAll")}
+            </Button>
+            <Button size="xs" onPress={() => hub.send({ name: "listenNone" })}>
+              {t("listenNone")}
+            </Button>
+          </span>
+        </div>
+      ) : null}
 
       {channels.length <= 0 ? (
         <p className="text-sm text-neutral-600 dark:text-gray-400 py-2">
@@ -317,6 +332,13 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
         {isTransmitChannel ? (
           <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-300">
             {t("tx")}
+          </span>
+        ) : joined ? (
+          <span
+            className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5"
+            title={t("listening")}
+          >
+            <Headphones aria-hidden /> {channel.canTransmit ? null : t("rxOnly")}
           </span>
         ) : channel.canTransmit ? null : (
           <span className="text-[11px] text-neutral-500 dark:text-gray-400">{t("rxOnly")}</span>

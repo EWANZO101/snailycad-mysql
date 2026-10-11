@@ -45,10 +45,11 @@ function asPartialUser(user: RadioUser) {
   };
 }
 
+/** dispatchers and CAD admins: every channel, and they take over a busy channel */
 export function isDispatcher(user: RadioUser) {
   return hasPermission({
     userToCheck: asPartialUser(user),
-    permissionsToCheck: [Permissions.Dispatch],
+    permissionsToCheck: [Permissions.Dispatch, Permissions.ManageCADSettings],
   });
 }
 

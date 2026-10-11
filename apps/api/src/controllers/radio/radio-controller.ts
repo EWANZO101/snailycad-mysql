@@ -44,7 +44,7 @@ export class RadioController {
   @Post("/token")
   @UseBefore(IsAuth)
   @IsFeatureEnabled({ feature: Feature.RADIO })
-  @UsePermissions({ permissions: UNIT_PERMISSIONS })
+  @UsePermissions({ permissions: [...UNIT_PERMISSIONS, Permissions.ManageCADSettings] })
   @Description("Get a radio token for the signed-in CAD user")
   async getToken(@Context("user") user: User) {
     return createRadioTokenResponse({
