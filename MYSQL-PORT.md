@@ -41,6 +41,24 @@ Tested with MySQL 8.0.46 and MariaDB 11.4.12.
 
 ## Moving an existing PostgreSQL CAD
 
+Set up this CAD first (install, `.env` with an empty MySQL/MariaDB database), then run one command:
+
+```bash
+pnpm convert:postgres --from-env /path/to/old/snaily-cadv4/.env
+```
+
+It reads the old CAD's database settings from its `.env`, checks both databases (the MySQL/MariaDB one
+must be empty), checks the old data for usernames that only differ in case, creates the tables, shows
+how many rows will be copied and asks you to confirm. It then copies everything in one transaction,
+checks every table's row count, and offers to copy the old `ENCRYPTION_TOKEN` into this `.env` (some
+stored data is encrypted with it). PostgreSQL is only read. Requires `psql`.
+
+Options: `--pg-url postgresql://...` instead of `--from-env`, `--mysql-url mysql://...` to convert into
+another database (this `.env` isn't changed), `--values` to copy only the values, `--yes` to skip the
+questions.
+
+### Doing it by hand
+
 1. Install as above, but stop before `pnpm run start`, and apply the schema only:
    `cd apps/api && pnpm prisma migrate deploy`
 2. Use the **same `ENCRYPTION_TOKEN`** as the old CAD (some stored data is encrypted with it).

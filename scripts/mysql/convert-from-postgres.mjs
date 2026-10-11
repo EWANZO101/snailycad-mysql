@@ -300,7 +300,11 @@ async function main() {
   }
 
   console.log(
-    `\n${green(bold("Done."))} Start (or restart) this CAD and sign in with your existing accounts.`,
+    `\n${green(bold("Done."))} ${
+      targetIsThisCad
+        ? "Start (or restart) this CAD and sign in with your existing accounts."
+        : "Point a CAD's DATABASE_URL at that database to use it."
+    }`,
   );
 }
 
