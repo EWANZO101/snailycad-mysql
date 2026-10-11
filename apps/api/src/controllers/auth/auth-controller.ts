@@ -16,6 +16,7 @@ import {
   type AutoSetUserProperties,
   type cad,
   Feature,
+  type Prisma,
 } from "@prisma/client";
 import { defaultPermissions, Permissions } from "@snailycad/permissions";
 import { setUserPreferencesCookies } from "lib/auth/setUserPreferencesCookies";
@@ -195,7 +196,8 @@ export class AuthController {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: extraUserData,
+      // permissions is a JSON column on MySQL/MariaDB: User's JsonValue isn't an input type
+      data: extraUserData as Prisma.UserUpdateInput,
     });
 
     sendUserRegisteredWebhook({

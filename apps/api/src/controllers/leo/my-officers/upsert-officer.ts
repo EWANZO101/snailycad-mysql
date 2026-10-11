@@ -9,7 +9,6 @@ import {
   type Officer,
   ShouldDoType,
   type User,
-  WhatPages,
 } from "@prisma/client";
 import { shouldCheckCitizenUserId } from "lib/citizen/has-citizen-access";
 import { prisma } from "lib/data/prisma";
@@ -29,7 +28,7 @@ import { leoProperties } from "utils/leo/includes";
 import type * as APITypes from "@snailycad/types/api";
 import type { ZodSchema } from "zod";
 import generateBlurPlaceholder from "lib/images/generate-image-blur-data";
-import { WhitelistStatus } from "@snailycad/types";
+import { WhitelistStatus, WhatPages } from "@snailycad/types";
 import { sendUnitWhitelistStatusChangeWebhook } from "~/controllers/admin/manage/units/manage-units-controller";
 
 interface CreateOfficerOptions {

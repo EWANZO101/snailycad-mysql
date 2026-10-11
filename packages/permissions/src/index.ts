@@ -3,10 +3,21 @@ import { allPermissions, type Permissions } from "./permissions";
 
 export * from "./permissions";
 
+/**
+ * permissions are a string array; the MySQL/MariaDB edition stores them in a JSON column, so a
+ * user straight from the database has them typed as JSON. Both are accepted.
+ */
+type PermissionList = (Permissions | string)[] | unknown;
+
 export interface PartialUser {
   rank: "OWNER" | "ADMIN" | "USER";
-  permissions: (Permissions | string)[];
-  roles?: { permissions: (Permissions | string)[] }[];
+  permissions: PermissionList;
+  roles?: { permissions: PermissionList }[];
+}
+
+/** a permission list from a user or role (an array, or a JSON array from the database) */
+export function toPermissionList(value: PermissionList): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
 }
 
 export interface HasPermissionOptions {
@@ -20,13 +31,13 @@ export interface HasPermissionOptions {
  * @returns whether a user has certain permissions.
  */
 export function hasPermission(options: HasPermissionOptions) {
-  let userPermissions = options.userToCheck?.permissions ?? [];
+  let userPermissions = toPermissionList(options.userToCheck?.permissions);
 
   if (!options.userToCheck) return false;
   if (options.userToCheck.roles && options.userToCheck.roles.length >= 1) {
     userPermissions = [
       ...userPermissions,
-      ...options.userToCheck.roles.flatMap((r) => r.permissions),
+      ...options.userToCheck.roles.flatMap((r) => toPermissionList(r.permissions)),
     ];
   }
 

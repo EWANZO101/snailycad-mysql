@@ -1,3 +1,4 @@
+import { toPermissionList } from "@snailycad/permissions";
 import { type Prisma } from "@prisma/client";
 import { type AllowedFileExtension, allowedFileExtensions } from "@snailycad/config";
 import { CUSTOM_ROLE_SCHEMA } from "@snailycad/schemas";
@@ -129,7 +130,7 @@ export class AdminManageCustomRolesController {
     // a user can only add/remove permissions to/from a custom role that they have themselves.
     assertCanChangePermissions({
       actor: sessionUser,
-      previous: customRole.permissions,
+      previous: toPermissionList(customRole.permissions),
       next: data.permissions as string[],
     });
 
@@ -139,7 +140,7 @@ export class AdminManageCustomRolesController {
      */
     if ((data.discordRoleId ?? null) !== (customRole.discordRoleId ?? null)) {
       assertActorHoldsPermissions(sessionUser, [
-        ...customRole.permissions,
+        ...toPermissionList(customRole.permissions),
         ...(data.permissions as string[]),
       ]);
     }
@@ -183,7 +184,7 @@ export class AdminManageCustomRolesController {
     }
 
     // deleting a role removes its permissions from every user that has it.
-    assertActorHoldsPermissions(sessionUser, customRole.permissions);
+    assertActorHoldsPermissions(sessionUser, toPermissionList(customRole.permissions));
 
     await prisma.customRole.delete({
       where: { id: customRole.id },

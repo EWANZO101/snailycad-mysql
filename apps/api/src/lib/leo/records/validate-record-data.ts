@@ -57,22 +57,19 @@ export async function validateRecordData(options: Options): Promise<Return> {
     return { errors, ...options };
   }
 
-  const minFinesArr = [
-    penalCode.warningNotApplicable?.fines[0],
-    penalCode.warningApplicable?.fines[0],
-  ];
-  const maxFinesArr = [
-    penalCode.warningNotApplicable?.fines[1],
-    penalCode.warningApplicable?.fines[1],
-  ];
+  // fines, prison terms and bail are [min, max] number arrays (JSON columns on MySQL/MariaDB)
+  const notApplicableFines = numberList(penalCode.warningNotApplicable?.fines);
+  const applicableFines = numberList(penalCode.warningApplicable?.fines);
+  const minFinesArr = [notApplicableFines[0], applicableFines[0]];
+  const maxFinesArr = [notApplicableFines[1], applicableFines[1]];
 
   const minFine = getMinOrMax(minFinesArr, "min") ?? 0;
   const maxFine = getMinOrMax(maxFinesArr, "max") ?? minFine;
 
   const minMaxFines = [minFine, maxFine];
 
-  const minMaxPrisonTerm = penalCode.warningNotApplicable?.prisonTerm ?? [];
-  const minMaxBail = (isBailEnabled && penalCode.warningNotApplicable?.bail) || [];
+  const minMaxPrisonTerm = numberList(penalCode.warningNotApplicable?.prisonTerm);
+  const minMaxBail = isBailEnabled ? numberList(penalCode.warningNotApplicable?.bail) : [];
   const minMaxCounts = [1, 10] as [number, number];
 
   if (options.counts && !isCorrect(minMaxCounts, options.counts)) {
@@ -156,4 +153,9 @@ function getMinOrMax(arr: (number | undefined)[], type: "min" | "max") {
 
 function exists(values: (number | undefined)[]): values is [number, number] {
   return values.every((v) => typeof v !== "undefined");
+}
+
+/** a JSON number array from the database ([min, max]); anything else is empty */
+function numberList(value: unknown): number[] {
+  return Array.isArray(value) ? value.map((v) => (typeof v === "number" ? v : Number(v))) : [];
 }

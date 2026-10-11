@@ -35,13 +35,13 @@ import {
   type StatusValueType,
   type ValueLicenseType,
   type QualificationValueType,
-  WhatPages,
   ValueType,
   type Value,
   type cad,
   type PenalCodeType,
   type Feature,
 } from "@prisma/client";
+import { WhatPages } from "@snailycad/types";
 import { validateSchema } from "lib/data/validate-schema";
 import { upsertWarningApplicable } from "~/lib/leo/records/penal-code";
 import { getLastOfArray, manyToManyHelper } from "lib/data/many-to-many";

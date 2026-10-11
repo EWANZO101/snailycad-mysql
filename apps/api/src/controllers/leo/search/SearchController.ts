@@ -146,7 +146,8 @@ export class LeoSearchController {
   @Description("Search citizens by their name, surname or fullname. Returns the first 35 results.")
   async searchName(
     @BodyParams("name") fullName: string,
-    @Context("cad") cad: cad & { features?: Record<Feature, boolean> },
+    @Context("cad")
+    cad: cad & { features?: Record<Feature, boolean>; miscCadSettings?: MiscCadSettings | null },
     @Context("user") user: User,
     @BodyParams("id") citizenId?: string,
     @QueryParams("fromAuthUserOnly", Boolean) fromAuthUserOnly = false,
@@ -362,7 +363,8 @@ export class LeoSearchController {
   })
   async customFieldSearch(
     @BodyParams() body: unknown,
-    @Context("cad") cad: cad & { features?: Record<Feature, boolean> },
+    @Context("cad")
+    cad: cad & { features?: Record<Feature, boolean>; miscCadSettings?: MiscCadSettings | null },
     @Context("user") user: User,
   ): Promise<APITypes.PostSearchCustomFieldData<true>> {
     const data = validateSchema(CUSTOM_FIELD_SEARCH_SCHEMA, body);

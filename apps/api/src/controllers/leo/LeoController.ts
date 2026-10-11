@@ -8,7 +8,7 @@ import { IsAuth } from "middlewares/auth/is-auth";
 import { ActiveOfficer } from "middlewares/active-officer";
 import { Socket } from "services/socket-service";
 import { combinedUnitProperties, leoProperties } from "utils/leo/includes";
-import { type cad, type Prisma, ShouldDoType, type User, WhatPages } from "@prisma/client";
+import { type cad, type Prisma, ShouldDoType, type User } from "@prisma/client";
 import { validateSchema } from "lib/data/validate-schema";
 import { Permissions, UsePermissions } from "middlewares/use-permissions";
 import { getInactivityFilter } from "lib/leo/utils";
@@ -18,6 +18,7 @@ import {
   type Officer,
   type MiscCadSettings,
   Feature,
+  WhatPages,
 } from "@snailycad/types";
 import type * as APITypes from "@snailycad/types/api";
 import { IsFeatureEnabled } from "middlewares/is-enabled";

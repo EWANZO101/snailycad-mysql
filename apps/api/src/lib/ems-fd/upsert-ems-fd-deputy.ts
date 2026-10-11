@@ -8,8 +8,8 @@ import {
   type MiscCadSettings,
   ShouldDoType,
   type User,
-  WhatPages,
 } from "@prisma/client";
+import { WhatPages } from "@snailycad/types";
 import { validateSchema } from "lib/data/validate-schema";
 import { EMS_FD_DEPUTY_SCHEMA } from "@snailycad/schemas";
 import { isFeatureEnabled } from "lib/upsert-cad";

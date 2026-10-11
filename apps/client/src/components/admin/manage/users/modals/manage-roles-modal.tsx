@@ -8,7 +8,7 @@ import { Loader, Button, SelectField } from "@snailycad/ui";
 import useFetch from "lib/useFetch";
 import type { GetCustomRolesData, PutManageUserByIdRolesData } from "@snailycad/types/api";
 import { usePermission } from "hooks/usePermission";
-import type { Permissions } from "@snailycad/permissions";
+import { type Permissions, toPermissionList } from "@snailycad/permissions";
 
 interface Props {
   user: User;
@@ -28,7 +28,9 @@ export function ManageRolesModal({ roles, user, onUpdate }: Props) {
    * (owners are unrestricted). this is also enforced by the API.
    */
   function canManageRole(role: GetCustomRolesData["customRoles"][number]) {
-    return role.permissions.every((permission) => hasPermissions([permission as Permissions]));
+    return toPermissionList(role.permissions).every((permission) =>
+      hasPermissions([permission as Permissions]),
+    );
   }
 
   async function onSubmit(data: typeof INITIAL_VALUES) {

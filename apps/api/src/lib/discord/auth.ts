@@ -1,3 +1,4 @@
+import { toPermissionList } from "@snailycad/permissions";
 import { type DiscordRole, Rank, type User, WhitelistStatus } from "@snailycad/types";
 import {
   type APIGuildMember,
@@ -105,12 +106,14 @@ export async function updateMemberRolesLogin<
     for (const _key in grantablePermissions) {
       const key = _key as keyof typeof grantablePermissions;
       const { value, permissions } = grantablePermissions[key];
-      const correctedPermissions = permissions.map((p) => p.replace(/ +/g, ""));
+      const correctedPermissions = toPermissionList(permissions).map((p) => p.replace(/ +/g, ""));
 
       if (value === true) {
         correctedPermissions.length && permissionsToGive.push(...correctedPermissions);
       } else {
-        user.permissions = user.permissions.filter((v) => !correctedPermissions.includes(v));
+        user.permissions = toPermissionList(user.permissions).filter(
+          (v) => !correctedPermissions.includes(v),
+        );
       }
     }
 

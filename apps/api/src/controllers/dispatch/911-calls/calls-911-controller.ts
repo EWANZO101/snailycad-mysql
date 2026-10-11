@@ -23,8 +23,8 @@ import {
   ShouldDoType,
   type Prisma,
   WhitelistStatus,
-  WhatPages,
 } from "@prisma/client";
+import { WhatPages } from "@snailycad/types";
 import { sendDiscordWebhook, sendRawWebhook } from "lib/discord/webhooks";
 import { sendCalls911EndedWebhook } from "lib/discord/extra-webhooks";
 import type { APIEmbed } from "discord-api-types/v10";

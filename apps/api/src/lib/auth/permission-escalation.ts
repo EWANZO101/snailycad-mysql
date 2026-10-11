@@ -1,11 +1,17 @@
-import { allPermissions, hasPermission, type PartialUser } from "@snailycad/permissions";
+import {
+  allPermissions,
+  hasPermission,
+  toPermissionList,
+  type PartialUser,
+} from "@snailycad/permissions";
 import { Forbidden } from "@tsed/exceptions";
 
 export const CANNOT_MANAGE_PERMISSION_ERROR = "cannotManagePermissionYouDoNotHave";
 
+// permissions may be a JSON array straight from the database (MySQL/MariaDB edition)
 interface PermissionsHolder {
-  permissions?: string[] | null;
-  roles?: { permissions: string[] }[] | null;
+  permissions?: unknown;
+  roles?: { permissions: unknown }[] | null;
 }
 
 /**
@@ -14,8 +20,8 @@ interface PermissionsHolder {
  */
 export function getEffectivePermissions(user: PermissionsHolder): Set<string> {
   const permissions = [
-    ...(user.permissions ?? []),
-    ...(user.roles ?? []).flatMap((role) => role.permissions),
+    ...toPermissionList(user.permissions),
+    ...(user.roles ?? []).flatMap((role) => toPermissionList(role.permissions)),
   ];
 
   return new Set(permissions.filter((permission) => allPermissions.includes(permission)));

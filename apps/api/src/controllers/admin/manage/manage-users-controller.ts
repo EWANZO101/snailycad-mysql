@@ -1,10 +1,10 @@
+import { toPermissionList } from "@snailycad/permissions";
 import { assertNotDemoAccount } from "lib/demo/demo-mode";
 /* eslint-disable unicorn/number-literal-case */
 import {
   Rank,
   WhitelistStatus,
   type User,
-  Prisma,
   type CustomRole,
   DiscordWebhookType,
 } from "@prisma/client";
@@ -383,7 +383,7 @@ export class ManageUsersController {
 
       assertActorHoldsPermissions(
         sessionUser,
-        changedRoles.flatMap((role) => role.permissions),
+        changedRoles.flatMap((role) => toPermissionList(role.permissions)),
       );
     }
 

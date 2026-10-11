@@ -7,7 +7,7 @@ import { leoProperties } from "utils/leo/includes";
 
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
-import { Prisma, WhitelistStatus } from "@prisma/client";
+import { WhitelistStatus } from "@prisma/client";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 
 import type * as APITypes from "@snailycad/types/api";

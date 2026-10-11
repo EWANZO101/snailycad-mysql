@@ -9,7 +9,7 @@ import type { CustomRole, DiscordRole } from "@snailycad/types";
 import { useTranslations } from "use-intl";
 import { ModalIds } from "types/modal-ids";
 import { CUSTOM_ROLE_SCHEMA } from "@snailycad/schemas";
-import { Permissions } from "@snailycad/permissions";
+import { Permissions, toPermissionList } from "@snailycad/permissions";
 import { ImageSelectInput, validateFile } from "components/form/inputs/ImageSelectInput";
 import { usePermission } from "hooks/usePermission";
 import type {
@@ -119,7 +119,8 @@ export function ManageCustomRolesModal({ role, onClose, onCreate, onUpdate }: Pr
   const INITIAL_VALUES = {
     name: role?.name ?? "",
     discordRoleId: role?.discordRoleId ?? null,
-    permissions: role?.permissions ?? [],
+    // a JSON array on MySQL/MariaDB
+    permissions: toPermissionList(role?.permissions),
   };
 
   const validate = handleValidate(CUSTOM_ROLE_SCHEMA);
@@ -144,7 +145,7 @@ export function ManageCustomRolesModal({ role, onClose, onCreate, onUpdate }: Pr
 
             <SelectField
               label={t("permissions")}
-              errorMessage={errors.permissions}
+              errorMessage={typeof errors.permissions === "string" ? errors.permissions : undefined}
               selectionMode="multiple"
               selectedKeys={values.permissions}
               options={Object.keys(Permissions).map((permission) => ({

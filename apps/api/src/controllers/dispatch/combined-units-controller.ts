@@ -8,8 +8,8 @@ import {
   type CombinedLeoUnit,
   Feature,
   ShouldDoType,
-  WhatPages,
 } from "@prisma/client";
+import { WhatPages } from "@snailycad/types";
 import { Socket } from "services/socket-service";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
