@@ -675,8 +675,8 @@ def step_service():
     unit = f"""[Unit]
 Description=SnailyCAD ({INSTALL_DIR}, made by the setup wizard)
 After=network.target mariadb.service mysql.service
-StartLimitIntervalSec=3600
-StartLimitBurst=3
+StartLimitIntervalSec=600
+StartLimitBurst=5
 
 [Service]
 Type=simple
