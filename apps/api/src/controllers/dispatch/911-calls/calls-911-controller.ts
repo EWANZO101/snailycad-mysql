@@ -20,7 +20,7 @@ import {
   type MiscCadSettings,
   ShouldDoType,
   type Prisma,
-  WhitelistStatus,
+  type WhitelistStatus,
   WhatPages,
 } from "@prisma/client";
 import { sendCalls911EndedWebhook } from "lib/discord/extra-webhooks";
