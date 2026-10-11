@@ -1,8 +1,9 @@
 import * as React from "react";
 import { useTranslations } from "use-intl";
 import { Button } from "@snailycad/ui";
-import type { RadioChannelInfo, RadioClient } from "@snailycad/radio/browser";
+import type { RadioChannelInfo } from "@snailycad/radio/browser";
 import {
+  BoxArrowUpRight,
   BroadcastPin,
   ChevronDown,
   ChevronUp,
@@ -14,143 +15,129 @@ import {
 } from "react-bootstrap-icons";
 import { classNames } from "lib/classNames";
 import useFetch from "lib/useFetch";
-import {
-  keyLabel,
-  type RadioPreferences,
-  usePushToTalkKey,
-  useRadioClient,
-  useRadioPreferences,
-} from "./use-radio";
+import { type RadioHub, type RadioView, useRadioHub } from "./radio-hub";
+import { keyLabel } from "./use-radio";
 
 interface RadioConsoleProps {
-  variant: "dock" | "page";
+  variant: "dock" | "page" | "popout";
   /** dispatchers can play tones on a channel */
   canPlayTones?: boolean;
-  /** channel to open when the user hasn't picked any yet (e.g. the unit's radio channel) */
-  defaultChannelId?: string | null;
 }
 
-export function RadioConsole({ variant, canPlayTones, defaultChannelId }: RadioConsoleProps) {
+export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
   const t = useTranslations("Radio");
-  const { client, level, lastError, clearError } = useRadioClient();
-  const { preferences, update, isLoaded } = useRadioPreferences();
+  const hub = useRadioHub();
   const [isEditing, setIsEditing] = React.useState(false);
-  const [audioReady, setAudioReady] = React.useState(false);
-  const isPage = variant === "page";
 
-  usePushToTalkKey(client, preferences.pttKey, isLoaded);
+  if (!hub || hub.role === "off") return null;
+  const { view, preferences } = hub;
+  const isDock = variant === "dock";
+  const runsHere = hub.role === "leader" || hub.role === "single";
 
-  // open the saved channels (or the default one) whenever the radio (re)connects
-  React.useEffect(() => {
-    if (!client || !isLoaded) return;
-    function openSaved() {
-      const visible = new Set(client!.channels.map((c) => c.id));
-      let wanted = preferences.channels.filter((id) => visible.has(id));
-      if (!wanted.length && defaultChannelId && visible.has(defaultChannelId)) {
-        wanted = [defaultChannelId];
-      }
-      for (const id of wanted) {
-        if (!client!.joined.has(id)) client!.join(id, "member");
-        client!.setChannelVolume(id, preferences.volumes[id] ?? 1);
-      }
-      const transmit =
-        preferences.transmitChannel && wanted.includes(preferences.transmitChannel)
-          ? preferences.transmitChannel
-          : wanted[0];
-      if (transmit) client!.setTransmitChannel(transmit);
-      client!.setVolume(preferences.masterVolume);
-    }
-    if (client.status === "connected") openSaved();
-    return client.on("ready", openSaved);
-    // the saved channel list is read once per connection
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, isLoaded, defaultChannelId]);
+  const status = view?.status ?? "connecting";
+  const connected = status === "connected";
+  const statusLabel = !view
+    ? t("connecting")
+    : connected
+      ? t("connected")
+      : status === "reconnecting"
+        ? t("reconnecting")
+        : status === "closed"
+          ? t("disconnected")
+          : t("connecting");
 
-  // dispatch moved this unit: remember the new channel
-  React.useEffect(() => {
-    if (!client) return;
-    return client.on("switch", ({ channel, from }) => {
-      update({
-        channels: [...new Set([...preferences.channels.filter((id) => id !== from), channel])],
-        transmitChannel: channel,
-      });
-    });
-  }, [client, preferences.channels, update]);
+  const channels = view?.channels ?? [];
+  const transmitChannel = view?.transmitChannel ?? null;
+  const transmitting = view?.transmitting ?? null;
+  const transmitName = channels.find((c) => c.id === transmitChannel)?.name ?? "";
 
-  React.useEffect(() => {
-    if (!client) return;
-    const context = client.output.context;
-    const sync = () => setAudioReady(context.state === "running");
-    sync();
-    context.addEventListener("statechange", sync);
-    return () => context.removeEventListener("statechange", sync);
-  }, [client]);
+  const pttLabel = transmitting
+    ? t("transmitting")
+    : transmitChannel
+      ? t("holdToTalk", { channel: transmitName, key: keyLabel(preferences.pttKey) })
+      : t("pickChannel");
 
-  if (!client) return null;
-
-  const channels = client.channels;
-  const transmitChannel = client.transmitChannel;
-  const transmitting = client.transmitting;
-  const connected = client.status === "connected";
-
-  function toggleChannel(channel: RadioChannelInfo) {
-    if (!client) return;
-    const open = client.joined.has(channel.id);
-    if (open) {
-      client.leave(channel.id);
-      update({ channels: preferences.channels.filter((id) => id !== channel.id) });
-    } else {
-      client.join(channel.id, "member");
-      client.setChannelVolume(channel.id, preferences.volumes[channel.id] ?? 1);
-      update({ channels: [...new Set([...preferences.channels, channel.id])] });
-    }
-  }
-
-  function selectTransmit(channel: RadioChannelInfo) {
-    if (!client || !channel.canTransmit) return;
-    client.setTransmitChannel(channel.id);
-    update({
-      transmitChannel: channel.id,
-      channels: [...new Set([...preferences.channels, channel.id])],
-    });
-  }
-
-  function setChannelVolume(id: string, volume: number) {
-    client?.setChannelVolume(id, volume);
-    update({ volumes: { ...preferences.volumes, [id]: volume } });
-  }
-
-  const statusLabel = connected
-    ? t("connected")
-    : client.status === "reconnecting"
-      ? t("reconnecting")
-      : client.status === "closed"
-        ? t("disconnected")
-        : t("connecting");
+  const header = (
+    <header className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-quaternary">
+      <h2 className="font-semibold text-sm flex items-center gap-2 min-w-0">
+        <span
+          className={classNames(
+            "inline-block w-2 h-2 rounded-full shrink-0",
+            connected
+              ? "bg-emerald-500"
+              : status === "closed"
+                ? "bg-red-500"
+                : "bg-amber-500 animate-pulse",
+          )}
+          title={statusLabel}
+        />
+        {t("radio")}
+        {transmitting ? (
+          <span className="text-xs font-semibold text-red-600 dark:text-red-400">{t("tx")}</span>
+        ) : null}
+        {!runsHere && view?.leaderIsPopout && !hub.isPopout ? (
+          <span className="text-xs font-normal text-neutral-500 dark:text-gray-400 truncate">
+            {t("inPopout")}
+          </span>
+        ) : null}
+      </h2>
+      <div className="flex items-center gap-1 shrink-0">
+        {hub.isPopout ? null : (
+          <Button
+            size="xs"
+            variant="transparent"
+            aria-label={t("popOut")}
+            title={t("popOut")}
+            onPress={hub.popOut}
+          >
+            <BoxArrowUpRight aria-hidden />
+          </Button>
+        )}
+        <Button
+          size="xs"
+          variant="transparent"
+          aria-label={t("settings")}
+          onPress={() => setIsEditing((v) => !v)}
+        >
+          <Gear aria-hidden />
+        </Button>
+        {isDock ? (
+          <Button
+            size="xs"
+            variant="transparent"
+            aria-label={preferences.minimized ? t("expand") : t("minimize")}
+            onPress={() => hub.updatePreferences({ minimized: !preferences.minimized })}
+          >
+            {preferences.minimized ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden />}
+          </Button>
+        ) : null}
+      </div>
+    </header>
+  );
 
   const body = (
     <>
-      {!audioReady ? (
+      {view && !view.audioReady ? (
         <button
           type="button"
           className="w-full mb-2 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-200 px-3 py-2 text-sm text-left"
-          onClick={() => void client.output.resume()}
+          onClick={() => hub.send({ name: "resumeAudio" })}
         >
           <VolumeUpFill className="inline mr-2" aria-hidden />
-          {t("enableAudio")}
+          {runsHere ? t("enableAudio") : t("enableAudioElsewhere")}
         </button>
       ) : null}
 
-      {lastError ? (
+      {hub.lastError ? (
         <div
           role="alert"
           className="mb-2 rounded-md bg-red-100 text-red-900 dark:bg-red-500/15 dark:text-red-200 px-3 py-2 text-sm flex justify-between gap-2"
         >
-          <span>{lastError}</span>
+          <span>{hub.lastError}</span>
           <button
             type="button"
             className="font-semibold"
-            onClick={clearError}
+            onClick={hub.clearError}
             aria-label={t("dismiss")}
           >
             ×
@@ -158,9 +145,7 @@ export function RadioConsole({ variant, canPlayTones, defaultChannelId }: RadioC
         </div>
       ) : null}
 
-      {isEditing ? (
-        <RadioSettings client={client} preferences={preferences} update={update} />
-      ) : null}
+      {isEditing ? <RadioSettings hub={hub} /> : null}
 
       {channels.length <= 0 ? (
         <p className="text-sm text-neutral-600 dark:text-gray-400 py-2">
@@ -170,40 +155,27 @@ export function RadioConsole({ variant, canPlayTones, defaultChannelId }: RadioC
         <ul
           className={classNames(
             "flex flex-col gap-1.5",
-            isPage && "md:grid md:grid-cols-2 xl:grid-cols-3 md:gap-3",
+            variant === "page" && "md:grid md:grid-cols-2 xl:grid-cols-3 md:gap-3",
           )}
         >
           {channels.map((channel) => (
             <ChannelRow
               key={channel.id}
-              client={client}
+              hub={hub}
+              view={view!}
               channel={channel}
               isTransmitChannel={transmitChannel === channel.id}
-              volume={preferences.volumes[channel.id] ?? 1}
               canPlayTones={!!canPlayTones}
-              onToggle={() => toggleChannel(channel)}
-              onSelectTransmit={() => selectTransmit(channel)}
-              onVolume={(volume) => setChannelVolume(channel.id, volume)}
-              isPage={isPage}
             />
           ))}
         </ul>
       )}
 
       <PushToTalkButton
-        client={client}
+        hub={hub}
         disabled={!connected || !transmitChannel}
         transmitting={!!transmitting}
-        label={
-          transmitting
-            ? t("transmitting")
-            : transmitChannel
-              ? t("holdToTalk", {
-                  channel: channels.find((c) => c.id === transmitChannel)?.name ?? "",
-                  key: keyLabel(preferences.pttKey),
-                })
-              : t("pickChannel")
-        }
+        label={pttLabel}
       />
       <div
         className="mt-1.5 h-1.5 rounded bg-gray-200 dark:bg-secondary overflow-hidden"
@@ -214,57 +186,15 @@ export function RadioConsole({ variant, canPlayTones, defaultChannelId }: RadioC
             "h-full transition-[width] duration-75",
             transmitting ? "bg-red-500" : "bg-emerald-500",
           )}
-          style={{ width: `${Math.round(level * 100)}%` }}
+          style={{ width: `${Math.round(hub.level * 100)}%` }}
         />
       </div>
     </>
   );
 
-  const header = (
-    <header className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-quaternary">
-      <h2 className="font-semibold text-sm flex items-center gap-2">
-        <span
-          className={classNames(
-            "inline-block w-2 h-2 rounded-full",
-            connected
-              ? "bg-emerald-500"
-              : client.status === "closed"
-                ? "bg-red-500"
-                : "bg-amber-500 animate-pulse",
-          )}
-          title={statusLabel}
-        />
-        {t("radio")}
-        {transmitting ? (
-          <span className="text-xs font-semibold text-red-600 dark:text-red-400">{t("tx")}</span>
-        ) : null}
-      </h2>
-      <div className="flex items-center gap-1">
-        <Button
-          size="xs"
-          variant="transparent"
-          aria-label={t("settings")}
-          onPress={() => setIsEditing((v) => !v)}
-        >
-          <Gear aria-hidden />
-        </Button>
-        {isPage ? null : (
-          <Button
-            size="xs"
-            variant="transparent"
-            aria-label={preferences.minimized ? t("expand") : t("minimize")}
-            onPress={() => update({ minimized: !preferences.minimized })}
-          >
-            {preferences.minimized ? <ChevronUp aria-hidden /> : <ChevronDown aria-hidden />}
-          </Button>
-        )}
-      </div>
-    </header>
-  );
-
-  if (isPage) {
+  if (!isDock) {
     return (
-      <section className="card">
+      <section className={classNames("card", variant === "popout" && "rounded-none min-h-screen")}>
         {header}
         <div className="p-3">{body}</div>
       </section>
@@ -282,7 +212,7 @@ export function RadioConsole({ variant, canPlayTones, defaultChannelId }: RadioC
     >
       {header}
       {preferences.minimized ? (
-        <MinimizedBar client={client} />
+        <MinimizedBar hub={hub} label={pttLabel} />
       ) : (
         <div className="p-3 max-h-[60vh] overflow-y-auto thin-scrollbar">{body}</div>
       )}
@@ -290,53 +220,58 @@ export function RadioConsole({ variant, canPlayTones, defaultChannelId }: RadioC
   );
 }
 
-function MinimizedBar({ client }: { client: RadioClient }) {
+function MinimizedBar({ hub, label }: { hub: RadioHub; label: string }) {
   const t = useTranslations("Radio");
-  const talking = [...client.joined.values()].flatMap((joined) =>
-    [...joined.talking.values()].map((name) => ({
-      name,
-      channel: client.channels.find((c) => c.id === joined.id)?.name ?? "",
-    })),
-  );
+  const view = hub.view;
+  const talking = view
+    ? Object.entries(view.joined).flatMap(([id, joined]) =>
+        joined.talking.map((name) => ({
+          name,
+          channel: view.channels.find((c) => c.id === id)?.name ?? "",
+        })),
+      )
+    : [];
   return (
-    <p className="px-3 py-2 text-sm truncate">
-      {talking.length ? (
-        <span className="text-red-600 dark:text-red-400">
-          {talking.map((entry) => `${entry.name} (${entry.channel})`).join(", ")}
-        </span>
-      ) : (
-        <span className="text-neutral-500 dark:text-gray-400">{t("quiet")}</span>
-      )}
-    </p>
+    <div className="px-3 py-2 flex items-center gap-2">
+      <p className="text-sm truncate flex-1 min-w-0">
+        {talking.length ? (
+          <span className="text-red-600 dark:text-red-400">
+            {talking.map((entry) => `${entry.name} (${entry.channel})`).join(", ")}
+          </span>
+        ) : (
+          <span className="text-neutral-500 dark:text-gray-400">{t("quiet")}</span>
+        )}
+      </p>
+      <PushToTalkButton
+        hub={hub}
+        compact
+        disabled={view?.status !== "connected" || !view.transmitChannel}
+        transmitting={!!view?.transmitting}
+        label={label}
+      />
+    </div>
   );
 }
 
 interface ChannelRowProps {
-  client: RadioClient;
+  hub: RadioHub;
+  view: RadioView;
   channel: RadioChannelInfo;
   isTransmitChannel: boolean;
-  volume: number;
   canPlayTones: boolean;
-  isPage: boolean;
-  onToggle(): void;
-  onSelectTransmit(): void;
-  onVolume(volume: number): void;
 }
 
-function ChannelRow(props: ChannelRowProps) {
+function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: ChannelRowProps) {
   const t = useTranslations("Radio");
   const { execute } = useFetch();
   const [showMembers, setShowMembers] = React.useState(false);
-  const joined = props.client.joined.get(props.channel.id);
-  const talking = joined ? [...joined.talking.values()] : [];
+  const joined = view.joined[channel.id];
+  const talking = joined?.talking ?? [];
   const members = joined?.members ?? [];
+  const volume = view.volumes[channel.id] ?? 1;
 
   async function playTone(tone: "alert" | "panic") {
-    await execute({
-      path: `/radio/channels/${props.channel.id}/tone`,
-      method: "POST",
-      data: { tone },
-    });
+    await execute({ path: `/radio/channels/${channel.id}/tone`, method: "POST", data: { tone } });
   }
 
   return (
@@ -345,7 +280,7 @@ function ChannelRow(props: ChannelRowProps) {
         "rounded-md border px-2.5 py-2 text-sm",
         talking.length
           ? "border-red-400 bg-red-50 dark:bg-red-500/10 dark:border-red-500/60"
-          : props.isTransmitChannel
+          : isTransmitChannel
             ? "border-blue-400 dark:border-blue-500/60"
             : "border-gray-200 dark:border-quaternary",
       )}
@@ -355,21 +290,21 @@ function ChannelRow(props: ChannelRowProps) {
           type="checkbox"
           className="shrink-0"
           checked={!!joined}
-          onChange={props.onToggle}
-          aria-label={t("listenTo", { channel: props.channel.name })}
+          onChange={() => hub.send({ name: "toggleChannel", id: channel.id })}
+          aria-label={t("listenTo", { channel: channel.name })}
         />
         <button
           type="button"
           className="flex-1 min-w-0 text-left"
-          onClick={props.onSelectTransmit}
-          disabled={!props.channel.canTransmit}
-          title={props.channel.canTransmit ? t("selectTransmit") : t("receiveOnly")}
+          onClick={() => hub.send({ name: "selectTransmit", id: channel.id })}
+          disabled={!channel.canTransmit}
+          title={channel.canTransmit ? t("selectTransmit") : t("receiveOnly")}
         >
           <span className="font-medium block truncate">
-            {props.channel.name}
-            {props.channel.frequency ? (
+            {channel.name}
+            {channel.frequency ? (
               <span className="ml-1.5 font-normal text-neutral-500 dark:text-gray-400">
-                {props.channel.frequency}
+                {channel.frequency}
               </span>
             ) : null}
           </span>
@@ -379,11 +314,11 @@ function ChannelRow(props: ChannelRowProps) {
             </span>
           ) : null}
         </button>
-        {props.isTransmitChannel ? (
+        {isTransmitChannel ? (
           <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-300">
             {t("tx")}
           </span>
-        ) : props.channel.canTransmit ? null : (
+        ) : channel.canTransmit ? null : (
           <span className="text-[11px] text-neutral-500 dark:text-gray-400">{t("rxOnly")}</span>
         )}
         {joined ? (
@@ -407,12 +342,18 @@ function ChannelRow(props: ChannelRowProps) {
             min={0}
             max={1}
             step={0.05}
-            value={props.volume}
-            onChange={(event) => props.onVolume(Number(event.target.value))}
+            value={volume}
+            onChange={(event) =>
+              hub.send({
+                name: "setChannelVolume",
+                id: channel.id,
+                volume: Number(event.target.value),
+              })
+            }
             className="flex-1 h-1"
-            aria-label={t("volumeOf", { channel: props.channel.name })}
+            aria-label={t("volumeOf", { channel: channel.name })}
           />
-          {props.canPlayTones ? (
+          {canPlayTones ? (
             <>
               <Button size="xs" variant="amber" onPress={() => void playTone("alert")}>
                 {t("alertTone")}
@@ -453,10 +394,11 @@ function ChannelRow(props: ChannelRowProps) {
 }
 
 function PushToTalkButton(props: {
-  client: RadioClient;
+  hub: RadioHub;
   disabled: boolean;
   transmitting: boolean;
   label: string;
+  compact?: boolean;
 }) {
   const pressed = React.useRef(false);
 
@@ -464,12 +406,12 @@ function PushToTalkButton(props: {
     if (props.disabled) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     pressed.current = true;
-    void props.client.startTransmit();
+    props.hub.send({ name: "startTransmit" });
   }
   function stop() {
     if (!pressed.current) return;
     pressed.current = false;
-    props.client.stopTransmit();
+    props.hub.send({ name: "stopTransmit" });
   }
 
   return (
@@ -480,26 +422,26 @@ function PushToTalkButton(props: {
       onPointerUp={stop}
       onPointerCancel={stop}
       onContextMenu={(event) => event.preventDefault()}
+      title={props.label}
+      aria-label={props.label}
       className={classNames(
-        "mt-3 w-full select-none touch-none rounded-lg py-3 font-semibold flex items-center justify-center gap-2",
+        "select-none touch-none rounded-lg font-semibold flex items-center justify-center gap-2",
         "disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
+        props.compact ? "shrink-0 px-3 py-1.5" : "mt-3 w-full py-3",
         props.transmitting
           ? "bg-red-600 text-white shadow-inner"
           : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm",
       )}
     >
       {props.transmitting ? <MicFill aria-hidden /> : <MicMuteFill aria-hidden />}
-      <span className="truncate">{props.label}</span>
+      {props.compact ? null : <span className="truncate">{props.label}</span>}
     </button>
   );
 }
 
-function RadioSettings(props: {
-  client: RadioClient;
-  preferences: RadioPreferences;
-  update(patch: Partial<RadioPreferences>): void;
-}) {
+function RadioSettings({ hub }: { hub: RadioHub }) {
   const t = useTranslations("Radio");
+  const { preferences } = hub;
   const [listening, setListening] = React.useState(false);
   const [devices, setDevices] = React.useState<MediaDeviceInfo[]>([]);
 
@@ -514,19 +456,19 @@ function RadioSettings(props: {
     if (!listening) return;
     function handle(event: KeyboardEvent) {
       event.preventDefault();
-      if (event.code !== "Escape") props.update({ pttKey: event.code });
+      if (event.code !== "Escape") hub.updatePreferences({ pttKey: event.code });
       setListening(false);
     }
     window.addEventListener("keydown", handle, { capture: true, once: true });
     return () => window.removeEventListener("keydown", handle, { capture: true });
-  }, [listening, props]);
+  }, [listening, hub]);
 
   return (
     <div className="mb-3 rounded-md border border-gray-200 dark:border-quaternary p-2.5 text-sm flex flex-col gap-2">
       <label className="flex items-center justify-between gap-2">
         <span>{t("pttKey")}</span>
         <Button size="xs" onPress={() => setListening(true)}>
-          {listening ? t("pressAKey") : keyLabel(props.preferences.pttKey)}
+          {listening ? t("pressAKey") : keyLabel(preferences.pttKey)}
         </Button>
       </label>
       <label className="flex items-center justify-between gap-2">
@@ -536,12 +478,10 @@ function RadioSettings(props: {
           min={0}
           max={1}
           step={0.05}
-          value={props.preferences.masterVolume}
-          onChange={(event) => {
-            const volume = Number(event.target.value);
-            props.client.setVolume(volume);
-            props.update({ masterVolume: volume });
-          }}
+          value={hub.view?.masterVolume ?? preferences.masterVolume}
+          onChange={(event) =>
+            hub.send({ name: "setMasterVolume", volume: Number(event.target.value) })
+          }
           className="w-32"
         />
       </label>
@@ -549,8 +489,10 @@ function RadioSettings(props: {
         <span>{t("microphone")}</span>
         <select
           className="max-w-[10rem] truncate rounded border border-gray-300 dark:border-quaternary bg-transparent px-1 py-0.5"
-          value={props.preferences.microphoneDeviceId ?? ""}
-          onChange={(event) => props.update({ microphoneDeviceId: event.target.value || null })}
+          value={preferences.microphoneDeviceId ?? ""}
+          onChange={(event) =>
+            hub.updatePreferences({ microphoneDeviceId: event.target.value || null })
+          }
         >
           <option value="">{t("defaultMicrophone")}</option>
           {devices.map((device) => (
@@ -560,19 +502,24 @@ function RadioSettings(props: {
           ))}
         </select>
       </label>
-      <label className="flex items-center justify-between gap-2">
-        <span>{t("position")}</span>
-        <select
-          className="rounded border border-gray-300 dark:border-quaternary bg-transparent px-1 py-0.5"
-          value={props.preferences.position}
-          onChange={(event) =>
-            props.update({ position: event.target.value as RadioPreferences["position"] })
-          }
-        >
-          <option value="bottom-left">{t("bottomLeft")}</option>
-          <option value="bottom-right">{t("bottomRight")}</option>
-        </select>
-      </label>
+      {hub.isPopout ? null : (
+        <label className="flex items-center justify-between gap-2">
+          <span>{t("position")}</span>
+          <select
+            className="rounded border border-gray-300 dark:border-quaternary bg-transparent px-1 py-0.5"
+            value={preferences.position}
+            onChange={(event) =>
+              hub.updatePreferences({
+                position: event.target.value as typeof preferences.position,
+              })
+            }
+          >
+            <option value="bottom-left">{t("bottomLeft")}</option>
+            <option value="bottom-right">{t("bottomRight")}</option>
+          </select>
+        </label>
+      )}
+      <p className="text-xs text-neutral-500 dark:text-gray-400">{t("anyPageNote")}</p>
       <p className="text-xs text-neutral-500 dark:text-gray-400">{t("httpsNote")}</p>
     </div>
   );

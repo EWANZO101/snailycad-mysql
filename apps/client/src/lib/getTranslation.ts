@@ -6,7 +6,7 @@ const cwd = process.cwd();
 
 export async function getTranslations(types: string[], locale = "en") {
   try {
-    const typesWithCommon = [...new Set(["common", "auth", "error-messages", ...types])];
+    const typesWithCommon = [...new Set(["common", "auth", "error-messages", "radio", ...types])];
     const paths = typesWithCommon.map((type) => path.join(cwd, `locales/${locale}/${type}.json`));
     const i18n = await getNextI18nConfig();
 

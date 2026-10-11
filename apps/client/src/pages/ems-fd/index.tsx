@@ -1,5 +1,4 @@
 import * as React from "react";
-import { RadioDock } from "components/radio/radio-dock";
 import { Layout } from "components/Layout";
 import { ActiveCalls } from "components/dispatch/active-calls/active-calls";
 import { ModalButtons } from "components/ems-fd/ModalButtons";
@@ -151,7 +150,6 @@ export default function EmsFDDashboard({
 
       <SelectDeputyModal />
       <EmsFdModals />
-      <RadioDock defaultChannelId={activeDeputy?.radioChannelId} />
     </Layout>
   );
 }
