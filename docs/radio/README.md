@@ -1,5 +1,9 @@
 # SnailyCAD Radio
 
+> **Installing it?** Follow the step-by-step guide:
+> **[Install the radio](https://snaily-doc.opslabsystems.cloud/docs/radio/install)** (CAD side, FiveM
+> resource, test, common problems).
+
 A push-to-talk radio built into SnailyCAD. Everyone on a channel hears each other, wherever they
 are:
 
