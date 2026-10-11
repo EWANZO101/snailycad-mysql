@@ -2,6 +2,7 @@
   "Management": {
     "CUSTOM_LOCALES": "Custom Locales",
     "TONE_PRESETS": "Tones",
+    "IMPORT_POSTGRES": "Import from PostgreSQL",
     "management": "Správa",
     "adminDashboard": "Admin Panel",
     "MANAGE_CITIZENS": "Správa Civilistů",

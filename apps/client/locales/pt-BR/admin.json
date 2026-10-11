@@ -2,6 +2,7 @@
   "Management": {
     "CUSTOM_LOCALES": "Custom Locales",
     "TONE_PRESETS": "Tones",
+    "IMPORT_POSTGRES": "Import from PostgreSQL",
     "management": "Gerenciamento",
     "adminDashboard": "Painel da Administração",
     "MANAGE_CITIZENS": "Gerenciar Cidadãos",

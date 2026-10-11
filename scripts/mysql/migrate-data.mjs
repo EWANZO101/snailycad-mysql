@@ -12,6 +12,8 @@
  *     node ../../scripts/mysql/migrate-data.mjs [--dry-run] [--only Table1,Table2] [--values]
  *
  * --only   copy only these tables (they must be empty in the target)
+ * --replace delete what's in the copied tables first, in the same transaction (if the copy fails,
+ *          the old data stays). Used by the admin import page.
  * --values copy only the CAD values (departments, statuses, penal codes, ...), e.g. into a new CAD
  *          that already has its owner account
  */
@@ -25,6 +27,7 @@ const { PrismaClient } = require("@prisma/client");
 
 const PG_URL = process.env.PG_URL;
 const isDryRun = process.argv.includes("--dry-run");
+const isReplace = process.argv.includes("--replace");
 const BATCH_SIZE = 200;
 
 /** the value tables only reference each other, so they can be copied into a CAD that has users */
@@ -157,7 +160,7 @@ async function main() {
   }
 
   // the target must be empty, so a re-run can't duplicate or mix data
-  for (const { name } of tables) {
+  for (const { name } of isReplace ? [] : tables) {
     const [{ count }] = await prisma.$queryRawUnsafe(
       `SELECT COUNT(*) AS count FROM ${quote(name)}`,
     );
@@ -204,6 +207,13 @@ async function main() {
   await prisma.$transaction(
     async (tx) => {
       await tx.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS = 0");
+
+      if (isReplace) {
+        for (const { name } of tables) {
+          await tx.$executeRawUnsafe(`DELETE FROM ${quote(name)}`);
+        }
+        console.log(`Cleared ${tables.length} tables.`);
+      }
 
       for (const { name } of tables) {
         const rows = data.get(name);

@@ -95,6 +95,12 @@ const Tabs = {
       (await import("components/admin/manage/cad-settings/misc-features/tones-tab")).TonesTab,
     { ssr: false },
   ),
+  ImportPostgresTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/import-postgres-tab"))
+        .ImportPostgresTab,
+    { ssr: false },
+  ),
   BlacklistedWordsTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/general/blacklisted-words-tab"))
@@ -128,6 +134,7 @@ export default function CadSettings(props: Props) {
       <Tabs.BlacklistedWordsTab />
       <Tabs.CustomLocalesTab localeFolders={props.localeFolders ?? []} />
       <Tabs.TonesTab />
+      <Tabs.ImportPostgresTab />
     </CadSettingsLayout>
   );
 }
