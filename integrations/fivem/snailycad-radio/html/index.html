@@ -46,6 +46,33 @@
       <button id="ptt" class="ptt" type="button" aria-label="Push to talk">PTT</button>
     </div>
 
+    <!-- radio setup for server admins (/radiosetup) -->
+    <div id="setup" class="setup" role="dialog" aria-labelledby="setup-title" hidden>
+      <form id="setup-form" class="setup-card" autocomplete="off">
+        <h2 id="setup-title">SnailyCAD Radio setup</h2>
+        <p class="setup-intro">
+          Connect this server to your SnailyCAD. You find both values in the CAD:
+          <b>CAD Settings → API Token</b> (turn it on) and your CAD's API address.
+        </p>
+        <label>
+          CAD API address
+          <input id="setup-url" type="url" placeholder="https://cad-api.example.com/v1" required />
+        </label>
+        <label>
+          CAD API token
+          <input id="setup-token" type="password" placeholder="sng_…" />
+          <small id="setup-token-hint"></small>
+        </label>
+        <p id="setup-source" class="setup-source"></p>
+        <p id="setup-message" class="setup-message" role="status"></p>
+        <div class="setup-buttons">
+          <button type="button" id="setup-close" class="secondary">Close</button>
+          <button type="button" id="setup-test" class="secondary">Test</button>
+          <button type="submit" id="setup-save">Save</button>
+        </div>
+      </form>
+    </div>
+
     <script type="module" src="app.js"></script>
   </body>
 </html>

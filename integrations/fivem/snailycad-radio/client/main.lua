@@ -45,6 +45,11 @@ RegisterNetEvent("snailycad-radio:token", function(response, err)
   if not response then
     if err == "not_configured" then
       print("[snailycad-radio] " .. _L("not_configured"))
+      -- admins get the setup form by itself
+      if Config.SetupPopup and not Radio.setupOffered then
+        Radio.setupOffered = true
+        TriggerServerEvent("snailycad-radio:setup:open", true)
+      end
     elseif Config.Debug then
       print(("[snailycad-radio] no radio token: %s"):format(err))
     end
@@ -349,3 +354,42 @@ exports("SetPower", function(on) SendNUIMessage({ action = "power", on = on == t
 exports("OpenRadio", openRadio)
 exports("StartTalking", pttDown)
 exports("StopTalking", pttUp)
+
+-- --- setup (admins): /radiosetup, Config.Keys.setup, or by itself while the radio isn't set up ---
+
+local function openSetup()
+  TriggerServerEvent("snailycad-radio:setup:open", false)
+end
+
+RegisterCommand(Config.Commands.setup, openSetup, false)
+RegisterCommand("snailyradio_setup_open", openSetup, false)
+RegisterKeyMapping("snailyradio_setup_open", _L("setup"), "keyboard", Config.Keys.setup)
+
+RegisterNetEvent("snailycad-radio:setup:status", function(status)
+  SendNUIMessage({ action = "setup", status = status })
+  SetNuiFocus(true, true)
+  SetNuiFocusKeepInput(false)
+end)
+
+RegisterNetEvent("snailycad-radio:setup:denied", function()
+  notify(_L("setup_denied"))
+end)
+
+RegisterNetEvent("snailycad-radio:setup:result", function(kind, result)
+  SendNUIMessage({ action = "setupResult", kind = kind, result = result })
+end)
+
+RegisterNUICallback("setupTest", function(data, cb)
+  TriggerServerEvent("snailycad-radio:setup:test", { url = data.url, token = data.token })
+  cb({ ok = true })
+end)
+
+RegisterNUICallback("setupSave", function(data, cb)
+  TriggerServerEvent("snailycad-radio:setup:save", { url = data.url, token = data.token })
+  cb({ ok = true })
+end)
+
+RegisterNUICallback("setupClose", function(_, cb)
+  SetNuiFocus(false, false)
+  cb({ ok = true })
+end)

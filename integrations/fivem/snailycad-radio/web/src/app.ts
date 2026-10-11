@@ -38,7 +38,16 @@ type LuaMessage =
   | { action: "open" }
   | { action: "close" }
   | { action: "nearby"; radios: { channel: string; volume: number; pan: number }[] }
-  | { action: "tone"; tone: string };
+  | { action: "tone"; tone: string }
+  | { action: "setup"; status: SetupStatus }
+  | { action: "setupResult"; kind: "test" | "save"; result: { ok: boolean; message: string } };
+
+interface SetupStatus {
+  url: string;
+  tokenHint: string | null;
+  source: "server.cfg" | "saved" | "none";
+  configured: boolean;
+}
 
 const resource =
   typeof GetParentResourceName === "function" ? GetParentResourceName() : "snailycad-radio";
@@ -329,6 +338,15 @@ window.addEventListener("message", (event: MessageEvent<LuaMessage>) => {
       document.body.classList.remove("open");
       break;
     }
+    case "setup": {
+      openSetup(message.status);
+      break;
+    }
+    case "setupResult": {
+      setupBusy(false);
+      setupMessage(message.result.message, message.result.ok ? "ok" : "error");
+      break;
+    }
     default: {
       break;
     }
@@ -358,8 +376,72 @@ $("volume").addEventListener("input", (event) => {
 });
 $("close").addEventListener("click", close);
 window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") close();
+  if (event.key !== "Escape") return;
+  if (!$("setup").hidden) closeSetup();
+  else close();
 });
+
+// --- setup (server admins) --------------------------------------------------------------------
+
+const SOURCES: Record<SetupStatus["source"], string> = {
+  "server.cfg": "Currently set in server.cfg (those settings win over the ones saved here).",
+  saved: "Currently using the settings saved here.",
+  none: "Not set up yet.",
+};
+
+function setupMessage(text: string, kind: "ok" | "error" | "busy" | "" = "") {
+  const element = $("setup-message");
+  element.textContent = text;
+  element.className = `setup-message ${kind}`;
+}
+
+function setupBusy(busy: boolean) {
+  for (const id of ["setup-test", "setup-save"]) ($(id) as HTMLButtonElement).disabled = busy;
+}
+
+function openSetup(status: SetupStatus) {
+  const url = $("setup-url") as HTMLInputElement;
+  const token = $("setup-token") as HTMLInputElement;
+  if (!$("setup").hidden && url.value) {
+    // already open (status after a save): only refresh the info lines
+  } else {
+    url.value = status.url;
+    token.value = "";
+    setupMessage("");
+  }
+  $("setup-token-hint").textContent = status.tokenHint
+    ? `A token ending in ${status.tokenHint} is saved: leave this empty to keep it.`
+    : "From CAD Settings > API Token.";
+  $("setup-source").textContent = SOURCES[status.source];
+  setupBusy(false);
+  $("setup").hidden = false;
+  (status.url ? token : url).focus();
+}
+
+function closeSetup() {
+  $("setup").hidden = true;
+  void post("setupClose");
+}
+
+function setupValues() {
+  return {
+    url: ($("setup-url") as HTMLInputElement).value.trim(),
+    token: ($("setup-token") as HTMLInputElement).value.trim(),
+  };
+}
+
+$("setup-test").addEventListener("click", () => {
+  setupBusy(true);
+  setupMessage("Checking the CAD…", "busy");
+  void post("setupTest", setupValues());
+});
+$("setup-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  setupBusy(true);
+  setupMessage("Checking and saving…", "busy");
+  void post("setupSave", setupValues());
+});
+$("setup-close").addEventListener("click", closeSetup);
 
 // the side PTT button on the handheld (mouse)
 const pttButton = $("ptt");

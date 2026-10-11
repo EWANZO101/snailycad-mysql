@@ -30,21 +30,36 @@ Everything below is also in the CAD docs: **Installation → Radio → FiveM**.
 
 ## Install
 
-1. Copy the `snailycad-radio` folder into your server's `resources` folder.
-2. Add to `server.cfg` (replace the URL and token with yours):
+1. Copy the `snailycad-radio` folder into your server's `resources` folder and add
+   `ensure snailycad-radio` to `server.cfg`.
+2. Connect it to the CAD: you need the CAD's **API address** (e.g. `https://cad-api.example.com/v1`)
+   and the **CAD API token** (CAD Settings → API Token, turned on). Pick one way:
+   - **In game (easiest):** join as a server admin. The setup pops up by itself while the radio
+     isn't set up; later open it with `/radiosetup` or **F4**. Enter both, press **Test**, then
+     **Save**: radios connect right away, no restart.
+   - **Server console / txAdmin Live Console:**
 
-   ```cfg
-   set snailycad_radio_api_url "https://cad-api.example.com/v1"
-   set snailycad_radio_api_token "your CAD API token"
-   ensure snailycad-radio
-   ```
+     ```
+     snailyradio_setup https://cad-api.example.com/v1 YOUR_CAD_API_TOKEN
+     ```
 
-   Use `set`, not `setr`: the token must stay on the server.
+     (`snailyradio_setup clear` removes the saved settings.)
 
-3. Restart the server and run `snailyradio_check` in the server console. It should print
-   `OK` and your channels.
+   - **server.cfg** (wins over the two above):
+
+     ```cfg
+     set snailycad_radio_api_url "https://cad-api.example.com/v1"
+     set snailycad_radio_api_token "YOUR_CAD_API_TOKEN"
+     ```
+
+     Use `set`, not `setr`: the token must stay on the server. `server.cfg` is only read when the
+     server starts; to apply it now, type the two `set` lines in the console and
+     `restart snailycad-radio`.
+
+3. Check: `snailyradio_check` in the server console prints `OK` and your channels.
 4. Check `config.lua`: which jobs get a radio (`Config.Jobs`) and their CAD departments, keys,
-   positional audio, the prop.
+   positional audio, the prop. Admins for the setup are `Config.AdminAces` (`command` = server
+   admins) plus ESX `admin` / `superadmin` groups and QBCore `admin` / `god`.
 
 ## Using it in game
 

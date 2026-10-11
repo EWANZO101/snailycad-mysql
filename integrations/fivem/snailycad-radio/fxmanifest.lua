@@ -24,7 +24,9 @@ shared_scripts {
 
 server_scripts {
   "server/access.lua",
+  "server/settings.lua",
   "server/main.lua",
+  "server/setup.lua",
 }
 
 client_scripts {

@@ -1,14 +1,22 @@
 Config = {}
 
 --[[
-  CAD connection. Set these in server.cfg rather than here, so the token never ends up in a
-  shared file:
+  CAD connection: the CAD's API address and its API token (CAD Settings > API Token). Set it up
+  in any of these ways (never in this file, so the token doesn't end up in a shared file):
 
-    set snailycad_radio_api_url "https://cad-api.example.com/v1"
-    set snailycad_radio_api_token "your CAD API token (CAD Settings > API Token)"
+    1. server.cfg (wins over the others):
+         set snailycad_radio_api_url "https://cad-api.example.com/v1"
+         set snailycad_radio_api_token "your CAD API token"
+    2. in game as an admin: /radiosetup (or the setup key below); it also pops up by itself for
+       admins while the radio isn't set up
+    3. server console / txAdmin Live Console: snailyradio_setup <url> <token>
 ]]
-Config.ApiUrl = GetConvar("snailycad_radio_api_url", "")
-Config.ApiToken = GetConvar("snailycad_radio_api_token", "")
+
+-- who can use /radiosetup: these ACE permissions ("command" = server admins), plus ESX admin
+-- groups (admin, superadmin) and QBCore admin / god
+Config.AdminAces = { "snailycad.radio.admin", "command" }
+-- show the setup form to admins by itself while the radio isn't set up
+Config.SetupPopup = true
 
 --[[
   Who gets a radio.
@@ -46,9 +54,11 @@ Config.Keys = {
   channelUp = "",
   channelDown = "",
   earpiece = "",
+  setup = "F4",           -- admins: open the radio setup
 }
 Config.Commands = {
   radio = "radio",
+  setup = "radiosetup",
   earpiece = "earpiece",
   channel = "radiochannel", -- /radiochannel <name or number>
 }

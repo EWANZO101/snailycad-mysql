@@ -4,8 +4,6 @@
   straight to the CAD's radio server.
 ]]
 
-local apiUrl = (Config.ApiUrl or ""):gsub("/+$", "")
-local configured = apiUrl ~= "" and Config.ApiToken ~= ""
 local lastRequest = {}
 -- the CAD's channel list, from the last token response (for exports)
 local knownChannels = {}
@@ -14,9 +12,11 @@ local function debug(message, ...)
   if Config.Debug then print(("[snailycad-radio] " .. message):format(...)) end
 end
 
-if not configured then
-  print("^3[snailycad-radio] Set snailycad_radio_api_url and snailycad_radio_api_token in server.cfg (see README.md).^0")
-end
+CreateThread(function()
+  if not Settings.isConfigured() then
+    print("^3[snailycad-radio] Not set up yet: set snailycad_radio_api_url and snailycad_radio_api_token in server.cfg, run snailyradio_setup <url> <token> here, or use /radiosetup in game as an admin.^0")
+  end
+end)
 
 --- asks the CAD for a radio token for this player; cb(response | nil, error)
 local function fetchToken(source, cb)
@@ -38,6 +38,7 @@ local function fetchToken(source, cb)
     listenOnly = not hasRadio,
   }
 
+  local apiUrl, apiToken = Settings.get()
   PerformHttpRequest(apiUrl .. "/radio/external/token", function(status, response)
     if status ~= 200 or not response then
       debug("token request for %s failed: HTTP %s %s", source, status, response or "")
@@ -54,13 +55,13 @@ local function fetchToken(source, cb)
     cb(data)
   end, "POST", json.encode(body), {
     ["Content-Type"] = "application/json",
-    ["snaily-cad-api-token"] = Config.ApiToken,
+    ["snaily-cad-api-token"] = apiToken,
   })
 end
 
 RegisterNetEvent("snailycad-radio:requestToken", function()
   local source = source
-  if not configured then
+  if not Settings.isConfigured() then
     TriggerClientEvent("snailycad-radio:token", source, nil, "not_configured")
     return
   end
@@ -146,31 +147,24 @@ end)
 
 RegisterCommand("snailyradio_check", function(source)
   if source ~= 0 then return end
-  if not configured then
-    print("^1[snailycad-radio] not configured: set snailycad_radio_api_url and snailycad_radio_api_token^0")
+  local url, token, from = Settings.get()
+  if from == "none" then
+    print("^1[snailycad-radio] not set up: use snailyradio_setup <url> <token>, server.cfg or /radiosetup in game^0")
     return
   end
-  print(("[snailycad-radio] checking %s ..."):format(apiUrl))
-  PerformHttpRequest(apiUrl .. "/radio/external/token", function(status, response)
-    if status == 200 then
-      local data = json.decode(response)
-      print(("^2[snailycad-radio] OK: radio server %s (%s audio)^0"):format(data.wsUrl, data.transport))
-      for index, channel in ipairs(data.channels or {}) do
-        print(("  %d. %s %s"):format(index, channel.name, channel.frequency or ""))
-      end
-      if #(data.channels or {}) == 0 then
-        print("  (no channels open to game servers: add some in the CAD, CAD Settings > Radio)")
-      end
-      knownChannels = data.channels or knownChannels
-    elseif status == 401 then
-      print("^1[snailycad-radio] the CAD API token is wrong or the API token is turned off in the CAD^0")
-    elseif status == 400 then
-      print(("^1[snailycad-radio] the CAD refused: %s (is the Radio feature turned on?)^0"):format(response or ""))
-    else
-      print(("^1[snailycad-radio] could not reach the CAD: HTTP %s %s^0"):format(status, response or ""))
+  print(("[snailycad-radio] checking %s (settings from %s) ..."):format(url, from))
+  Settings.check(url, token, function(result)
+    if not result.ok then
+      print(("^1[snailycad-radio] %s^0"):format(result.message))
+      return
     end
-  end, "POST", json.encode({ name = "server check", identity = "fivem:server-check", kind = "game" }), {
-    ["Content-Type"] = "application/json",
-    ["snaily-cad-api-token"] = Config.ApiToken,
-  })
+    print(("^2[snailycad-radio] OK: radio server %s (%s audio)^0"):format(result.wsUrl, result.transport))
+    for index, channel in ipairs(result.channels) do
+      print(("  %d. %s %s"):format(index, channel.name, channel.frequency or ""))
+    end
+    if #result.channels == 0 then
+      print("  (no channels open to game servers: add some in the CAD, CAD Settings > Radio)")
+    end
+    if #result.channels > 0 then knownChannels = result.channels end
+  end)
 end, true)

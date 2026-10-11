@@ -120,3 +120,24 @@ function Access.check(source)
   if mode == "ace" then return hasAce, departments end
   return hasJob or hasAce, departments
 end
+
+--- server admins can set the radio up in game (/radiosetup): an ACE in Config.AdminAces, an ESX
+--- admin group, or a QBCore admin permission
+function Access.isAdmin(source)
+  if source == 0 then return true end
+  for _, ace in ipairs(Config.AdminAces or {}) do
+    if IsPlayerAceAllowed(source, ace) then return true end
+  end
+  if ESX then
+    local xPlayer = ESX.GetPlayerFromId(source)
+    local group = xPlayer and xPlayer.getGroup and xPlayer.getGroup()
+    if group == "admin" or group == "superadmin" or group == "owner" then return true end
+  end
+  if QBCore and QBCore.Functions.HasPermission then
+    local ok, allowed = pcall(QBCore.Functions.HasPermission, source, "admin")
+    if ok and allowed then return true end
+    ok, allowed = pcall(QBCore.Functions.HasPermission, source, "god")
+    if ok and allowed then return true end
+  end
+  return false
+end
