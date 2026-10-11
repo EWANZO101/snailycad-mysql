@@ -13,7 +13,8 @@
 
 # SnailyCAD
 
-> **This is the MySQL / MariaDB edition** of SnailyCADv4, with one-line installers for Ubuntu.
+> **This is the MySQL / MariaDB edition** of SnailyCADv4, with one-line installers for Ubuntu and
+> Windows.
 >
 > **Docker** (the CAD and a MariaDB database in containers):
 >
@@ -27,6 +28,18 @@
 > curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install-ubuntu.sh | sudo bash
 > ```
 >
+> **Windows 10/11** (standalone, as a Windows service). In **PowerShell (Admin)**:
+>
+> ```powershell
+> irm https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.ps1 | iex
+> ```
+>
+> or in **cmd**:
+>
+> ```bat
+> powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.ps1 | iex"
+> ```
+>
 > Each starts a setup wizard in your browser that installs everything with buttons.
 > See [docs/one-line-install.md](docs/one-line-install.md), [docs/install-docker.md](docs/install-docker.md)
 > and [MYSQL-PORT.md](MYSQL-PORT.md).
@@ -36,7 +49,7 @@
 ## What's different from the original SnailyCAD
 
 - **MySQL 8 / MariaDB 10.6+** instead of PostgreSQL, with a converter for existing PostgreSQL CADs
-- **One-line installers** for Ubuntu and Docker, finished in a setup wizard in your browser
+- **One-line installers** for Ubuntu, Docker and Windows, finished in a setup wizard in your browser
 - **Built-in radio**: dispatchers and admins talk in the browser (dock on every page, pop-out,
   listen to many channels), units talk in FiveM with the `snailycad-radio` resource
   (positional audio, earpieces, pma-voice / SaltyChat / TokoVOIP / mumble-voip) —

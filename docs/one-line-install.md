@@ -1,8 +1,8 @@
 <!-- Copy of the docs site's installations/methods/one-line-install.mdx; keep both in sync. -->
 
-# One-line install (Ubuntu)
+# One-line install (Ubuntu and Windows)
 
-Install SnailyCADv4 on an Ubuntu server with **one command**. The command starts a setup wizard in
+Install SnailyCADv4 on an Ubuntu server or a Windows 10/11 PC with **one command**. The command starts a setup wizard in
 your browser that installs everything else with buttons, one step at a time.
 
 Pick how the CAD should run:
@@ -38,6 +38,24 @@ Not sure yet? This one lets you choose in the wizard:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.sh | sudo bash
 ```
+
+### 🪟 Windows 10 / 11
+
+The CAD runs directly on Windows with Node.js, as a Windows service. Open **PowerShell as
+administrator** (right-click Start > Terminal (Admin) or Windows PowerShell (Admin)) and paste:
+
+```powershell
+irm https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.ps1 | iex
+```
+
+Or paste this in **Command Prompt (cmd)**:
+
+```bat
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.ps1 | iex"
+```
+
+The `curl … | sudo bash` lines above are for Linux only; they don't work in cmd or PowerShell.
+See [Windows](#windows) below for what the Windows installer does.
 
 > **MySQL / MariaDB edition**
 >
@@ -169,6 +187,103 @@ data)**, the `snailycad` service or the Docker containers and images, the firewa
 the packages the wizard installed (Docker or MariaDB included), and the `/opt/snailycad` folder. A
 database server or Docker that was already on the server is kept; only the CAD's own database and
 user are removed from it. A database on **another** server is left alone: drop it there yourself.
+
+## Windows
+
+### Requirements
+
+- **Windows 10** (version 1809 or newer) or **Windows 11**, 64-bit (x64), and an administrator
+  account
+- **winget** ("App Installer" from the Microsoft Store). It comes with Windows 11 and recent
+  Windows 10. If it's missing, the installer tells you; get it from
+  [aka.ms/getwinget](https://aka.ms/getwinget) and run the line again.
+- About **4 GB of RAM** (plus page file) for building, and **8 GB of free disk space**
+
+### What the command does
+
+1. If PowerShell isn't running as administrator, it asks (a UAC prompt) and continues in a new
+   administrator window.
+2. Checks Windows version, x64, free disk space and winget.
+3. Installs **Python 3.12** with winget if no Python 3 is installed (the setup wizard runs on it).
+4. Downloads the setup wizard into `C:\SnailyCAD\installer`, allows the wizard's port `3100` in
+   Windows Firewall, starts the wizard in the background and opens it in your browser at
+   `http://localhost:3100/?token=…`. It also prints a link for other PCs on your network.
+
+### The wizard on Windows
+
+The steps are the same as on Ubuntu, with these differences:
+
+- **Method**: standalone only. Docker Desktop needs WSL 2 and several restarts, so it isn't offered.
+- **Requirements**: **Git** (winget `Git.Git`), **Node.js 22** (a private copy in
+  `C:\SnailyCAD\runtime`, a Node.js you already have is not touched) and **pnpm 9**.
+- **Database**:
+  - **Install MariaDB for me**: installs MariaDB with winget (`MariaDB.Server`, Windows service
+    `MariaDB`, port 3306) with a random root password, then creates the database. The root
+    password is in `C:\SnailyCAD\installer\mariadb-root-password.txt`. Shown when no MySQL/MariaDB is
+    on the PC.
+  - **Connect to another database server**: a MySQL 8 / MariaDB 10.6+ you already have, on this
+    PC (`127.0.0.1`) or another one. Enter a user that may create the database.
+- **Install**: Database → Settings → Firewall → Dependencies → Build → Service → Start. The wizard
+  installs and builds the CAD itself, then starts it as a service.
+- **Service**: the CAD runs as the Windows service **`snailycad`**, made with
+  [NSSM](https://nssm.cc) (winget `NSSM.NSSM`). It starts at boot without anyone logged in,
+  restarts the CAD if it stops, and logs to `C:\SnailyCAD\logs\cad.log`. If NSSM can't be
+  downloaded, a scheduled task (`\SnailyCAD\snailycad`, runs as SYSTEM at startup) is used instead.
+- **Firewall**: Windows Firewall rules `SnailyCAD-snailycad-<port>` for the website and API ports.
+  A router or hosting firewall in front of the PC still needs its own port forwards.
+
+The built-in **Update CAD** button needs the Linux service and doesn't work on Windows yet.
+
+### Where everything is
+
+| Path                                  | What                                                   |
+| ------------------------------------- | ------------------------------------------------------ |
+| `C:\SnailyCAD\app`                    | The CAD's code and its `.env`                          |
+| `C:\SnailyCAD\runtime`                | The private Node.js, pnpm, its package store, NSSM     |
+| `C:\SnailyCAD\logs\cad.log`           | The CAD's log                                          |
+| `C:\SnailyCAD\installer\install.log`  | Every command the wizard ran                           |
+| `C:\SnailyCAD\installer\wizard.log`   | The setup wizard's own log                             |
+| `C:\SnailyCAD\installer\manifest.env` | Everything the installer added **outside** this folder |
+| `C:\SnailyCAD\uninstall.ps1`          | Removes all of it again                                |
+
+### Managing the CAD on Windows
+
+| What         | Command (PowerShell as administrator)                  |
+| ------------ | ------------------------------------------------------ |
+| Status       | `Get-Service snailycad`                                |
+| Restart      | `Restart-Service snailycad`                            |
+| Stop / start | `Stop-Service snailycad` / `Start-Service snailycad`   |
+| Live log     | `Get-Content C:\SnailyCAD\logs\cad.log -Wait -Tail 50` |
+
+You can also use **services.msc**. After changing `C:\SnailyCAD\app\.env`, rebuild in
+`C:\SnailyCAD\app` and restart the service.
+
+### Uninstalling on Windows
+
+In PowerShell or cmd, as administrator:
+
+```bat
+powershell -ExecutionPolicy Bypass -File C:\SnailyCAD\uninstall.ps1
+```
+
+It lists what it will remove and asks first. It removes the `snailycad` service (or scheduled
+task), the firewall rules, the CAD's database, MariaDB if the wizard installed it (with all its
+data), the programs it installed with winget (Python, Git, NSSM; not ones you already had) and
+`C:\SnailyCAD`. Add `-KeepMariaDB` to keep MariaDB (only the CAD's database and user are dropped;
+the root password is shown) and `-Yes` to skip the question.
+
+### Windows options
+
+Set these in the same PowerShell window before the `irm` line, for example
+`$env:SNAILY_WIZARD_PORT = '3200'`:
+
+| Variable             | Default        | What                       |
+| -------------------- | -------------- | -------------------------- |
+| `SNAILY_NAME`        | `snailycad`    | Service name               |
+| `SNAILY_DIR`         | `C:\SnailyCAD` | Install folder             |
+| `SNAILY_WIZARD_PORT` | `3100`         | Port of the setup wizard   |
+| `SNAILY_REPO`        | the repo below | Repository to install from |
+| `SNAILY_BRANCH`      | `main`         | Branch to install          |
 
 ## Options
 
