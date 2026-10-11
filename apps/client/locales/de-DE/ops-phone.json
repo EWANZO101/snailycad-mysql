@@ -39,7 +39,7 @@
     "regenerateConfirm": "Make a new secret? The old one stops working until you update server.cfg.",
     "serverOwnerSteps": "On the FiveM server",
     "stepServerCfg": "Add this line to server.cfg:",
-    "stepApiConfig": "In opslabs-phone/server/api_config.lua, add this line inside Webhooks = { }:",
+    "stepApiConfig": "In opslabs-phone/server/api_config.lua, add this line to the Webhooks list:",
     "stepApiKey": "Make sure server.cfg has set opslabs_phone_api_key \"...\" and paste the same key above.",
     "stepRestart": "Restart the server (or ensure opslabs-phone) so the phone reads the new settings.",
     "services": "Services",
