@@ -1,6 +1,13 @@
 {
   "name": "@snailycad/radio",
   "version": "1.80.2",
+  "typesVersions": {
+    "*": {
+      "browser": [
+        "dist/browser/index.d.ts"
+      ]
+    }
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

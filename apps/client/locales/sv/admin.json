@@ -3,6 +3,7 @@
     "CUSTOM_LOCALES": "Custom Locales",
     "TONE_PRESETS": "Tones",
     "IMPORT_POSTGRES": "Import from PostgreSQL",
+    "RADIO": "Radio",
     "management": "Hantering",
     "adminDashboard": "Adminpanel",
     "MANAGE_CITIZENS": "Hantera Medborgare",

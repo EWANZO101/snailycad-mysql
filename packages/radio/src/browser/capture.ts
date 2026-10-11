@@ -44,9 +44,9 @@ registerProcessor("snaily-radio-capture", SnailyRadioCapture);
 export interface MicrophoneOptions {
   deviceId?: string;
   /** called with every 20 ms frame while `transmitting` is true */
-  onFrame: (samples: Float32Array) => void;
+  onFrame(samples: Float32Array): void;
   /** input level 0..1, about 50 times a second while open */
-  onLevel?: (level: number) => void;
+  onLevel?(level: number): void;
 }
 
 export function canCaptureMicrophone() {

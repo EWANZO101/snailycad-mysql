@@ -55,3 +55,4 @@ start.log
 # Docker: persisted API data (recovery token)
 .snailycad-data
 .db-credentials
+livekit.yaml

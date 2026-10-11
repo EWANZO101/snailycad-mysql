@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/number-literal-case -- hex byte masks; prettier lowercases them */
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, Server as HttpServer } from "node:http";
 import type { Duplex } from "node:stream";
@@ -200,26 +201,35 @@ export class RadioServer {
     }
 
     switch (message.t) {
-      case "join":
+      case "join": {
         await this.#join(
           session,
           String(message.channel),
           message.mode === "listen" ? "listen" : "member",
         );
         break;
-      case "leave":
+      }
+      case "leave": {
         this.#leave(session, String(message.channel));
         break;
-      case "ptt":
+      }
+      case "ptt": {
         if (message.on) this.#pttOn(session, String(message.channel));
         else this.#pttOff(session, String(message.channel));
         break;
-      case "state":
+      }
+      case "state": {
         this.#setState(session, message);
         break;
-      case "ping":
+      }
+      case "ping": {
         this.#send(session, { t: "pong", ts: message.ts });
         break;
+      }
+      default: {
+        // unknown messages are ignored (newer clients)
+        break;
+      }
     }
   }
 

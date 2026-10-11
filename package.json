@@ -8,6 +8,7 @@
     "build": "node scripts/create-images-domain.mjs && pnpm turbo run build --filter=\"{packages/*}\" && pnpm turbo run build --filter=\"{apps/*}\"",
     "dev": "docker compose up -d && pnpm turbo run watch --parallel --concurrency 11",
     "convert:postgres": "node scripts/mysql/convert-from-postgres.mjs",
+    "build:fivem-radio": "pnpm --filter @snailycad/radio build && node integrations/fivem/build.mjs",
     "format": "prettier --write \"./(packages|apps)/**/**/*.{js,jsx,ts,mjs,tsx,md,css,json}\" --ignore-path .gitignore",
     "lint": "pnpm eslint . --ext .ts,.js,.tsx,.jsx,.mjs",
     "lint:fix": "pnpm eslint . --ext .ts,.js,.tsx,.jsx,.mjs --fix",

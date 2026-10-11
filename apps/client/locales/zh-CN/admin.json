@@ -3,6 +3,7 @@
     "CUSTOM_LOCALES": "Custom Locales",
     "TONE_PRESETS": "Tones",
     "IMPORT_POSTGRES": "Import from PostgreSQL",
+    "RADIO": "Radio",
     "management": "管理",
     "adminDashboard": "管理员仪表板",
     "MANAGE_CITIZENS": "管理公民",

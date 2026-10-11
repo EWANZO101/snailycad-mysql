@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/number-literal-case -- hex byte masks; prettier lowercases them */
 import {
   type ChannelMode,
   type ClientMessage,
@@ -50,7 +51,7 @@ export interface RadioClientEvents {
 
 export interface RadioClientOptions {
   /** fetches a fresh radio token (POST /v1/radio/token or your own backend) */
-  getToken: () => Promise<RadioTokenResponse>;
+  getToken(): Promise<RadioTokenResponse>;
   /** shown in logs, e.g. "cad-browser/1.0" or "fivem/1.0" */
   clientName?: string;
   /** radio sound (band-pass + saturation) on received audio */
@@ -325,10 +326,11 @@ export class RadioClient extends Emitter<RadioClientEvents> {
         if (this.earpiece) this.#send({ t: "state", earpiece: true });
         break;
       }
-      case "channels":
+      case "channels": {
         this.channels = message.channels;
         this.emit("channels", message.channels);
         break;
+      }
       case "joined": {
         const joined: JoinedChannel = {
           id: message.channel,
@@ -395,17 +397,19 @@ export class RadioClient extends Emitter<RadioClientEvents> {
         this.emit("transmit", { channel: message.channel, on: true });
         break;
       }
-      case "busy":
+      case "busy": {
         if (this.#pttWanted === message.channel) this.#pttWanted = null;
         this.#tone("busy");
         this.emit("busy", message);
         break;
-      case "preempted":
+      }
+      case "preempted": {
         if (this.#pttWanted === message.channel) this.#pttWanted = null;
         this.#stopTransmitting(false);
         this.#tone("busy");
         this.emit("preempted", message);
         break;
+      }
       case "switch": {
         const from = this.transmitChannel;
         if (this.#options.followSwitch && from !== message.channel) {
@@ -417,16 +421,23 @@ export class RadioClient extends Emitter<RadioClientEvents> {
         this.emit("switch", { channel: message.channel, from });
         break;
       }
-      case "tone":
+      case "tone": {
         if (isRadioTone(message.tone)) this.#tone(message.tone, true);
         this.emit("tone", message);
         break;
-      case "error":
+      }
+      case "error": {
         this.emit("error", { code: message.code, message: message.message });
         if (message.fatal) this.#closed = message.code === "auth";
         break;
-      case "pong":
+      }
+      case "pong": {
         break;
+      }
+      default: {
+        // unknown messages are ignored (newer servers)
+        break;
+      }
     }
   }
 

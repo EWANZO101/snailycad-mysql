@@ -1,4 +1,5 @@
 import * as React from "react";
+import { RadioDock } from "components/radio/radio-dock";
 import dynamic from "next/dynamic";
 import { useTranslations } from "use-intl";
 import { Layout } from "components/Layout";
@@ -221,6 +222,7 @@ export default function OfficerDashboard({
 
       <Modals.SelectOfficerModal />
       <OfficerModals />
+      <RadioDock defaultChannelId={activeOfficer?.radioChannelId} />
     </Layout>
   );
 }
@@ -340,7 +342,17 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({ req, local
       values,
       messages: {
         ...(await getTranslations(
-          ["citizen", "leo", "truck-logs", "ems-fd", "calls", "common", "business", "courthouse"],
+          [
+            "citizen",
+            "leo",
+            "truck-logs",
+            "ems-fd",
+            "calls",
+            "common",
+            "business",
+            "courthouse",
+            "radio",
+          ],
           user?.locale ?? locale,
         )),
       },

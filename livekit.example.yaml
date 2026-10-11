@@ -1,0 +1,14 @@
+# LiveKit server for the SnailyCAD radio. Copy to livekit.yaml and change the secret.
+# Docs: docs/radio/livekit.md (and https://docs.livekit.io/home/self-hosting/deployment/)
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50100
+  # find the server's public IP automatically (needed behind NAT / in Docker)
+  use_external_ip: true
+keys:
+  # key: secret  (use the same values in the CAD's .env: RADIO_LIVEKIT_API_KEY / _API_SECRET)
+  snailycad: change-me-to-a-long-random-secret-at-least-32-characters
+logging:
+  level: info

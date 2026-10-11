@@ -23,6 +23,8 @@ export interface RadioTokenClaims {
   dep?: string[];
   /** may listen to nearby radios (positional audio in games) */
   prox?: boolean;
+  /** no radio of their own: can only overhear nearby radios (prox), never join as a member */
+  lo?: boolean;
 }
 
 function radioKey() {
@@ -55,6 +57,7 @@ export function verifyRadioToken(token: string): RadioTokenClaims | null {
       uid: payload.uid,
       dep: Array.isArray(payload.dep) ? payload.dep : undefined,
       prox: payload.prox === true,
+      lo: payload.lo === true,
     };
   } catch {
     return null;

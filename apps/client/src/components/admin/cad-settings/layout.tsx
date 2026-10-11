@@ -27,6 +27,7 @@ export enum SettingsTabs {
   Limits = "LIMITS",
   CustomLocales = "CUSTOM_LOCALES",
   TonePresets = "TONE_PRESETS",
+  Radio = "RADIO",
   ImportPostgres = "IMPORT_POSTGRES",
 
   /** integrations */
@@ -110,6 +111,7 @@ function CadSettingsSidebar() {
         SettingsTabs.Other,
         SettingsTabs.CustomLocales,
         SettingsTabs.TonePresets,
+        SettingsTabs.Radio,
         SettingsTabs.ImportPostgres,
       ],
     },

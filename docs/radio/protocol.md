@@ -32,15 +32,26 @@ External request body:
 {
   "name": "John Doe | 1A-12",
   "identity": "fivem:license:abc123",
-  "identifiers": { "discordId": "1234", "steamId": "110000100000000" },
-  "kind": "game"
+  "identifiers": { "discordId": "1234", "steamId": "76561197960265728" },
+  "kind": "game",
+  "departments": ["LSPD"],
+  "proximity": true,
+  "listenOnly": false
 }
 ```
 
-- `identity` is your stable id for this person (unique per integration).
-- `identifiers` link the person to a CAD user (the CAD user's Discord or Steam account). A linked
-  person gets that user's channel access and follows dispatch channel changes made for their unit.
-- `kind`: `game` (a player in a game) or `external` (anything else, e.g. a hardware gateway).
+| Field         | Meaning                                                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`        | Shown to everyone on the radio.                                                                                                                                                 |
+| `identity`    | Your stable id for this person (unique within your integration).                                                                                                                |
+| `identifiers` | Links the person to a CAD user (the user's Discord or Steam account). A linked person gets that user's channel access and follows dispatch channel changes made for their unit. |
+| `kind`        | `game` (a player in a game) or `external` (anything else, e.g. a hardware gateway or a bot).                                                                                    |
+| `departments` | CAD department names or ids this person counts as (e.g. mapped from their job), for department-only channels.                                                                   |
+| `proximity`   | May overhear nearby radios: `join` with `mode: "listen"` on channels that allow outside radios.                                                                                 |
+| `listenOnly`  | No radio of their own: never joins as a member, only overhears (needs `proximity`).                                                                                             |
+
+Channels with **Allow FiveM and other radios** turned off only accept people linked to a CAD user
+with access to them, and can't be overheard.
 
 Response (both endpoints):
 
@@ -73,20 +84,21 @@ Text frames are JSON objects with a `t` (type) field. Unknown types must be igno
 
 ### Server → client
 
-| `t`         | Fields                                            | Meaning                                                                                                         |
-| ----------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `ready`     | `identity`, `channels`, `transport`               | `hello` accepted.                                                                                               |
-| `joined`    | `channel`, `handle`, `mode`, `members`, `livekit` | Joined. `handle` is the number used in binary audio frames. In LiveKit mode `livekit` is `{ "room", "token" }`. |
-| `left`      | `channel`                                         | Left (also sent when access was removed).                                                                       |
-| `members`   | `channel`, `members`                              | Member list changed: `[{ id, name, kind, talking, earpiece }]`.                                                 |
-| `talk`      | `channel`, `id`, `name`, `on`                     | Someone started / stopped transmitting.                                                                         |
-| `granted`   | `channel`                                         | Your `ptt on` was accepted: start sending audio.                                                                |
-| `busy`      | `channel`, `by`                                   | Your `ptt on` was refused: someone else is talking.                                                             |
-| `preempted` | `channel`, `by`                                   | A dispatcher took the channel: stop sending audio.                                                              |
-| `switch`    | `channel`                                         | Dispatch moved you to this channel. Leave your current member channel and join this one.                        |
-| `tone`      | `channel`, `tone`                                 | Play an alert tone (`"alert"`, `"panic"`, `"beep"` or a CAD tone name).                                         |
-| `error`     | `code`, `message`                                 | Something went wrong; `fatal: true` means the server closes the socket.                                         |
-| `pong`      | `ts`                                              | Reply to `ping`.                                                                                                |
+| `t`         | Fields                                            | Meaning                                                                                                            |
+| ----------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `ready`     | `identity`, `channels`, `transport`               | `hello` accepted.                                                                                                  |
+| `joined`    | `channel`, `handle`, `mode`, `members`, `livekit` | Joined. `handle` is the number used in binary audio frames. In LiveKit mode `livekit` is `{ "room", "token" }`.    |
+| `left`      | `channel`                                         | Left (also sent when access was removed).                                                                          |
+| `members`   | `channel`, `members`                              | Member list changed: `[{ id, name, kind, talking, earpiece }]`.                                                    |
+| `talk`      | `channel`, `id`, `name`, `on`                     | Someone started / stopped transmitting.                                                                            |
+| `granted`   | `channel`                                         | Your `ptt on` was accepted: start sending audio.                                                                   |
+| `busy`      | `channel`, `by`                                   | Your `ptt on` was refused: someone else is talking.                                                                |
+| `preempted` | `channel`, `by`                                   | A dispatcher took the channel: stop sending audio.                                                                 |
+| `switch`    | `channel`                                         | Dispatch moved you to this channel. Leave your current member channel and join this one.                           |
+| `tone`      | `channel`, `tone`                                 | Play an alert tone (`"alert"`, `"panic"`, `"beep"` or a CAD tone name).                                            |
+| `channels`  | `channels`                                        | Your channel list changed (an admin edited channels or your access). Channels you lost access to are `left` first. |
+| `error`     | `code`, `message`                                 | Something went wrong; `fatal: true` means the server closes the socket.                                            |
+| `pong`      | `ts`                                              | Reply to `ping`.                                                                                                   |
 
 ## 3. Audio (`transport: "builtin"`)
 

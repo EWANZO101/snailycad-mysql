@@ -62,6 +62,25 @@ services:
       - cad_web
     restart: always
 
+  # Optional LiveKit server for the radio (CAD Settings > Radio > LiveKit server). Start it with:
+  #   cp livekit.example.yaml livekit.yaml   (and change the secret)
+  #   docker compose -f production.docker-compose.yml --profile livekit up -d
+  # then set RADIO_LIVEKIT_URL / _API_KEY / _API_SECRET in .env and rebuild/restart the API.
+  livekit:
+    container_name: "snaily-cad-livekit"
+    image: livekit/livekit-server:v1.13.7
+    profiles: ["livekit"]
+    command: --config /etc/livekit.yaml
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    networks:
+      - cad_web
+    restart: unless-stopped
+
 networks:
   cad_web:
     external: true

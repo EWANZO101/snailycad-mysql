@@ -11,3 +11,6 @@ apps/api/public/**/*.jpg
 apps/api/public/**/*.jpeg
 
 next-env.d.ts
+# built FiveM UI bundle (from integrations/fivem/snailycad-radio/web/src)
+integrations/fivem/snailycad-radio/html/app.js
+integrations/fivem/snailycad-radio/html/chunks

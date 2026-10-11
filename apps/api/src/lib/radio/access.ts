@@ -119,6 +119,8 @@ export async function resolveRadioAccess(claims: RadioTokenClaims): Promise<Radi
       member = false;
     }
 
+    // a listen-only token (a player without a radio) never joins a channel as a member
+    if (claims.lo) member = false;
     const transmit = member && (dispatcher || !channel.receiveOnly);
     // positional audio: a game player may overhear any radio near them, except on channels
     // that are closed to game servers / outside radios

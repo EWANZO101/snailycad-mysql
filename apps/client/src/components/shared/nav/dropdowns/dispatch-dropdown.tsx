@@ -10,12 +10,14 @@ import {
 } from "@snailycad/ui";
 import { classNames } from "lib/classNames";
 import { usePermission, Permissions } from "hooks/usePermission";
+import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 
 export function DispatchDropdown() {
   const router = useRouter();
   const t = useTranslations("Nav");
   const isActive = (route: string) => router.pathname.startsWith(route);
   const { hasPermissions } = usePermission();
+  const { RADIO } = useFeatureEnabled();
 
   return (
     <DropdownMenu>
@@ -42,6 +44,10 @@ export function DispatchDropdown() {
 
         {hasPermissions([Permissions.LiveMap]) ? (
           <DropdownMenuLinkItem href="/dispatch/map">{t("liveMap")}</DropdownMenuLinkItem>
+        ) : null}
+
+        {RADIO && hasPermissions([Permissions.Dispatch]) ? (
+          <DropdownMenuLinkItem href="/radio">{t("radio")}</DropdownMenuLinkItem>
         ) : null}
       </DropdownMenuContent>
     </DropdownMenu>

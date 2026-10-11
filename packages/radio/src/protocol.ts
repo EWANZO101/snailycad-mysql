@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/number-literal-case -- hex byte masks; prettier lowercases them */
 /**
  * SnailyCAD Radio protocol v1. Documented in docs/radio/protocol.md: keep both in sync.
  */

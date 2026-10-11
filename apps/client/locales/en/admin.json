@@ -2,6 +2,7 @@
   "Management": {
     "TONE_PRESETS": "Tones",
     "IMPORT_POSTGRES": "Import from PostgreSQL",
+    "RADIO": "Radio",
     "management": "Management",
     "adminDashboard": "Admin Dashboard",
     "MANAGE_CITIZENS": "Manage Citizens",
