@@ -1,7 +1,12 @@
 #!/bin/bash
 # SnailyCAD one-line installer for Ubuntu.
 #
-#   curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.sh | sudo bash
+#   Docker:      curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install-docker.sh | sudo bash
+#   Ubuntu:      curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install-ubuntu.sh | sudo bash
+#   Ask me:      curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.sh | sudo bash
+#
+# install-docker.sh and install-ubuntu.sh run this script with --docker / --ubuntu, which picks
+# the install method up front so the wizard skips that step.
 #
 # This only starts the setup wizard (python3, which Ubuntu ships). Everything else is installed
 # from the wizard in the browser, one button per requirement: system tools, Node.js + pnpm or
@@ -20,6 +25,11 @@
 #   SNAILY_REPO         git repository (GitHub URL or local path) to install from
 #   SNAILY_BRANCH       branch to install                                   (default: main)
 #   SNAILY_WIZARD_PORT  port of the setup wizard                            (default: 3100)
+#   SNAILY_METHOD       docker or ubuntu, same as --docker / --ubuntu
+#
+# Options:
+#   --docker            run the CAD in Docker containers, with a MariaDB container
+#   --ubuntu            run the CAD directly on Ubuntu with Node.js (alias: --standalone)
 set -euo pipefail
 
 NAME="${SNAILY_NAME:-snailycad}"
@@ -28,6 +38,7 @@ REPO="${SNAILY_REPO:-https://github.com/EWANZO101/snailycad-mysql.git}"
 BRANCH="${SNAILY_BRANCH:-main}"
 WIZARD_PORT="${SNAILY_WIZARD_PORT:-3100}"
 WIZARD_FILES=(wizard-server.py wizard.html uninstall.sh)
+METHOD="${SNAILY_METHOD:-}"
 
 GREEN="\033[0;32m"
 RED="\033[0;31m"
@@ -41,6 +52,20 @@ fail() {
     echo -e "${RED}[x]${NC} $1" >&2
     exit 1
 }
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --docker) METHOD=docker ;;
+        --ubuntu | --standalone) METHOD=standalone ;;
+        *) fail "Unknown option: $1 (use --docker or --ubuntu)" ;;
+    esac
+    shift
+done
+case "$METHOD" in
+    "" | docker | standalone) ;;
+    ubuntu) METHOD=standalone ;;
+    *) fail "SNAILY_METHOD must be docker or ubuntu." ;;
+esac
 
 [[ $EUID -eq 0 ]] || fail "Run this as root (e.g. with sudo)."
 [[ "$NAME" =~ ^[a-z][a-z0-9-]{0,30}$ ]] || fail "SNAILY_NAME must be lowercase letters, numbers and dashes."
@@ -73,6 +98,10 @@ INSTALL_DIR=$INSTALL_DIR
 REPO=$REPO
 BRANCH=$BRANCH
 EOF
+if [[ -n "$METHOD" ]]; then
+    # chosen by the install command: the wizard skips its method step
+    printf 'METHOD=%s\nMETHOD_PRESET=1\n' "$METHOD" >> "$MANIFEST"
+fi
 
 # --- python3 (the wizard) --------------------------------------------------------
 
@@ -144,6 +173,10 @@ done
 
 IP=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+(\.[0-9]+){3}$' | head -1)
 echo
+case "$METHOD" in
+    docker) echo -e "Install method: ${BOLD}Docker${NC}" ;;
+    standalone) echo -e "Install method: ${BOLD}Ubuntu (standalone, Node.js)${NC}" ;;
+esac
 echo -e "${BOLD}SnailyCAD setup wizard is running. Open this link in your browser:${NC}"
 echo
 echo -e "    ${GREEN}http://${IP:-<server-ip>}:${WIZARD_PORT}/?token=${TOKEN}${NC}"

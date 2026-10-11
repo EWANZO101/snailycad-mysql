@@ -471,6 +471,8 @@ def checks():
         "ip": server_ip(),
         "ports": {"client": client_port, "api": api_port},
         "method": method(),
+        # chosen by the install command (install-docker.sh / install-ubuntu.sh)
+        "methodPreset": manifest_value("METHOD_PRESET") == "1",
         "items": [
             {"label": "Operating system", "value": os_name, "ok": "ubuntu" in os_name.lower(), "warnOnly": True},
             {"label": "CPU", "value": f"{cpus} core(s)", "ok": cpus >= 2, "warnOnly": True, "hint": "2 or more recommended"},

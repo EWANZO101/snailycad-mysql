@@ -923,7 +923,15 @@
         $("api-port").value = data.ports.api ?? 8080;
         syncUrls();
       }
-      $("checks-next").addEventListener("click", () => show(1));
+      $("checks-next").addEventListener("click", () => {
+        // the install command already chose docker or ubuntu: skip the method step
+        if (state.checks?.methodPreset) {
+          state.method = state.checks.method;
+          setupDbOptions();
+          return show(2);
+        }
+        show(1);
+      });
 
       // --- 2. method
       $("method-next").addEventListener("click", async () => {
