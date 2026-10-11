@@ -28,19 +28,23 @@ Tested with MySQL 8.0.46 and MariaDB 11.4.12.
 
 ## New install
 
-### One-line installer (Ubuntu)
+### One-line installers (Ubuntu)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.sh | sudo bash
+# Docker: the CAD and a MariaDB database in containers
+curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install-docker.sh | sudo bash
+
+# Ubuntu standalone: the CAD runs directly with Node.js, as a systemd service
+curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install-ubuntu.sh | sudo bash
 ```
 
-It prints a link to a setup wizard on `http://<server-ip>:3100`. In the browser you pick Docker or
-standalone, install each requirement with a button (system tools, Node.js + pnpm or Docker, the
-CAD), choose the database and ports, and follow the install live. Everything lives in
-`/opt/snailycad`, and `sudo bash /opt/snailycad/uninstall.sh` removes all of it again, including
-what the wizard added outside that folder. Options (`SNAILY_NAME`, `SNAILY_WIZARD_PORT`, …) are
-listed at the top of `scripts/installer/install.sh`. Full guide, including a manual Docker install:
-[docs/install-docker.md](docs/install-docker.md).
+Each prints a link to a setup wizard on `http://<server-ip>:3100`. In the browser you install each
+requirement with a button (system tools, then Docker or Node.js + pnpm, then the CAD), choose the
+database and ports, and follow the install live. `install.sh` without a method asks in the wizard
+instead. Everything lives in `/opt/snailycad`, and `sudo bash /opt/snailycad/uninstall.sh` removes
+all of it again, including what the wizard added outside that folder. Options (`SNAILY_NAME`,
+`SNAILY_WIZARD_PORT`, …) are listed at the top of `scripts/installer/install.sh`. Full guides:
+[docs/one-line-install.md](docs/one-line-install.md) and [docs/install-docker.md](docs/install-docker.md).
 
 ### By hand
 

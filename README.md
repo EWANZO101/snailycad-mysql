@@ -13,15 +13,23 @@
 
 # SnailyCAD
 
-> **This is the MySQL / MariaDB edition** of SnailyCADv4, with a one-line installer for Ubuntu.
+> **This is the MySQL / MariaDB edition** of SnailyCADv4, with one-line installers for Ubuntu.
+>
+> **Docker** (the CAD and a MariaDB database in containers):
 >
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.sh | sudo bash
+> curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install-docker.sh | sudo bash
 > ```
 >
-> It starts a setup wizard in your browser that installs everything with buttons, using Docker or
-> standalone Node.js. See [docs/install-docker.md](docs/install-docker.md) and
-> [MYSQL-PORT.md](MYSQL-PORT.md).
+> **Ubuntu** (standalone: the CAD runs directly with Node.js, as a system service):
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install-ubuntu.sh | sudo bash
+> ```
+>
+> Each starts a setup wizard in your browser that installs everything with buttons.
+> See [docs/one-line-install.md](docs/one-line-install.md), [docs/install-docker.md](docs/install-docker.md)
+> and [MYSQL-PORT.md](MYSQL-PORT.md).
 
 💻 An open source Computer Aided Dispatch (CAD) for FiveM,
 this is a web based integration for communities who love police roleplaying and dispatching. Optional Discord and FiveM integrations included.

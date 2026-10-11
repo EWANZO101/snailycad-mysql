@@ -1,4 +1,4 @@
-<!-- Copy of docs/installations/methods/docker.mdx from the docs site; keep both in sync. -->
+<!-- Copy of the docs site's installations/methods/docker.mdx; keep both in sync. -->
 
 # Docker installation (MySQL / MariaDB edition)
 
@@ -31,7 +31,7 @@ Both run the same three containers: **MariaDB 11.4**, the **API** and the **clie
 Connect to your server over SSH and run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install-docker.sh | sudo bash
 ```
 
 This only downloads and starts the setup wizard. When it's done it prints a link:
@@ -57,7 +57,8 @@ The wizard walks you through seven steps. Each one has **Back** and **Next** but
 
 1. **Server**: checks the operating system, CPU, memory, disk space and systemd. A red ✕ must be
    fixed before you can continue; a yellow ! is only a warning.
-2. **Method**: choose **Docker**. (**Standalone** runs the CAD directly with Node.js instead.)
+2. **Method**: skipped, because `install-docker.sh` already chose Docker. (To run the CAD
+   directly on Ubuntu instead, use the [Ubuntu one-liner](one-line-install.md).)
 3. **Requirements**: everything the CAD needs, each with its own **Install** button:
    - **System tools**: git, curl, xz-utils, ca-certificates
    - **Docker Engine** (`docker.io` from Ubuntu)
@@ -133,7 +134,7 @@ Make a backup of the database first if you want to keep the data (see [backups](
 ### Installer options
 
 Set these in front of `bash`, for example
-`curl -fsSL …/install.sh | sudo SNAILY_WIZARD_PORT=3200 bash`:
+`curl -fsSL …/install-docker.sh | sudo SNAILY_WIZARD_PORT=3200 bash`:
 
 | Variable             | Default                                            | What                                                        |
 | -------------------- | -------------------------------------------------- | ----------------------------------------------------------- |
@@ -147,7 +148,7 @@ Set these in front of `bash`, for example
 >
 > The container names (`snaily-cad-mariadb`, `snaily-cad-api`, `snaily-cad-client`) are fixed, so
 > only one Docker install can run on a server. For a second CAD on the same server, use the
-> **Standalone** method with another `SNAILY_NAME`.
+> [Ubuntu one-liner](one-line-install.md) with another `SNAILY_NAME`.
 
 ## Manual installation
 
