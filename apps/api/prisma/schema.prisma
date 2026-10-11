@@ -284,32 +284,32 @@ model User {
   officerLayoutOrder       DashboardLayoutCardType[]
 
   // relational data
-  citizens             Citizen[]
-  cads                 cad[]
-  vehicles             RegisteredVehicle[]
-  weapons              Weapon[]
-  notifications        Notification[]
-  executedNotifictions Notification[]         @relation("executor")
-  medicalRecords       MedicalRecord[]
-  bleeterPosts         BleeterPost[]
-  businesses           Business[]
-  businessPosts        BusinessPost[]
-  Employee             Employee[]
-  officers             Officer[]
-  emsFdDeputies        EmsFdDeputy[]
-  TruckLog             TruckLog[]
-  ExpungementRequest   ExpungementRequest[]
-  ActiveDispatchers    ActiveDispatchers[]
-  User2FA              User2FA[]
-  NameChangeRequest    NameChangeRequest[]
-  CourthousePost       CourthousePost[]
-  ActiveTone           ActiveTone[]
-  AuditLog             AuditLog[]
-  DoctorVisit          DoctorVisit[]
-  BleeterProfile       BleeterProfile?
-  BleeterProfileFollow BleeterProfileFollow[]
-  citizenClaimRequests          CitizenClaimRequest[] @relation("citizenClaimRequests")
-  reviewedCitizenClaimRequests  CitizenClaimRequest[] @relation("reviewedCitizenClaimRequests")
+  citizens                     Citizen[]
+  cads                         cad[]
+  vehicles                     RegisteredVehicle[]
+  weapons                      Weapon[]
+  notifications                Notification[]
+  executedNotifictions         Notification[]         @relation("executor")
+  medicalRecords               MedicalRecord[]
+  bleeterPosts                 BleeterPost[]
+  businesses                   Business[]
+  businessPosts                BusinessPost[]
+  Employee                     Employee[]
+  officers                     Officer[]
+  emsFdDeputies                EmsFdDeputy[]
+  TruckLog                     TruckLog[]
+  ExpungementRequest           ExpungementRequest[]
+  ActiveDispatchers            ActiveDispatchers[]
+  User2FA                      User2FA[]
+  NameChangeRequest            NameChangeRequest[]
+  CourthousePost               CourthousePost[]
+  ActiveTone                   ActiveTone[]
+  AuditLog                     AuditLog[]
+  DoctorVisit                  DoctorVisit[]
+  BleeterProfile               BleeterProfile?
+  BleeterProfileFollow         BleeterProfileFollow[]
+  citizenClaimRequests         CitizenClaimRequest[]  @relation("citizenClaimRequests")
+  reviewedCitizenClaimRequests CitizenClaimRequest[]  @relation("reviewedCitizenClaimRequests")
 }
 
 model UserSession {
@@ -821,6 +821,7 @@ model DepartmentValue {
   mCombinedEmsFdUnit    CombinedEmsFdUnit[]
   ActiveDispatchers     ActiveDispatchers[]
   links                 DepartmentValueLink[]
+  tonePresets           TonePreset[]
 }
 
 model DepartmentValueLink {
@@ -1805,6 +1806,20 @@ model ActiveTone {
 enum PublishStatus {
   DRAFT
   PUBLISHED
+}
+
+// a tone admins configure and dispatch can play for everyone, a department, a unit or a call
+model TonePreset {
+  id           String           @id @default(cuid())
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @default(now()) @updatedAt
+  name         String           @db.VarChar(255)
+  // "builtin:<name>" for a generated tone, otherwise a URL to an audio file
+  sound        String           @db.Text
+  type         ActiveToneType   @default(SHARED)
+  department   DepartmentValue? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentId String?
+  position     Int              @default(0)
 }
 
 enum ActiveToneType {

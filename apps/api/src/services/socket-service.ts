@@ -211,4 +211,15 @@ export class Socket {
   emitUnitPrivateMessage(data: { senderUnitId: string; recipientUnitId: string }) {
     this.io.sockets.emit(SocketEvents.UnitPrivateMessage, data);
   }
+
+  emitPlayTone(data: {
+    tone: { id: string; name: string; sound: string };
+    target: "ALL" | "LEO" | "EMS_FD" | "DEPARTMENT" | "UNIT" | "CALL";
+    unitIds: string[] | null;
+    departmentId: string | null;
+    description: string | null;
+    sentBy: string;
+  }) {
+    this.io.sockets.emit(SocketEvents.PlayTone, data);
+  }
 }

@@ -14,6 +14,10 @@ import { Table, useTableState } from "components/shared/Table";
 import { CallDescription } from "../active-calls/CallDescription";
 import { type ActiveTone, ActiveToneType } from "@snailycad/types";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/router";
+import { defaultPermissions } from "@snailycad/permissions";
+import { usePermission } from "hooks/usePermission";
+import { PlayToneSection } from "components/tones/tone-presets";
 
 interface Props {
   types: ActiveToneType[];
@@ -28,6 +32,11 @@ export function TonesModal({ types }: Props) {
   const common = useTranslations("Common");
   const tableState = useTableState();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const { hasPermissions } = usePermission();
+  const canPlayPresets =
+    router.pathname === "/dispatch" &&
+    hasPermissions(defaultPermissions.defaultDispatchPermissions);
 
   async function onSubmit(
     values: typeof INITIAL_VALUES,
@@ -93,6 +102,8 @@ export function TonesModal({ types }: Props) {
       title={t("tones")}
       className="w-[600px]"
     >
+      {canPlayPresets && modalState.isOpen(ModalIds.Tones) ? <PlayToneSection /> : null}
+
       <Formik validate={validate} onSubmit={onSubmit} initialValues={INITIAL_VALUES}>
         {({ setFieldValue, setValues, resetForm, values, errors, isValid }) => (
           <Form>

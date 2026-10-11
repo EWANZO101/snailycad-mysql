@@ -40,4 +40,5 @@ export enum SocketEvents {
   Tones = "Tones",
   PrivateMessage = "PrivateMessage",
   UnitPrivateMessage = "UnitPrivateMessage",
+  PlayTone = "PlayTone",
 }

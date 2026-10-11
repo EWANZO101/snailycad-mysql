@@ -1,7 +1,7 @@
 # Roadmap Status
 
 Tracks progress against the backlog in https://github.com/EWANZO101/sna1/blob/main/readme.md.
-Last updated: 2026-10-10.
+Last updated: 2026-10-11.
 
 Legend: **Done** = implemented (syntax-checked, not yet tested in a browser) · **Partial** · **Todo** · **Needs decision** = out-of-repo or needs maintainer/product input.
 
@@ -20,7 +20,7 @@ Legend: **Done** = implemented (syntax-checked, not yet tested in a browser) · 
 | 5.2 | Live map permission review | Done | |
 | 6.1 | Private officer-to-officer messages | Done | `UNIT_PRIVATE_MESSAGES` feature (on by default). Officers and EMS-FD deputies message each other from their dashboard; unread badge, conversation list, read receipts. Sockets only carry unit ids, never message text. Combined units message from the member's own unit. No oversight/audit view yet |
 | 6.2 | Snaily radio system | Needs decision | Exploration item: built-in vs separate integration, hosting cost |
-| 6.3 | Multiple department and call tones | Todo | |
+| 6.3 | Multiple department and call tones | Done | Admins add tone presets in CAD Settings > Tones (name, LEO/EMS-FD/everyone, optional department, built-in generated sound or custom audio URL, preview). Dispatch plays them from the Tones modal for everyone, all LEO, all EMS-FD, a department, a unit or the units on a call, with an optional message; requires the `Dispatch` permission and the `TONES` feature. Units hear the tone and get a toast. Built-in tones need no audio files (the old LEO/EMS tones need `leo-tone.mp3`/`ems-fd-tone.mp3` in `public/sounds`) |
 | 6.4 | Change radio channels from dispatch | Needs decision | Depends on 4.4 (FiveM radio resource) |
 | 7.1 | Officers edit/end calls | Done | Via `ManageCallHistory` |
 | 7.2 | Bulk call management | Done | `POST /911-calls/bulk-end` + "End selected" in call history |

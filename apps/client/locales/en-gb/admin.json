@@ -1,5 +1,7 @@
 {
   "Management": {
+    "CUSTOM_LOCALES": "Custom Locales",
+    "TONE_PRESETS": "Tones",
     "management": "Management",
     "adminDashboard": "Admin Dashboard",
     "MANAGE_CITIZENS": "Manage Civilians",

@@ -1,5 +1,7 @@
 {
   "Management": {
+    "CUSTOM_LOCALES": "Custom Locales",
+    "TONE_PRESETS": "Tones",
     "management": "Управление",
     "adminDashboard": "Панель администратора",
     "MANAGE_CITIZENS": "Граждане",

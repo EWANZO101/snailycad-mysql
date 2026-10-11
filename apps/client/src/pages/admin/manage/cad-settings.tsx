@@ -90,6 +90,11 @@ const Tabs = {
         .CustomLocalesTab,
     { ssr: false },
   ),
+  TonesTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/tones-tab")).TonesTab,
+    { ssr: false },
+  ),
   BlacklistedWordsTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/general/blacklisted-words-tab"))
@@ -122,6 +127,7 @@ export default function CadSettings(props: Props) {
       <Tabs.RawWebhooksTab />
       <Tabs.BlacklistedWordsTab />
       <Tabs.CustomLocalesTab localeFolders={props.localeFolders ?? []} />
+      <Tabs.TonesTab />
     </CadSettingsLayout>
   );
 }

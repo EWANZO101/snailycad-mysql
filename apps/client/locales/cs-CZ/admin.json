@@ -1,5 +1,7 @@
 {
   "Management": {
+    "CUSTOM_LOCALES": "Custom Locales",
+    "TONE_PRESETS": "Tones",
     "management": "Správa",
     "adminDashboard": "Admin Panel",
     "MANAGE_CITIZENS": "Správa Civilistů",
