@@ -30,6 +30,21 @@
 > Each starts a setup wizard in your browser that installs everything with buttons.
 > See [docs/one-line-install.md](docs/one-line-install.md), [docs/install-docker.md](docs/install-docker.md)
 > and [MYSQL-PORT.md](MYSQL-PORT.md).
+>
+> **Documentation:** https://snaily-doc.opslabsystems.cloud
+
+## What's different from the original SnailyCAD
+
+- **MySQL 8 / MariaDB 10.6+** instead of PostgreSQL, with a converter for existing PostgreSQL CADs
+- **One-line installers** for Ubuntu and Docker, finished in a setup wizard in your browser
+- **Built-in radio**: dispatchers and admins talk in the browser (dock on every page, pop-out,
+  listen to many channels), units talk in FiveM with the `snailycad-radio` resource
+  (positional audio, earpieces, pma-voice / SaltyChat / TokoVOIP / mumble-voip) —
+  [docs/radio](docs/radio/README.md)
+- **Login page notice** admins write themselves, instead of the link to snailycad.org
+- **Coming by 15 October 2026:** FiveM framework integration (ESX, QBCore, Qbox)
+
+Full list: [Updates — October 2026](https://snaily-doc.opslabsystems.cloud/docs/features/updates-october-2026)
 
 💻 An open source Computer Aided Dispatch (CAD) for FiveM,
 this is a web based integration for communities who love police roleplaying and dispatching. Optional Discord and FiveM integrations included.
@@ -40,9 +55,9 @@ this is a web based integration for communities who love police roleplaying and 
 
 ## Links
 
-- [Documentation](https://docs.snailycad.org/docs/getting-started)
-- [Features List](https://docs.snailycad.org/docs/features)
-- [Bugs reports & Feature requests](https://github.com/SnailyCAD/snaily-cadv4/issues)
+- [Documentation](https://snaily-doc.opslabsystems.cloud/docs/getting-started)
+- [Features List](https://snaily-doc.opslabsystems.cloud/docs/features)
+- [Bugs reports & Feature requests](https://github.com/EWANZO101/snailycad-mysql/issues)
 - [Contributing](./.github/CONTRIBUTING.md)
 
 ## Sponsors

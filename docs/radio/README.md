@@ -3,10 +3,12 @@
 A push-to-talk radio built into SnailyCAD. Everyone on a channel hears each other, wherever they
 are:
 
-- **Dispatchers in a web browser**: the radio dock on the Dispatch page, or the full-screen radio
-  console at `/radio`. Nothing to install: no FiveM, TeamSpeak or Discord.
-- **Units** on the LEO and EMS-FD pages (the same dock).
-- **Players in FiveM** with the [`snailycad-radio`](../../integrations/fivem/snailycad-radio)
+- **Dispatchers and admins in a web browser**: the radio dock on every page of the CAD (with a
+  pop-out window), or the full-screen radio console at `/radio`. Listen to any or all channels,
+  pick one to talk on, push-to-talk with a hotkey on any page. Nothing to install: no FiveM,
+  TeamSpeak or Discord. Only users with the Dispatch or Manage CAD Settings permission (and the
+  owner) get the browser radio.
+- **Units and players in FiveM** with the [`snailycad-radio`](../../integrations/fivem/snailycad-radio)
   resource: a handheld in hand, positional audio for people nearby, earpieces.
 - **Anything else** through the open [protocol](protocol.md): bots, loggers, hardware radio
   gateways, other games. See [integrations.md](integrations.md).
@@ -23,7 +25,7 @@ are:
 
 ```
  browser dispatcher ──┐                         ┌── FiveM player (in-game UI)
- LEO / EMS-FD page  ──┼── wss://<api>/v1/radio/ws ──┼── FiveM player
+ admin / pop-out    ──┼── wss://<api>/v1/radio/ws ──┼── FiveM player
  bot / gateway      ──┘   (SnailyCAD API)        └── ...
                               │
                               └─ optional: audio through a LiveKit server
@@ -62,7 +64,7 @@ are:
 | Who                                                    | Channels                                                                                                              |
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
 | Dispatchers (Dispatch permission)                      | every channel, and they take over a busy channel                                                                      |
-| Units (LEO / EMS-FD permission)                        | channels without departments, and channels of their units' departments                                                |
+| Units linked in game (LEO / EMS-FD permission)         | channels without departments, and channels of their units' departments                                                |
 | Game players / integrations                            | channels with "Allow FiveM and other radios" on, without departments or of the departments the game server gives them |
 | Game players linked to a CAD account (Discord / Steam) | what that CAD user can use                                                                                            |
 
