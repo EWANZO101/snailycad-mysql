@@ -4,6 +4,7 @@
     "TONE_PRESETS": "Tones",
     "IMPORT_POSTGRES": "Import from PostgreSQL",
     "RADIO": "Radio",
+    "OPS_PHONE": "ops-phone",
     "management": "Hantering",
     "adminDashboard": "Adminpanel",
     "MANAGE_CITIZENS": "Hantera Medborgare",

@@ -4,6 +4,7 @@
     "TONE_PRESETS": "Tones",
     "IMPORT_POSTGRES": "Import from PostgreSQL",
     "RADIO": "Radio",
+    "OPS_PHONE": "ops-phone",
     "management": "Gerenciamento",
     "adminDashboard": "Painel da Administração",
     "MANAGE_CITIZENS": "Gerenciar Cidadãos",
