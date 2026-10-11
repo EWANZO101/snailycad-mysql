@@ -16,6 +16,8 @@ import { useMounted } from "@casperiv/useful/hooks/useMounted";
 import dynamic from "next/dynamic";
 import Head from "next/head";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RadioHubProvider } from "components/radio/radio-hub";
+import { RadioDock } from "components/radio/radio-dock";
 
 import type { GetErrorMapOptions } from "lib/validation/zod-error-map";
 import type { SetSentryTagsOptions } from "lib/set-sentry-tags";
@@ -99,16 +101,20 @@ export default function App({ Component, router, pageProps, ...rest }: AppProps)
             <DndProviderWrapper>
               <ValuesProvider router={router} initialData={pageProps}>
                 <CitizenProvider initialData={pageProps}>
-                  <Head>
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                  </Head>
-                  {isMounted ? (
-                    <>
-                      <ReauthorizeSessionModal />
-                      <Toaster position="top-right" />
-                    </>
-                  ) : null}
-                  <Component {...pageProps} err={(rest as any).err} />
+                  {/* the radio lives here so it stays connected between pages */}
+                  <RadioHubProvider>
+                    <Head>
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    </Head>
+                    {isMounted ? (
+                      <>
+                        <ReauthorizeSessionModal />
+                        <Toaster position="top-right" />
+                      </>
+                    ) : null}
+                    <Component {...pageProps} err={(rest as any).err} />
+                    {isMounted ? <RadioDock /> : null}
+                  </RadioHubProvider>
                 </CitizenProvider>
               </ValuesProvider>
             </DndProviderWrapper>

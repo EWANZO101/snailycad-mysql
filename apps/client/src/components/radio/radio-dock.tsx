@@ -1,30 +1,25 @@
 import dynamic from "next/dynamic";
+import { useRouter } from "next/router";
 import { Permissions } from "@snailycad/permissions";
-import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 import { usePermission } from "hooks/usePermission";
+import { POPOUT_PATH, useRadioHub } from "./radio-hub";
 
 const RadioConsole = dynamic(async () => (await import("./radio-console")).RadioConsole, {
   ssr: false,
 });
 
-interface RadioDockProps {
-  /** the active unit's radio channel, opened when nothing was picked yet */
-  defaultChannelId?: string | null;
-}
+/** pages that show the full radio console themselves */
+const CONSOLE_PAGES = ["/radio", POPOUT_PATH];
 
-/** the floating radio on the dispatch, LEO and EMS-FD pages (when the RADIO feature is on) */
-export function RadioDock({ defaultChannelId }: RadioDockProps) {
-  const { RADIO } = useFeatureEnabled();
+/**
+ * The floating radio on every page of the CAD (when the RADIO feature is on and the user is a
+ * dispatcher, LEO or EMS-FD). Mounted once in _app, so it stays connected between pages.
+ */
+export function RadioDock() {
+  const router = useRouter();
+  const hub = useRadioHub();
   const { hasPermissions } = usePermission();
 
-  const canUseRadio = hasPermissions([Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd]);
-  if (!RADIO || !canUseRadio) return null;
-
-  return (
-    <RadioConsole
-      variant="dock"
-      canPlayTones={hasPermissions([Permissions.Dispatch])}
-      defaultChannelId={defaultChannelId}
-    />
-  );
+  if (!hub || hub.role === "off" || CONSOLE_PAGES.includes(router.pathname)) return null;
+  return <RadioConsole variant="dock" canPlayTones={hasPermissions([Permissions.Dispatch])} />;
 }

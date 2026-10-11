@@ -1,5 +1,4 @@
 import * as React from "react";
-import { RadioDock } from "components/radio/radio-dock";
 import dynamic from "next/dynamic";
 import { Layout } from "components/Layout";
 import { getSessionUser } from "lib/auth";
@@ -154,7 +153,6 @@ export default function DispatchDashboard(props: DispatchPageProps) {
       )}
 
       <DispatchModals />
-      <RadioDock />
     </Layout>
   );
 }
