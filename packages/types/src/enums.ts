@@ -58,6 +58,7 @@ export const Feature = {
   MODERN_CITIZEN_THEME: "MODERN_CITIZEN_THEME",
   API_TOKEN_REMINDER: "API_TOKEN_REMINDER",
   UNIT_PRIVATE_MESSAGES: "UNIT_PRIVATE_MESSAGES",
+  RADIO: "RADIO",
 } as const;
 
 export type Feature = (typeof Feature)[keyof typeof Feature];

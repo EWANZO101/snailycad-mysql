@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import "./instrument";
+import http from "node:http";
 
 import { Server } from "./server";
 import { $log } from "@tsed/logger";
@@ -14,6 +15,7 @@ import { canSecureCookiesBeEnabled } from "utils/validate-environment-variables"
 import { areRequiredCommandsInstalled } from "./utils/validate-requirements";
 import { ensureRecoveryToken } from "lib/recovery/recovery-token";
 import { startDemoMode } from "lib/demo/demo-mode";
+import { radioServer } from "lib/radio/radio-server";
 
 const rootDir = __dirname;
 
@@ -34,6 +36,9 @@ async function bootstrap() {
     });
 
     await platform.listen();
+    // the built-in radio shares the API's port: WebSocket upgrades on /v1/radio/ws
+    const httpServer = platform.injector.get<http.Server>(http.Server);
+    if (httpServer) radioServer.attach(httpServer);
     await startDemoMode();
     const versions = await getCADVersion();
     const versionStr = versions

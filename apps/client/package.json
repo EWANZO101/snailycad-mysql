@@ -34,6 +34,7 @@
     "@snailycad/audit-logger": "workspace:*",
     "@snailycad/config": "workspace:*",
     "@snailycad/permissions": "workspace:*",
+    "@snailycad/radio": "workspace:*",
     "@snailycad/schemas": "workspace:*",
     "@snailycad/types": "workspace:*",
     "@snailycad/ui": "workspace:*",

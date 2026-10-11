@@ -4,6 +4,7 @@ import { BodyParams, PathParams, Context } from "@tsed/platform-params";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { prisma } from "lib/data/prisma";
 import { Socket } from "services/socket-service";
+import { switchUnitRadios } from "lib/radio/switch-unit";
 import { UseAfter, UseBeforeEach } from "@tsed/platform-middlewares";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { type cad, Feature, type MiscCadSettings, ShouldDoType, type User } from "@snailycad/types";
@@ -343,10 +344,14 @@ export class DispatchController {
       include,
     });
 
-    if (["leo", "combined"].includes(type)) {
+    if (["leo", "combined-leo"].includes(type)) {
       await this.socket.emitUpdateOfficerStatus();
     } else {
       await this.socket.emitUpdateDeputyStatus();
+    }
+
+    if (data.radioChannel) {
+      await switchUnitRadios(updated, data.radioChannel);
     }
 
     return updated;
