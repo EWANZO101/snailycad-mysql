@@ -47,10 +47,9 @@ fail() {
 [[ "$NAME" =~ ^[a-z][a-z0-9-]{0,30}$ ]] || fail "SNAILY_NAME must be lowercase letters, numbers and dashes."
 [[ "$WIZARD_PORT" =~ ^[0-9]+$ ]] || fail "SNAILY_WIZARD_PORT must be a number."
 
-if [[ -r /etc/os-release ]]; then
-    . /etc/os-release
-    [[ "${ID:-}" == "ubuntu" || "${ID_LIKE:-}" == *ubuntu* || "${ID:-}" == "debian" ]] \
-        || warn "This installer is made for Ubuntu; ${PRETTY_NAME:-this OS} is not tested."
+# in a subshell: os-release sets NAME, which would replace ours
+if [[ -r /etc/os-release ]] && ! (. /etc/os-release && [[ "${ID:-}" == ubuntu || "${ID_LIKE:-}" == *ubuntu* || "${ID:-}" == debian ]]); then
+    warn "This installer is made for Ubuntu; $(. /etc/os-release && echo "${PRETTY_NAME:-this OS}") is not tested."
 fi
 
 case "$(uname -m)" in
