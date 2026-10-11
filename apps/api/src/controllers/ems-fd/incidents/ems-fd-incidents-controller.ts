@@ -465,7 +465,7 @@ export async function createIncidentWebhookData(
         fields: [
           {
             inline: true,
-            name: t("fireArmsInvolved"),
+            name: t("fireArmsIncluded"),
             value: incident.firearmsInvolved ? t("yes") : t("no"),
           },
           {

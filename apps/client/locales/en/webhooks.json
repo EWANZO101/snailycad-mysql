@@ -104,7 +104,8 @@
     "situationCode": "Situation Code",
     "postal": "Postal",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "none": "None"
   },
   "ExtraWebhooks": {
     "viewMoreInfo": "View more information on the CAD.",
