@@ -190,7 +190,7 @@ export default function CallHistory({ data, incidents, emsFdIncidents }: Props) 
             features={{ rowSelection: hasManagePermissions }}
             data={asyncTable.items.map((call) => {
               const caseNumbers = [...(call.incidents ?? []), call.EmsFdIncident]
-                .filter((i) => i != null)
+                .filter((i): i is NonNullable<typeof i> => i !== null && i !== undefined)
                 .map((i) => `#${i.caseNumber}`)
                 .join(", ");
 
