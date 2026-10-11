@@ -18,8 +18,6 @@ PROJECT_DIR="${PROJECT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 SERVICE_NAME="${SNAILYCAD_SERVICE_NAME:-start-snaily-cadv4}"
 if [[ -n "${SNAILY_STATUS_DIR:-}" ]]; then
     STATUS_DIR="$SNAILY_STATUS_DIR"
-elif [[ -d /var/www/snaily-status ]]; then
-    STATUS_DIR=/var/www/snaily-status
 else
     STATUS_DIR="$PROJECT_DIR/.snaily-cache/status"
 fi
@@ -53,7 +51,7 @@ status preparing
 # this point, so it only publishes the log until start.sh takes over.
 STATUS_SERVER="$PROJECT_DIR/scripts/status-server.mjs"
 if [[ -f "$STATUS_SERVER" ]] && command -v node >/dev/null 2>&1; then
-    pkill -f "scripts/status-server.mjs" 2>/dev/null || true
+    pkill -f "$PROJECT_DIR/scripts/status-server.mjs" 2>/dev/null || true
     node "$STATUS_SERVER" --status "$STATUS_FILE" --log "$LOG_FILE" \
         --out "$(dirname "$STATUS_FILE")/log.json" --port "${PORT_CLIENT:-3000}" >/dev/null 2>&1 &
     sleep 1
