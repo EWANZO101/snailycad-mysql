@@ -1,2 +1,0 @@
--- AlterEnum
-ALTER TYPE "Feature" ADD VALUE 'MODERN_CITIZEN_THEME';

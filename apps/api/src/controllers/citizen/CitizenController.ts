@@ -117,15 +117,15 @@ export class CitizenController {
       userId: checkCitizenUserId ? user.id : undefined,
       OR: [
         {
-          name: { contains: name, mode: "insensitive" },
-          surname: { contains: surname, mode: "insensitive" },
+          name: { contains: name },
+          surname: { contains: surname },
         },
         {
-          name: { contains: surname, mode: "insensitive" },
-          surname: { contains: name, mode: "insensitive" },
+          name: { contains: surname },
+          surname: { contains: name },
         },
-        { socialSecurityNumber: { contains: name, mode: "insensitive" } },
-        { phoneNumber: { contains: name, mode: "insensitive" } },
+        { socialSecurityNumber: { contains: name } },
+        { phoneNumber: { contains: name } },
       ],
     };
 
@@ -363,12 +363,12 @@ export class CitizenController {
     const [isFirstNameBlacklisted, isLastNameBlacklisted] = await Promise.all([
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.name, mode: "insensitive" },
+          word: { contains: data.name },
         },
       }),
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.surname, mode: "insensitive" },
+          word: { contains: data.surname },
         },
       }),
     ]);
@@ -459,12 +459,12 @@ export class CitizenController {
     const [isFirstNameBlacklisted, isLastNameBlacklisted] = await Promise.all([
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.name, mode: "insensitive" },
+          word: { contains: data.name },
         },
       }),
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.surname, mode: "insensitive" },
+          word: { contains: data.surname },
         },
       }),
     ]);

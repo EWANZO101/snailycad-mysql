@@ -38,8 +38,8 @@ export class ImportWeaponsController {
     const where: Prisma.WeaponWhereInput | undefined = query
       ? {
           OR: [
-            { serialNumber: { contains: query, mode: "insensitive" } },
-            { model: { value: { value: { contains: query, mode: "insensitive" } } } },
+            { serialNumber: { contains: query } },
+            { model: { value: { value: { contains: query } } } },
           ],
         }
       : undefined;

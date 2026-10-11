@@ -66,21 +66,21 @@ export class JailController {
     }).catch(console.error);
 
     const conditions = [
-      Prisma.sql`r."type" = 'ARREST_REPORT'`,
-      Prisma.sql`r."publishStatus" = 'PUBLISHED'`,
+      Prisma.sql`r.\`type\` = 'ARREST_REPORT'`,
+      Prisma.sql`r.\`publishStatus\` = 'PUBLISHED'`,
     ];
 
     if (activeOnly) {
-      conditions.push(Prisma.sql`r."releaseId" IS NULL`);
+      conditions.push(Prisma.sql`r.\`releaseId\` IS NULL`);
     }
 
     const search = query.trim();
     if (search) {
       const like = `%${search.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
       conditions.push(Prisma.sql`(
-        (c."name" || ' ' || c."surname") ILIKE ${like}
-        OR (c."surname" || ' ' || c."name") ILIKE ${like}
-        OR c."socialSecurityNumber" = ${search}
+        CONCAT(c.\`name\`, ' ', c.\`surname\`) LIKE ${like}
+        OR CONCAT(c.\`surname\`, ' ', c.\`name\`) LIKE ${like}
+        OR c.\`socialSecurityNumber\` = ${search}
       )`);
     }
 
@@ -90,26 +90,26 @@ export class JailController {
 
     const orderBy =
       sortKey === "citizen"
-        ? Prisma.sql`LOWER(c."name") ${direction}, LOWER(c."surname") ${direction}, c."id" ASC`
+        ? Prisma.sql`LOWER(c.\`name\`) ${direction}, LOWER(c.\`surname\`) ${direction}, c.\`id\` ASC`
         : sortKey === "createdAt"
-          ? Prisma.sql`MAX(r."createdAt") ${direction}, c."id" ASC`
-          : Prisma.sql`MAX(r."createdAt") DESC, c."id" ASC`;
+          ? Prisma.sql`MAX(r.\`createdAt\`) ${direction}, c.\`id\` ASC`
+          : Prisma.sql`MAX(r.\`createdAt\`) DESC, c.\`id\` ASC`;
 
     const pagination = includeAll ? Prisma.empty : Prisma.sql`LIMIT 35 OFFSET ${skip}`;
 
     const [countResult, citizenIdsResult] = await Promise.all([
       prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(DISTINCT c."id") AS count
-        FROM "Citizen" c
-        INNER JOIN "Record" r ON r."citizenId" = c."id"
+        SELECT COUNT(DISTINCT c.\`id\`) AS count
+        FROM \`Citizen\` c
+        INNER JOIN \`Record\` r ON r.\`citizenId\` = c.\`id\`
         WHERE ${where}
       `,
       prisma.$queryRaw<{ id: string }[]>`
-        SELECT c."id"
-        FROM "Citizen" c
-        INNER JOIN "Record" r ON r."citizenId" = c."id"
+        SELECT c.\`id\`
+        FROM \`Citizen\` c
+        INNER JOIN \`Record\` r ON r.\`citizenId\` = c.\`id\`
         WHERE ${where}
-        GROUP BY c."id"
+        GROUP BY c.\`id\`
         ORDER BY ${orderBy}
         ${pagination}
       `,

@@ -113,7 +113,7 @@ export async function upsertEmsFdDeputy(options: UpsertEmsFdDeputyOptions) {
     const onDutyStatus = await prisma.statusValue.findFirst({
       where: {
         shouldDo: ShouldDoType.SET_ON_DUTY,
-        OR: [{ whatPages: { isEmpty: true } }, { whatPages: { has: WhatPages.EMS_FD } }],
+        OR: [{ whatPages: { equals: [] } }, { whatPages: { array_contains: WhatPages.EMS_FD } }],
       },
     });
 

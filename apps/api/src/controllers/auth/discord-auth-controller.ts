@@ -168,7 +168,7 @@ export class DiscordAuth {
      */
     if (!user && !authUser) {
       const existingUserWithUsername = await prisma.user.findFirst({
-        where: { username: { equals: data.username, mode: "insensitive" } },
+        where: { username: { equals: data.username } },
       });
 
       if (existingUserWithUsername) {
@@ -361,9 +361,7 @@ async function getDiscordOAuthPrompt(req: Req, res: Res): Promise<"none" | undef
     return "none";
   }
 
-  const sessionUser = await getSessionUser({ req, res, returnNullOnError: true }).catch(
-    () => null,
-  );
+  const sessionUser = await getSessionUser({ req, res, returnNullOnError: true }).catch(() => null);
 
   if (sessionUser?.discordId) {
     return "none";

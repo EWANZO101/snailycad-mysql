@@ -44,10 +44,7 @@ export class AdminManageCustomRolesController {
   ): Promise<APITypes.GetCustomRolesData> {
     const where = query
       ? ({
-          OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { discordRole: { name: { contains: query, mode: "insensitive" } } },
-          ],
+          OR: [{ name: { contains: query } }, { discordRole: { name: { contains: query } } }],
         } satisfies Prisma.CustomRoleWhereInput)
       : undefined;
 
@@ -81,7 +78,7 @@ export class AdminManageCustomRolesController {
     assertActorHoldsPermissions(sessionUser, data.permissions as string[]);
 
     const existing = await prisma.customRole.findFirst({
-      where: { name: { equals: data.name, mode: "insensitive" } },
+      where: { name: { equals: data.name } },
     });
 
     if (existing) {

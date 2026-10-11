@@ -54,26 +54,26 @@ export function createWhere<Type extends "OFFICER" | "DEPUTY">({
       { id: query },
       { callsign: query },
       { callsign2: query },
-      { department: { value: { value: { contains: query, mode: "insensitive" } } } },
-      { status: { value: { value: { contains: query, mode: "insensitive" } } } },
+      { department: { value: { value: { contains: query } } } },
+      { status: { value: { value: { contains: query } } } },
       {
         citizen: {
           OR: [
             {
-              name: { contains: name, mode: "insensitive" },
-              surname: { contains: surname, mode: "insensitive" },
+              name: { contains: name },
+              surname: { contains: surname },
             },
             {
-              name: { contains: name, mode: "insensitive" },
-              surname: { contains: surname, mode: "insensitive" },
+              name: { contains: name },
+              surname: { contains: surname },
             },
           ],
         },
       },
-      { user: { username: { contains: query, mode: Prisma.QueryMode.insensitive } } },
+      { user: { username: { contains: query } } },
       type === "OFFICER"
         ? {
-            divisions: { some: { value: { value: { contains: query, mode: "insensitive" } } } },
+            divisions: { some: { value: { value: { contains: query } } } },
           }
         : {},
     ],

@@ -50,14 +50,14 @@ export class AdminManageCitizensController {
             OR: [
               { id: query },
               {
-                name: { contains: name, mode: Prisma.QueryMode.insensitive },
-                surname: { contains: surname, mode: Prisma.QueryMode.insensitive },
+                name: { contains: name },
+                surname: { contains: surname },
               },
               {
-                name: { equals: surname, mode: Prisma.QueryMode.insensitive },
-                surname: { equals: name, mode: Prisma.QueryMode.insensitive },
+                name: { equals: surname },
+                surname: { equals: name },
               },
-              { user: { username: { contains: query, mode: Prisma.QueryMode.insensitive } } },
+              { user: { username: { contains: query } } },
             ],
           }
         : undefined;
@@ -155,12 +155,12 @@ export class AdminManageCitizensController {
     const [isFirstNameBlacklisted, isLastNameBlacklisted] = await Promise.all([
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.name, mode: "insensitive" },
+          word: { contains: data.name },
         },
       }),
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.surname, mode: "insensitive" },
+          word: { contains: data.surname },
         },
       }),
     ]);

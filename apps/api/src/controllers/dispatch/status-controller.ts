@@ -119,10 +119,10 @@ export class StatusController {
 
       const [existingOfficer, existingDeputy] = await prisma.$transaction([
         prisma.officer.findFirst({
-          where: { userDefinedCallsign: { equals: data.userDefinedCallsign, mode: "insensitive" } },
+          where: { userDefinedCallsign: { equals: data.userDefinedCallsign } },
         }),
         prisma.emsFdDeputy.findFirst({
-          where: { userDefinedCallsign: { equals: data.userDefinedCallsign, mode: "insensitive" } },
+          where: { userDefinedCallsign: { equals: data.userDefinedCallsign } },
         }),
       ]);
 

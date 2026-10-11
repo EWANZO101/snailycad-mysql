@@ -81,9 +81,7 @@ export class BusinessController {
 
   @Get("/search")
   async searchBusinesses(@QueryParams("query") query: string) {
-    const where: Prisma.BusinessWhereInput = query
-      ? { name: { contains: query, mode: "insensitive" } }
-      : {};
+    const where: Prisma.BusinessWhereInput = query ? { name: { contains: query } } : {};
     const joinableBusinesses = await prisma.business.findMany({
       where,
     });

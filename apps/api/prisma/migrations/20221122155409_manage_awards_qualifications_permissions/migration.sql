@@ -1,2 +1,0 @@
--- AlterEnum
-ALTER TYPE "ToAddDefaultPermissionsKey" ADD VALUE 'MANAGE_AWARDS_AND_QUALIFICATIONS';

@@ -99,7 +99,7 @@ export class CADSettingsController {
     const OR: Prisma.Enumerable<Prisma.AuditLogWhereInput> = [];
     const _typeWhere: Prisma.Enumerable<Prisma.AuditLogWhereInput> | undefined =
       type && Object.hasOwn(AuditLogActionType, type)
-        ? { action: { string_contains: type, path: ["type"] } }
+        ? { action: { string_contains: type, path: "$.type" } }
         : undefined;
 
     if (_typeWhere) {
@@ -108,7 +108,7 @@ export class CADSettingsController {
 
     if (query) {
       OR.push({ action: { string_contains: query } });
-      OR.push({ executor: { username: { contains: query, mode: "insensitive" } } });
+      OR.push({ executor: { username: { contains: query } } });
     }
 
     const where = { OR: OR.length > 0 ? OR : undefined };
@@ -491,10 +491,10 @@ export class CADSettingsController {
 
     const [totalCount, blacklistedWords] = await prisma.$transaction([
       prisma.blacklistedWord.count({
-        where: query ? { word: { contains: query, mode: "insensitive" } } : undefined,
+        where: query ? { word: { contains: query } } : undefined,
       }),
       prisma.blacklistedWord.findMany({
-        where: query ? { word: { contains: query, mode: "insensitive" } } : undefined,
+        where: query ? { word: { contains: query } } : undefined,
         take: includeAll ? undefined : 35,
         skip: includeAll ? undefined : skip,
         orderBy,

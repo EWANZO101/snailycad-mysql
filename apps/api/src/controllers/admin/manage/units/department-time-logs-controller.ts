@@ -199,14 +199,14 @@ export class AdminManageUnitsController {
             {
               emsFdDeputy: {
                 department: {
-                  value: { value: { contains: query, mode: Prisma.QueryMode.insensitive } },
+                  value: { value: { contains: query } },
                 },
               },
             },
             {
               officer: {
                 department: {
-                  value: { value: { contains: query, mode: Prisma.QueryMode.insensitive } },
+                  value: { value: { contains: query } },
                 },
               },
             },

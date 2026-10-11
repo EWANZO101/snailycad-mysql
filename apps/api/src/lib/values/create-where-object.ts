@@ -19,9 +19,9 @@ export function createSearchWhereObject(options: CreateSearchWhereObjectOptions)
 
     const where: Prisma.PenalCodeWhereInput = {
       OR: [
-        { title: { contains: options.query, mode: "insensitive" } },
-        { description: { contains: options.query, mode: "insensitive" } },
-        { group: { name: { contains: options.query, mode: "insensitive" } } },
+        { title: { contains: options.query } },
+        { description: { contains: options.query } },
+        { group: { name: { contains: options.query } } },
       ],
       AND: groupId
         ? groupId === "ungrouped"
@@ -37,7 +37,7 @@ export function createSearchWhereObject(options: CreateSearchWhereObjectOptions)
     let where: any = {
       value: {
         isDisabled: showDisabled ? undefined : false,
-        value: { contains: options.query, mode: "insensitive" },
+        value: { contains: options.query },
       },
     };
 
@@ -56,7 +56,7 @@ export function createSearchWhereObject(options: CreateSearchWhereObjectOptions)
 
       const whereAND = [
         { value: { isDisabled: showDisabled ? undefined : false } },
-        { value: { value: { contains: options.query, mode: "insensitive" } } },
+        { value: { value: { contains: options.query } } },
       ] as any[];
 
       if (options.queryParams.department) {
@@ -75,9 +75,9 @@ export function createSearchWhereObject(options: CreateSearchWhereObjectOptions)
     if (ValueType.ADDRESS === type) {
       where = {
         OR: [
-          { value: { value: { contains: options.query, mode: "insensitive" } } },
-          { county: { contains: options.query, mode: "insensitive" } },
-          { postal: { contains: options.query, mode: "insensitive" } },
+          { value: { value: { contains: options.query } } },
+          { county: { contains: options.query } },
+          { postal: { contains: options.query } },
         ],
         AND: [{ value: { isDisabled: showDisabled ? undefined : false } }],
       };
@@ -89,6 +89,6 @@ export function createSearchWhereObject(options: CreateSearchWhereObjectOptions)
   return {
     type,
     isDisabled: showDisabled ? undefined : false,
-    value: { contains: options.query, mode: "insensitive" },
+    value: { contains: options.query },
   };
 }

@@ -1,13 +1,19 @@
 services:
-  postgres:
-    container_name: "snaily-cad-postgres"
-    image: postgres
+  mariadb:
+    container_name: "snaily-cad-mariadb"
+    image: mariadb:11.4
     environment:
-      POSTGRES_PORT: ${DB_PORT}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     ports:
-      - "${DB_PORT}:5432"
+      - "${DB_PORT}:3306"
     volumes:
-      - ./.dev-data:/var/lib/postgresql/data
+      - ./.dev-data:/var/lib/mysql

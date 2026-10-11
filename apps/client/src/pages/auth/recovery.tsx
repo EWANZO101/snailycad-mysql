@@ -686,15 +686,15 @@ function ActionCard({
 }
 
 const DB_ROWS = [
-  { key: "dbName", variable: "POSTGRES_DB", example: "snaily-cad-v4" },
-  { key: "dbUser", variable: "POSTGRES_USER", example: "postgres" },
-  { key: "dbPassword", variable: "POSTGRES_PASSWORD", example: "<your password>" },
+  { key: "dbName", variable: "DB_NAME", example: "snaily-cad-v4" },
+  { key: "dbUser", variable: "DB_USER", example: "snailycad" },
+  { key: "dbPassword", variable: "DB_PASSWORD", example: "<your password>" },
   {
     key: "dbHost",
-    variable: "DB_HOST (POSTGRES_HOST in the recovery script)",
+    variable: "DB_HOST",
     example: "localhost",
   },
-  { key: "dbPort", variable: "DB_PORT (POSTGRES_PORT in the recovery script)", example: "5432" },
+  { key: "dbPort", variable: "DB_PORT", example: "3306" },
 ] as const;
 
 function DatabaseSettingsGuide() {
@@ -746,7 +746,7 @@ function DatabaseSettingsGuide() {
 
         <pre className="mt-3 p-3 rounded-md bg-gray-200 dark:bg-tertiary text-sm overflow-x-auto">
           {
-            "export PGPASSWORD=<your password>\npsql -U postgres -d snaily-cad-v4 -h localhost -p 5432"
+            "mysql -u snailycad -p -h localhost -P 3306 snaily-cad-v4\n# MariaDB: mariadb -u snailycad -p -h localhost -P 3306 snaily-cad-v4"
           }
         </pre>
 

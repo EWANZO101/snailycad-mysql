@@ -1,2 +1,0 @@
--- AlterEnum
-ALTER TYPE "ShouldDoType" ADD VALUE 'UNAVAILABLE';

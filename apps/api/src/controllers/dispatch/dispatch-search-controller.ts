@@ -19,7 +19,6 @@ export class SearchController {
       where: {
         address: {
           contains: address,
-          mode: "insensitive",
         },
       },
       include: { warrants: true },

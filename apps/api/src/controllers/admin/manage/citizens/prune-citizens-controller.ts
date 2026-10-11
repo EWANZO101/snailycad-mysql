@@ -70,14 +70,11 @@ function createPruneWhere(filters: PruneCitizensFilters): Prisma.CitizenWhereInp
     AND.push(
       surname
         ? {
-            name: { contains: name, mode: Prisma.QueryMode.insensitive },
-            surname: { contains: surname, mode: Prisma.QueryMode.insensitive },
+            name: { contains: name },
+            surname: { contains: surname },
           }
         : {
-            OR: [
-              { name: { contains: name, mode: Prisma.QueryMode.insensitive } },
-              { surname: { contains: name, mode: Prisma.QueryMode.insensitive } },
-            ],
+            OR: [{ name: { contains: name } }, { surname: { contains: name } }],
           },
     );
   }

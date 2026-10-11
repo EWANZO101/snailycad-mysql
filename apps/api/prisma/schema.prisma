@@ -2,7 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -27,8 +27,8 @@ model cad {
   towWhitelisted          Boolean                @default(false)
   taxiWhitelisted         Boolean                @default(false)
   businessWhitelisted     Boolean                @default(false)
-  logoId                  String?
-  registrationCode        String?
+  logoId                  String?                @db.Text
+  registrationCode        String?                @db.Text
   features                CadFeature[]
   miscCadSettings         MiscCadSettings?       @relation(fields: [miscCadSettingsId], references: [id])
   miscCadSettingsId       String?
@@ -40,7 +40,7 @@ model cad {
   autoSetUserPropertiesId String?
   discordRoles            DiscordRoles?          @relation(fields: [discordRolesId], references: [id])
   discordRolesId          String?
-  timeZone                String?                @default("UTC")
+  timeZone                String?                @default("UTC") @db.VarChar(255)
 }
 
 model CadFeature {
@@ -56,7 +56,7 @@ model MiscCadSettings {
   id String @id @default(cuid())
 
   /// OG = open graph.
-  cadOGDescription          String?
+  cadOGDescription          String?        @db.Text
   heightPrefix              String         @default("cm") @db.VarChar(255)
   weightPrefix              String         @default("kg") @db.VarChar(255)
   maxCitizensPerUser        Int?
@@ -68,16 +68,16 @@ model MiscCadSettings {
   maxDepartmentsEachPerUser Int?
   maxAssignmentsToIncidents Int?
   maxAssignmentsToCalls     Int?
-  callsignTemplate          String         @default("{department}{callsign1} - {callsign2}{division}") @db.Text
-  caseNumberTemplate        String?
-  pairedUnitTemplate        String?        @default("1A-{callsign1}") @db.Text
+  callsignTemplate          String         @default("{department}{callsign1} - {callsign2}{division}") @db.VarChar(255)
+  caseNumberTemplate        String?        @db.Text
+  pairedUnitTemplate        String?        @default("1A-{callsign1}") @db.VarChar(255)
   pairedUnitSymbol          String?        @default("A") @db.VarChar(255)
   signal100Enabled          Boolean        @default(false)
   liveMapURL                String?        @db.Text
   liveMapURLs               LiveMapURL[]
   roleplayEnabled           Boolean?       @default(true)
-  authScreenBgImageId       String?
-  authScreenHeaderImageId   String?
+  authScreenBgImageId       String?        @db.Text
+  authScreenHeaderImageId   String?        @db.Text
   jailTimeScale             JailTimeScale?
   // How many times a signal 100 should be repeated.
   signal100RepeatAmount     Int?           @default(1)
@@ -121,8 +121,8 @@ model MiscCadSettings {
 
 model LiveMapURL {
   id                String           @id @default(cuid())
-  url               String
-  name              String
+  url               String           @db.Text
+  name              String           @db.Text
   MiscCadSettings   MiscCadSettings? @relation(fields: [miscCadSettingsId], references: [id], onDelete: Cascade)
   miscCadSettingsId String?
 }
@@ -130,7 +130,7 @@ model LiveMapURL {
 model RawWebhook {
   id   String             @id @default(cuid())
   type DiscordWebhookType @unique
-  url  String
+  url  String             @db.Text
 
   MiscCadSettings   MiscCadSettings? @relation(fields: [miscCadSettingsId], references: [id], onDelete: Cascade)
   miscCadSettingsId String?
@@ -139,9 +139,9 @@ model RawWebhook {
 model DiscordWebhook {
   id                String             @id @default(cuid())
   type              DiscordWebhookType @unique
-  webhookId         String?
-  channelId         String
-  extraMessage      String?
+  webhookId         String?            @db.Text
+  channelId         String             @db.Text
+  extraMessage      String?            @db.Text
   MiscCadSettings   MiscCadSettings?   @relation(fields: [miscCadSettingsId], references: [id], onDelete: Cascade)
   miscCadSettingsId String?
 }
@@ -152,7 +152,7 @@ model AutoSetUserProperties {
   leo                Boolean? @default(false)
   dispatch           Boolean? @default(false)
   emsFd              Boolean? @default(false)
-  defaultPermissions String[]
+  defaultPermissions Json     @default(dbgenerated("(json_array())"))
 
   cad cad[]
 
@@ -160,11 +160,11 @@ model AutoSetUserProperties {
 }
 
 model ApiToken {
-  id      String   @id @default(cuid())
-  enabled Boolean  @default(false)
-  token   String?
+  id      String  @id @default(cuid())
+  enabled Boolean @default(false)
+  token   String? @db.Text
   // empty = *
-  routes  String[]
+  routes  Json    @default(dbgenerated("(json_array())"))
 
   uses      Int?
   createdAt DateTime      @default(now())
@@ -181,14 +181,14 @@ model ApiTokenLog {
   apiTokenId String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
-  statusCode String?
-  route      String?
-  method     String?
+  statusCode String?  @db.Text
+  route      String?  @db.Text
+  method     String?  @db.Text
 }
 
 model DiscordRoles {
   id      String @id @default(cuid())
-  guildId String
+  guildId String @db.Text
 
   leoRoles           DiscordRole[] @relation("leoRoles")
   leoSupervisorRoles DiscordRole[] @relation("leoSupervisorRoles")
@@ -201,14 +201,14 @@ model DiscordRoles {
   whitelistedRole    DiscordRole?  @relation("whitelistedRole", fields: [whitelistedRoleId], references: [id])
   courthouseRoles    DiscordRole[] @relation("courthouseRoles")
 
-  adminRolePermissions         String[]
-  leoRolePermissions           String[]
-  leoSupervisorRolePermissions String[]
-  emsFdRolePermissions         String[]
-  dispatchRolePermissions      String[]
-  towRolePermissions           String[]
-  taxiRolePermissions          String[]
-  courthouseRolePermissions    String[]
+  adminRolePermissions         Json @default(dbgenerated("(json_array())"))
+  leoRolePermissions           Json @default(dbgenerated("(json_array())"))
+  leoSupervisorRolePermissions Json @default(dbgenerated("(json_array())"))
+  emsFdRolePermissions         Json @default(dbgenerated("(json_array())"))
+  dispatchRolePermissions      Json @default(dbgenerated("(json_array())"))
+  towRolePermissions           Json @default(dbgenerated("(json_array())"))
+  taxiRolePermissions          Json @default(dbgenerated("(json_array())"))
+  courthouseRolePermissions    Json @default(dbgenerated("(json_array())"))
 
   roles DiscordRole[]
   cad   cad[]
@@ -216,8 +216,8 @@ model DiscordRoles {
 
 model DiscordRole {
   id             String       @id @unique
-  name           String
-  guildId        String?
+  name           String       @db.Text
+  guildId        String?      @db.Text
   discordRoles   DiscordRoles @relation(fields: [discordRolesId], references: [id])
   discordRolesId String
   CustomRole     CustomRole[]
@@ -235,7 +235,7 @@ model DiscordRole {
 
 model BlacklistedWord {
   id        String   @id @unique @default(cuid())
-  word      String
+  word      String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 }
@@ -247,7 +247,7 @@ model AuditLog {
   executorId     String?
   action         Json
   createdAt      DateTime @default(now())
-  translationKey String?
+  translationKey String?  @db.Text
 }
 
 model User {
@@ -256,32 +256,32 @@ model User {
   password                 String                    @db.Text
   rank                     Rank                      @default(USER)
   banned                   Boolean                   @default(false)
-  banReason                String?
+  banReason                String?                   @db.Text
   avatarUrl                String?                   @db.Text
   steamId                  String?                   @db.VarChar(255)
   whitelistStatus          WhitelistStatus           @default(ACCEPTED)
   isDarkTheme              Boolean                   @default(true)
-  tempPassword             String?
+  tempPassword             String?                   @db.Text
   statusViewMode           StatusViewMode            @default(DOT_COLOR)
   tableActionsAlignment    TableActionsAlignment     @default(RIGHT)
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @default(now()) @updatedAt
-  discordId                String?
+  discordId                String?                   @db.Text
   lastDiscordSyncTimestamp DateTime?
-  permissions              String[]
+  permissions              Json                      @default(dbgenerated("(json_array())"))
   soundSettings            UserSoundSettings?        @relation(fields: [soundSettingsId], references: [id])
   soundSettingsId          String?
   apiToken                 ApiToken?                 @relation(fields: [apiTokenId], references: [id])
   apiTokenId               String?
   roles                    CustomRole[]
-  locale                   String?
+  locale                   String?                   @db.Text
   sessions                 UserSession[]
   toAddDefaultPermissions  ToAddDefaultPermissions[]
   lastSeen                 DateTime                  @default(now())
   developerMode            Boolean                   @default(false)
-  dispatchLayoutOrder      DashboardLayoutCardType[]
-  emsFdLayoutOrder         DashboardLayoutCardType[]
-  officerLayoutOrder       DashboardLayoutCardType[]
+  dispatchLayoutOrder      Json                      @default(dbgenerated("(json_array())"))
+  emsFdLayoutOrder         Json                      @default(dbgenerated("(json_array())"))
+  officerLayoutOrder       Json                      @default(dbgenerated("(json_array())"))
 
   // relational data
   citizens                     Citizen[]
@@ -314,7 +314,7 @@ model User {
 
 model UserSession {
   id           String   @id @default(cuid())
-  refreshToken String   @unique
+  refreshToken String   @unique @db.VarChar(512)
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expires      DateTime
@@ -325,7 +325,7 @@ model ToAddDefaultPermissions {
   key         ToAddDefaultPermissionsKey
   user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
-  permissions String[]
+  permissions Json                       @default(dbgenerated("(json_array())"))
   addedAt     DateTime                   @default(now())
 
   @@unique([key, userId])
@@ -334,7 +334,7 @@ model ToAddDefaultPermissions {
 model UserSoundSettings {
   id           String  @id @default(uuid())
   speech       Boolean @default(true)
-  speechVoice  String?
+  speechVoice  String? @db.Text
   panicButton  Boolean @default(true)
   signal100    Boolean @default(true)
   addedToCall  Boolean @default(false)
@@ -346,14 +346,14 @@ model UserSoundSettings {
 
 model User2FA {
   id     String @id @default(uuid())
-  secret String
+  secret String @db.Text
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 }
 
 model Citizen {
   id                   String                        @id @default(cuid())
-  socialSecurityNumber String?
+  socialSecurityNumber String?                       @db.Text
   user                 User?                         @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId               String?
   name                 String                        @db.VarChar(255)
@@ -371,23 +371,23 @@ model Citizen {
   weight               String                        @db.VarChar(255)
   driversLicense       Value?                        @relation("driversLicenseToValue", fields: [driversLicenseId], references: [id])
   driversLicenseId     String?
-  driversLicenseNumber String?
+  driversLicenseNumber String?                       @db.Text
   dlCategory           DriversLicenseCategoryValue[] @relation("dlCategoryToDLCategory")
   weaponLicense        Value?                        @relation("weaponLicenseToValue", fields: [weaponLicenseId], references: [id])
   weaponLicenseId      String?
-  weaponLicenseNumber  String?
+  weaponLicenseNumber  String?                       @db.Text
   pilotLicense         Value?                        @relation("pilotLicenseToValue", fields: [pilotLicenseId], references: [id])
   pilotLicenseId       String?
-  pilotLicenseNumber   String?
+  pilotLicenseNumber   String?                       @db.Text
   waterLicense         Value?                        @relation("waterLicenseToValue", fields: [waterLicenseId], references: [id])
   waterLicenseId       String?
-  waterLicenseNumber   String?
+  waterLicenseNumber   String?                       @db.Text
   huntingLicense       Value?                        @relation("huntingLicenseToValue", fields: [huntingLicenseId], references: [id])
   huntingLicenseId     String?
-  huntingLicenseNumber String?
+  huntingLicenseNumber String?                       @db.Text
   fishingLicense       Value?                        @relation("fishingLicenseToValue", fields: [fishingLicenseId], references: [id])
   fishingLicenseId     String?
-  fishingLicenseNumber String?
+  fishingLicenseNumber String?                       @db.Text
   ccw                  Value?                        @relation("ccwToValue", fields: [ccwId], references: [id])
   ccwId                String?
   imageId              String?                       @db.Text
@@ -398,7 +398,7 @@ model Citizen {
   missing              Boolean?                      @default(false)
   dateOfMissing        DateTime?
   arrested             Boolean?                      @default(false)
-  phoneNumber          String?
+  phoneNumber          String?                       @db.Text
   occupation           String?                       @db.Text
   additionalInfo       String?                       @db.Text
   flags                Value[]                       @relation("citizenFlags")
@@ -419,7 +419,7 @@ model Citizen {
   truckLogs            TruckLog[]
   createdAt            DateTime                      @default(now())
   updatedAt            DateTime                      @default(now()) @updatedAt
-  appearance           String?
+  appearance           String?                       @db.Text
   RecordRelease        RecordRelease[]
   RecordLog            RecordLog[]
   ExpungementRequest   ExpungementRequest[]
@@ -515,14 +515,14 @@ model SuspendedCitizenLicenses {
 
 model Pet {
   id          String   @id @default(cuid())
-  name        String
+  name        String   @db.Text
   breed       String   @db.VarChar(255)
   color       String   @db.VarChar(255)
   weight      String   @db.VarChar(255)
   dateOfBirth DateTime
   citizen     Citizen  @relation(fields: [citizenId], references: [id], onDelete: Cascade)
   citizenId   String
-  imageId     String?
+  imageId     String?  @db.Text
 
   notes          Note[]
   medicalRecords PetMedicalRecord[]
@@ -530,7 +530,7 @@ model Pet {
 
 model Note {
   id        String   @id @default(uuid())
-  text      String
+  text      String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
@@ -569,8 +569,8 @@ model RegisteredVehicle {
   customFields         CustomFieldValue[]
   dmvStatus            WhitelistStatus?
   notes                Note[]
-  appearance           String?
-  imageId              String?
+  appearance           String?                  @db.Text
+  imageId              String?                  @db.Text
   trimLevels           Value[]                  @relation("registeredVehicleTrimLevels")
 
   TruckLog         TruckLog[]
@@ -661,8 +661,8 @@ model Value {
   licenseType ValueLicenseType?
 
   /// OFFICER_RANK only
-  officerRankImageId       String?
-  officerRankImageBlurData String?
+  officerRankImageId       String?           @db.Text
+  officerRankImageBlurData String?           @db.Text
   officerRankDepartments   DepartmentValue[] @relation("officerRankDepartments")
 
   // how to clean this up?!
@@ -710,8 +710,8 @@ model AddressValue {
   id      String  @id @default(uuid())
   value   Value   @relation("addressValueToValue", fields: [valueId], references: [id], onDelete: Cascade)
   valueId String
-  county  String?
-  postal  String?
+  county  String? @db.Text
+  postal  String? @db.Text
 }
 
 model PenalCode {
@@ -738,22 +738,22 @@ model PenalCodeGroup {
   position  Int?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @default(now()) @updatedAt
-  name      String
+  name      String      @db.Text
   PenalCode PenalCode[]
 }
 
 // Int[] = [field1, field2]. Items in this array where idx > 1 will be ignored
 model WarningApplicable {
   id        String      @id @default(uuid())
-  fines     Int[]
+  fines     Json        @default(dbgenerated("(json_array())"))
   PenalCode PenalCode[]
 }
 
 model WarningNotApplicable {
   id         String      @id @default(uuid())
-  fines      Int[]
-  prisonTerm Int[]
-  bail       Int[]
+  fines      Json        @default(dbgenerated("(json_array())"))
+  prisonTerm Json        @default(dbgenerated("(json_array())"))
+  bail       Json        @default(dbgenerated("(json_array())"))
   PenalCode  PenalCode[]
 }
 
@@ -762,7 +762,7 @@ model Violation {
   fine             Int?
   jailTime         Int?
   bail             Int?
-  communityService String?
+  communityService String?    @db.Text
   penalCode        PenalCode? @relation(fields: [penalCodeId], references: [id], onDelete: SetNull)
   penalCodeId      String?
   records          Record[]
@@ -773,7 +773,7 @@ model SeizedItem {
   id       String  @id @default(uuid())
   record   Record  @relation(fields: [recordId], references: [id], onDelete: Cascade)
   recordId String
-  item     String
+  item     String  @db.Text
   quantity Int     @default(1)
   illegal  Boolean @default(false)
 }
@@ -784,10 +784,10 @@ model DivisionValue {
   valueId                    String
   department                 DepartmentValue?             @relation("divisionDepartmentToValue", fields: [departmentId], references: [id], onDelete: Cascade)
   departmentId               String?
-  callsign                   String?
+  callsign                   String?                      @db.Text
   officerDivisionsToDivision Officer[]                    @relation("officerDivisionsToDivision")
   deputies                   EmsFdDeputy[]                @relation("emsFdDivisionToDivision")
-  pairedUnitTemplate         String?
+  pairedUnitTemplate         String?                      @db.VarChar(255)
   extraFields                Json?
   Call911                    Call911[]
   IndividualDivisionCallsign IndividualDivisionCallsign[]
@@ -798,8 +798,8 @@ model DepartmentValue {
   id                    String                  @id @default(cuid())
   value                 Value                   @relation("departmentToValue", fields: [valueId], references: [id], onDelete: Cascade)
   valueId               String
-  callsign              String?
-  customTemplate        String?
+  callsign              String?                 @db.Text
+  customTemplate        String?                 @db.Text
   whitelisted           Boolean                 @default(false)
   isDefaultDepartment   Boolean                 @default(false)
   type                  DepartmentType          @default(LEO)
@@ -826,8 +826,8 @@ model DepartmentValue {
 
 model DepartmentValueLink {
   id           String          @id @default(cuid())
-  title        String
-  url          String
+  title        String          @db.Text
+  url          String          @db.Text
   department   DepartmentValue @relation(fields: [departmentId], references: [id])
   departmentId String
 }
@@ -839,7 +839,7 @@ model EmergencyVehicleValue {
   departments DepartmentValue[]
   divisions   DivisionValue[]
   extraFields Json?
-  description String?
+  description String?           @db.Text
 
   Officers          Officer[]           @relation("activeEmergencyVehicle_leo")
   EmsFdDeputies     EmsFdDeputy[]       @relation("activeEmergencyVehicle_emsfd")
@@ -852,7 +852,7 @@ model DriversLicenseCategoryValue {
   valueId     String
   value       Value                      @relation("driversLicenseCategoryToValue", fields: [valueId], references: [id], onDelete: Cascade)
   type        DriversLicenseCategoryType
-  description String?
+  description String?                    @db.Text
   citizens    Citizen[]                  @relation("dlCategoryToDLCategory")
   LicenseExam LicenseExam[]              @relation("dlCategoryToLicenseExam")
 }
@@ -861,8 +861,8 @@ model VehicleValue {
   id                String              @id @default(cuid())
   valueId           String
   value             Value               @relation("vehicleValueToValue", fields: [valueId], references: [id], onDelete: Cascade)
-  hash              String?
-  imageId           String?
+  hash              String?             @db.Text
+  imageId           String?             @db.Text
   trimLevels        Value[]             @relation("vehicleTrimLevels")
   RegisteredVehicle RegisteredVehicle[]
 }
@@ -871,13 +871,13 @@ model WeaponValue {
   id      String   @id @default(cuid())
   valueId String
   value   Value    @relation("weaponValueToValue", fields: [valueId], references: [id], onDelete: Cascade)
-  hash    String?
+  hash    String?  @db.Text
   weapon  Weapon[] @relation("weaponModelToValue")
 }
 
 model CallTypeValue {
   id            String  @id @default(cuid())
-  priority      String?
+  priority      String? @db.Text
   valueId       String
   isDisposition Boolean @default(false)
   value         Value   @relation("callTypeValueToValue", fields: [valueId], references: [id], onDelete: Cascade)
@@ -893,8 +893,8 @@ model Notification {
   userId      String
   executor    User?    @relation("executor", fields: [executorId], references: [id], onDelete: Cascade)
   executorId  String?
-  title       String
-  description String
+  title       String   @db.Text
+  description String   @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 }
@@ -947,7 +947,7 @@ model BleeterPost {
 // tow
 model TowCall {
   id                String   @id @default(uuid())
-  userId            String?
+  userId            String?  @db.Text
   assignedUnit      Citizen? @relation(fields: [assignedUnitId], references: [id], onDelete: SetNull)
   assignedUnitId    String?
   location          String   @db.VarChar(255)
@@ -956,7 +956,7 @@ model TowCall {
   deliveryAddressId String?
   plate             String?  @db.VarChar(255)
   model             String?  @db.VarChar(255)
-  name              String?
+  name              String?  @db.Text
   description       String?  @db.Text
   descriptionData   Json?
   creator           Citizen? @relation("towCallCreator", fields: [creatorId], references: [id], onDelete: SetNull)
@@ -970,12 +970,12 @@ model TowCall {
 // taxi
 model TaxiCall {
   id              String   @id @default(uuid())
-  userId          String?
+  userId          String?  @db.Text
   assignedUnit    Citizen? @relation(fields: [assignedUnitId], references: [id], onDelete: SetNull)
   assignedUnitId  String?
   location        String   @db.VarChar(255)
   postal          String?  @db.Text
-  name            String?
+  name            String?  @db.Text
   description     String?  @db.Text
   descriptionData Json?
   creator         Citizen? @relation("taxiCallCreator", fields: [creatorId], references: [id], onDelete: SetNull)
@@ -1059,7 +1059,7 @@ model Officer {
   activeDivisionCallsign      IndividualDivisionCallsign?  @relation("divisionCallsign", fields: [activeDivisionCallsignId], references: [id])
   activeDivisionCallsignId    String?
   incremental                 Int?
-  userDefinedCallsign         String?
+  userDefinedCallsign         String?                      @db.Text
   divisions                   DivisionValue[]              @relation("officerDivisionsToDivision")
   rank                        Value?                       @relation("officerRankToValue", fields: [rankId], references: [id])
   rankId                      String?
@@ -1068,7 +1068,7 @@ model Officer {
   statusId                    String?
   suspended                   Boolean                      @default(false)
   badgeNumber                 Int?
-  badgeNumberString           String?
+  badgeNumberString           String?                      @db.Text
   imageId                     String?                      @db.VarChar(255)
   imageBlurData               String?                      @db.Text
   citizen                     Citizen                      @relation(fields: [citizenId], references: [id], onDelete: Cascade)
@@ -1079,7 +1079,7 @@ model Officer {
   updatedAt                   DateTime                     @default(now()) @updatedAt
   whitelistStatus             LeoWhitelistStatus?          @relation(fields: [whitelistStatusId], references: [id])
   whitelistStatusId           String?
-  radioChannelId              String?
+  radioChannelId              String?                      @db.Text
   bolos                       Bolo[]                       @relation("bolosToOfficer")
   warrants                    Warrant[]
   logs                        OfficerLog[]
@@ -1102,7 +1102,7 @@ model Officer {
   activeVehicle               EmergencyVehicleValue?       @relation("activeEmergencyVehicle_leo", fields: [activeVehicleId], references: [id], onDelete: SetNull)
   activeVehicleId             String?
   isTemporary                 Boolean                      @default(false)
-  identifiers                 String[]
+  identifiers                 Json                         @default(dbgenerated("(json_array())"))
   ChatCreator                 ChatCreator[]
   drugTests                   CitizenDrugTest[]
 
@@ -1113,8 +1113,8 @@ model IndividualDivisionCallsign {
   id         String         @id @default(uuid())
   divisionId String?
   division   DivisionValue? @relation(fields: [divisionId], references: [id])
-  callsign   String
-  callsign2  String
+  callsign   String         @db.Text
+  callsign2  String         @db.Text
   officerId  String
   officer    Officer        @relation(fields: [officerId], references: [id], onDelete: Cascade)
   Officer    Officer[]      @relation("divisionCallsign")
@@ -1137,13 +1137,13 @@ model UnitQualification {
 
 model QualificationValue {
   id                String                 @id @default(uuid())
-  imageId           String?
+  imageId           String?                @db.Text
   imageBlurData     String?                @db.Text
   /// name of the qualification
   valueId           String
   value             Value                  @relation(fields: [valueId], references: [id], onDelete: Cascade)
   departments       DepartmentValue[]
-  departmentId      String?
+  departmentId      String?                @db.Text
   description       String?                @db.Text
   qualificationType QualificationValueType @default(QUALIFICATION)
   UnitQualification UnitQualification[]
@@ -1164,9 +1164,9 @@ model StatusValue {
   value       Value             @relation("StatusValueToValue", fields: [valueId], references: [id], onDelete: Cascade)
   valueId     String
   shouldDo    ShouldDoType      @default(SET_STATUS)
-  whatPages   WhatPages[]
-  color       String?
-  textColor   String?
+  whatPages   Json              @default(dbgenerated("(json_array())"))
+  color       String?           @db.Text
+  textColor   String?           @db.Text
   type        StatusValueType   @default(STATUS_CODE)
   departments DepartmentValue[]
 
@@ -1183,7 +1183,7 @@ model OfficerLog {
   id            String       @id @default(uuid())
   startedAt     DateTime     @default(now())
   endedAt       DateTime?
-  userId        String?
+  userId        String?      @db.Text
   officer       Officer?     @relation(fields: [officerId], references: [id], onDelete: Cascade)
   officerId     String?
   createdAt     DateTime     @default(now())
@@ -1208,10 +1208,10 @@ model ImpoundedVehicle {
 
 model LeoIncident {
   id                   String                 @id @default(uuid())
-  caseNumber           Int                    @default(autoincrement())
+  caseNumber           Int                    @unique @default(autoincrement())
   description          String?                @db.Text
   descriptionData      Json?
-  postal               String?
+  postal               String?                @db.Text
   // when null, it is the dispatcher
   creator              Officer?               @relation(fields: [creatorId], references: [id])
   creatorId            String?
@@ -1249,16 +1249,16 @@ model IncidentEvent {
 model CombinedLeoUnit {
   id                     String                   @id @default(uuid())
   officers               Officer[]
-  userDefinedCallsign    String?
-  callsign               String
-  callsign2              String?
+  userDefinedCallsign    String?                  @db.Text
+  callsign               String                   @db.Text
+  callsign2              String?                  @db.Text
   department             DepartmentValue?         @relation(fields: [departmentId], references: [id])
   departmentId           String?
   incremental            Int?
-  radioChannelId         String?
+  radioChannelId         String?                  @db.Text
   status                 StatusValue?             @relation("combinedUnitStatusToValue", fields: [statusId], references: [id])
   statusId               String?
-  pairedUnitTemplate     String?
+  pairedUnitTemplate     String?                  @db.VarChar(255)
   activeCall             Call911?                 @relation("CombinedLeoUnitActiveCall", fields: [activeCallId], references: [id])
   activeCallId           String?
   activeIncident         LeoIncident?             @relation("combinedActiveIncident", fields: [activeIncidentId], references: [id])
@@ -1280,16 +1280,16 @@ model CombinedLeoUnit {
 model CombinedEmsFdUnit {
   id                  String                 @id @default(uuid())
   deputies            EmsFdDeputy[]
-  callsign            String
-  userDefinedCallsign String?
-  callsign2           String?
+  callsign            String                 @db.Text
+  userDefinedCallsign String?                @db.Text
+  callsign2           String?                @db.Text
   department          DepartmentValue?       @relation(fields: [departmentId], references: [id])
   departmentId        String?
   incremental         Int?
-  radioChannelId      String?
+  radioChannelId      String?                @db.Text
   status              StatusValue?           @relation("combinedEmsFdUnitStatusToValue", fields: [statusId], references: [id])
   statusId            String?
-  pairedUnitTemplate  String?
+  pairedUnitTemplate  String?                @db.VarChar(255)
   activeCall          Call911?               @relation("CombinedEmsFdUnitActiveCall", fields: [activeCallId], references: [id])
   activeCallId        String?
   activeIncident      LeoIncident?           @relation("combinedEmsFdActiveIncident", fields: [activeIncidentId], references: [id])
@@ -1324,7 +1324,7 @@ model DispatchChat {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @default(now()) @updatedAt
   message    String       @db.Text
-  unitId     String
+  unitId     String       @db.Text
   // creator = null ? dispatcher : unit
   creator    ChatCreator? @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId  String?
@@ -1366,12 +1366,12 @@ model ChatCreator {
 // 911 calls & bolos
 model Call911 {
   id                String              @id @default(cuid())
-  caseNumber        Int                 @default(autoincrement())
+  caseNumber        Int                 @unique @default(autoincrement())
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @default(now()) @updatedAt
   position          Position?           @relation(fields: [positionId], references: [id])
   positionId        String?
-  userId            String?
+  userId            String?             @db.Text
   assignedUnits     AssignedUnit[]
   location          String              @db.Text
   postal            String?             @db.Text
@@ -1501,7 +1501,7 @@ model Bolo {
 model Record {
   id                   String              @id @default(uuid())
   publishStatus        PublishStatus       @default(DRAFT)
-  caseNumber           Int                 @default(autoincrement())
+  caseNumber           Int                 @unique @default(autoincrement())
   type                 RecordType
   citizen              Citizen?            @relation(fields: [citizenId], references: [id], onDelete: Cascade)
   citizenId            String?
@@ -1526,11 +1526,11 @@ model Record {
   paymentStatus        PaymentStatus?
   vehicle              RegisteredVehicle?  @relation(fields: [vehicleId], references: [id])
   vehicleId            String?
-  vehiclePlate         String?
-  vehicleModel         String?
-  vehicleColor         String?
-  vehicleSpeed         String?
-  speedLimit           String?
+  vehiclePlate         String?             @db.Text
+  vehicleModel         String?             @db.Text
+  vehicleColor         String?             @db.Text
+  vehicleSpeed         String?             @db.Text
+  speedLimit           String?             @db.Text
   vehiclePaceType      VehiclePaceType?
   call911              Call911?            @relation(fields: [call911Id], references: [id], onDelete: Cascade)
   call911Id            String?
@@ -1552,7 +1552,7 @@ model RecordRelease {
 
 model Warrant {
   id                   String                   @id @default(uuid())
-  caseNumber           Int                      @default(autoincrement())
+  caseNumber           Int                      @unique @default(autoincrement())
   citizen              Citizen                  @relation(fields: [citizenId], references: [id], onDelete: Cascade)
   citizenId            String
   officer              Officer?                 @relation(fields: [officerId], references: [id], onDelete: SetNull)
@@ -1603,8 +1603,8 @@ model NameChangeRequest {
   citizenId   String
   user        User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String?
-  newName     String
-  newSurname  String
+  newName     String          @db.Text
+  newSurname  String          @db.Text
   description String?         @db.Text
   status      WhitelistStatus @default(PENDING)
   createdAt   DateTime        @default(now())
@@ -1613,8 +1613,8 @@ model NameChangeRequest {
 
 model CourtEntry {
   id              String      @id @default(uuid())
-  title           String
-  caseNumber      String
+  title           String      @db.Text
+  caseNumber      String      @db.Text
   descriptionData Json?
   dates           CourtDate[]
   createdAt       DateTime    @default(now())
@@ -1624,7 +1624,7 @@ model CourtEntry {
 
 model CourtDate {
   id           String     @id @default(uuid())
-  note         String?
+  note         String?    @db.Text
   date         DateTime
   courtEntry   CourtEntry @relation(fields: [courtEntryId], references: [id], onDelete: Cascade)
   courtEntryId String
@@ -1638,7 +1638,7 @@ model EmsFdDeputy {
   callsign             String                 @db.VarChar(255)
   callsign2            String                 @db.VarChar(255)
   incremental          Int?
-  userDefinedCallsign  String?
+  userDefinedCallsign  String?                @db.Text
   division             DivisionValue?         @relation("emsFdDivisionToDivision", fields: [divisionId], references: [id])
   divisionId           String?
   position             String?                @db.Text
@@ -1648,7 +1648,7 @@ model EmsFdDeputy {
   statusId             String?
   suspended            Boolean                @default(false)
   badgeNumber          Int?
-  badgeNumberString    String?
+  badgeNumberString    String?                @db.Text
   imageId              String?                @db.VarChar(255)
   imageBlurData        String?                @db.Text
   citizen              Citizen                @relation(fields: [citizenId], references: [id], onDelete: Cascade)
@@ -1657,7 +1657,7 @@ model EmsFdDeputy {
   userId               String?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @default(now()) @updatedAt
-  radioChannelId       String?
+  radioChannelId       String?                @db.Text
   activeCall           Call911?               @relation("emsFdActiveCall", fields: [activeCallId], references: [id])
   activeCallId         String?
   activeIncident       LeoIncident?           @relation("emsfdActiveIncident", fields: [activeIncidentId], references: [id])
@@ -1671,7 +1671,7 @@ model EmsFdDeputy {
   activeVehicle        EmergencyVehicleValue? @relation("activeEmergencyVehicle_emsfd", fields: [activeVehicleId], references: [id], onDelete: SetNull)
   activeVehicleId      String?
   isTemporary          Boolean                @default(false)
-  identifiers          String[]
+  identifiers          Json                   @default(dbgenerated("(json_array())"))
   CombinedEmsFdUnit    CombinedEmsFdUnit?     @relation(fields: [combinedEmsFdUnitId], references: [id])
   combinedEmsFdUnitId  String?
   EmsFdIncident        EmsFdIncident[]        @relation("emsFdIncidentCreator")
@@ -1682,12 +1682,12 @@ model EmsFdDeputy {
 
 model EmsFdIncident {
   id                   String                 @id @default(uuid())
-  caseNumber           Int                    @default(autoincrement())
+  caseNumber           Int                    @unique @default(autoincrement())
   description          String?                @db.Text
   descriptionData      Json?
-  address              String?
-  postal               String?
-  fireType             String?
+  address              String?                @db.Text
+  postal               String?                @db.Text
+  fireType             String?                @db.Text
   reportType           EmsFdReportType        @default(MEDICAL)
   causeOfFire          String?                @db.Text
   propertyDamage       String?                @db.VarChar(255)
@@ -1732,7 +1732,7 @@ model TruckLog {
   endedAt   String             @db.VarChar(255)
   createdAt DateTime           @default(now())
   updatedAt DateTime           @default(now()) @updatedAt
-  notes     String?
+  notes     String?            @db.Text
 }
 
 // Exams
@@ -1754,7 +1754,7 @@ model LicenseExam {
 /// custom fields
 model CustomField {
   id              String              @id @default(uuid())
-  name            String
+  name            String              @db.Text
   citizenEditable Boolean             @default(false)
   category        CustomFieldCategory
   values          CustomFieldValue[]
@@ -1762,7 +1762,7 @@ model CustomField {
 
 model CustomFieldValue {
   id                 String              @id @default(uuid())
-  value              String?
+  value              String?             @db.Text
   field              CustomField         @relation(fields: [fieldId], references: [id], onDelete: Cascade)
   fieldId            String
   Citizens           Citizen[]
@@ -1774,8 +1774,8 @@ model CustomFieldValue {
 model CustomRole {
   id            String       @id @default(uuid())
   name          String       @unique
-  iconId        String?
-  permissions   String[]
+  iconId        String?      @db.Text
+  permissions   Json         @default(dbgenerated("(json_array())"))
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @default(now()) @updatedAt
   discordRole   DiscordRole? @relation(fields: [discordRoleId], references: [id])
@@ -1797,7 +1797,7 @@ model CourthousePost {
 model ActiveTone {
   id          String         @id @default(uuid())
   type        ActiveToneType @unique
-  description String?
+  description String?        @db.Text
   createdAt   DateTime       @default(now())
   createdBy   User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdById String

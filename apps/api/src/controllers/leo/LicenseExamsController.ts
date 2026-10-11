@@ -40,9 +40,9 @@ export class LicenseExamsController {
     const where: Prisma.LicenseExamWhereInput | undefined = query
       ? {
           OR: [
-            { license: { value: { contains: query, mode: "insensitive" } } },
-            { citizen: { name: { contains: query, mode: "insensitive" } } },
-            { citizen: { surname: { contains: query, mode: "insensitive" } } },
+            { license: { value: { contains: query } } },
+            { citizen: { name: { contains: query } } },
+            { citizen: { surname: { contains: query } } },
           ],
         }
       : undefined;

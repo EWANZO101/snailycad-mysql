@@ -43,7 +43,9 @@ export class TemporaryUnitsController {
     const existingOfficer = data.identifiers
       ? await prisma.officer.findFirst({
           where: {
-            identifiers: { hasSome: data.identifiers },
+            OR: data.identifiers.map((identifier) => ({
+              identifiers: { array_contains: identifier },
+            })),
           },
           include: leoProperties,
         })
@@ -93,7 +95,9 @@ export class TemporaryUnitsController {
     const existingDeputy = data.identifiers
       ? await prisma.emsFdDeputy.findFirst({
           where: {
-            identifiers: { hasSome: data.identifiers },
+            OR: data.identifiers.map((identifier) => ({
+              identifiers: { array_contains: identifier },
+            })),
           },
           include: unitProperties,
         })

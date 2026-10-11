@@ -43,7 +43,7 @@ export class AuthController {
 
     const user = await prisma.user.findFirst({
       where: {
-        username: { mode: "insensitive", equals: data.username },
+        username: { equals: data.username },
       },
     });
 
@@ -127,7 +127,7 @@ export class AuthController {
 
     const existing = await prisma.user.findFirst({
       where: {
-        username: { equals: data.username, mode: "insensitive" },
+        username: { equals: data.username },
       },
     });
 

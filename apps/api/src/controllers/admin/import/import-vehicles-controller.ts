@@ -39,10 +39,10 @@ export class ImportVehiclesController {
     const where: Prisma.RegisteredVehicleWhereInput | undefined = query
       ? {
           OR: [
-            { plate: { contains: query, mode: "insensitive" } },
-            { model: { value: { value: { contains: query, mode: "insensitive" } } } },
-            { color: { contains: query, mode: "insensitive" } },
-            { vinNumber: { contains: query, mode: "insensitive" } },
+            { plate: { contains: query } },
+            { model: { value: { value: { contains: query } } } },
+            { color: { contains: query } },
+            { vinNumber: { contains: query } },
           ],
         }
       : undefined;
@@ -72,7 +72,7 @@ export class ImportVehiclesController {
     const where: Prisma.RegisteredVehicleWhereInput | undefined = {};
 
     if (query) {
-      where.plate = { contains: query, mode: "insensitive" };
+      where.plate = { contains: query };
     }
 
     if (typeof userRegisteredOnly === "boolean") {

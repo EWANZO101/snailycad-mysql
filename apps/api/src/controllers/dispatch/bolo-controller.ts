@@ -56,12 +56,12 @@ export class BoloController {
     const where: Prisma.BoloWhereInput = query
       ? {
           OR: [
-            { plate: { contains: query.trim(), mode: "insensitive" } },
-            { name: { contains: query, mode: "insensitive" } },
-            { color: { contains: query, mode: "insensitive" } },
-            { plate: { contains: query, mode: "insensitive" } },
-            { model: { contains: query, mode: "insensitive" } },
-            { description: { contains: query, mode: "insensitive" } },
+            { plate: { contains: query.trim() } },
+            { name: { contains: query } },
+            { color: { contains: query } },
+            { plate: { contains: query } },
+            { model: { contains: query } },
+            { description: { contains: query } },
           ],
         }
       : {};

@@ -68,7 +68,7 @@
     "dbPassword": "Password",
     "dbHost": "Host",
     "dbPort": "Port",
-    "databaseUrlInfo": "Prisma (the API) only reads DATABASE_URL. Its format is postgresql://USER:PASSWORD@HOST:PORT/DB_NAME?sslmode=prefer. In the default .env it is built from POSTGRES_USER, POSTGRES_PASSWORD, DB_HOST, DB_PORT and POSTGRES_DB, so if you change one of those, make sure DATABASE_URL still matches (or write the values directly into DATABASE_URL).",
+    "databaseUrlInfo": "Prisma (the API) only reads DATABASE_URL. Its format is mysql://USER:PASSWORD@HOST:PORT/DB_NAME (MySQL 8.0+ or MariaDB 10.6+). In the default .env it is built from DB_USER, DB_PASSWORD, DB_HOST, DB_PORT and DB_NAME, so if you change one of those, make sure DATABASE_URL still matches (or write the values directly into DATABASE_URL).",
     "manageToken": "Locating, rotating and replacing the token",
     "manageToken_locate": "Locate: on the API server, run cat apps/api/.recovery-token from the SnailyCAD folder. The exact absolute path is shown on the admin dashboard for the owner. Set RECOVERY_TOKEN_FILE in .env to use another location.",
     "manageToken_rotate": "Rotate: as the owner, open the admin dashboard and click \"Rotate token\". The new token is shown once and replaces the old one immediately.",

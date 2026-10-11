@@ -190,29 +190,29 @@ export class LeoSearchController {
         userId: fromAuthUserOnly && checkUserId ? user.id : undefined,
         OR: [
           {
-            name: { contains: name, mode: "insensitive" },
-            surname: { contains: surname, mode: "insensitive" },
+            name: { contains: name },
+            surname: { contains: surname },
           },
           {
-            name: { contains: surname, mode: "insensitive" },
-            surname: { contains: name, mode: "insensitive" },
+            name: { contains: surname },
+            surname: { contains: name },
           },
-          { driversLicenseNumber: { contains: name, mode: "insensitive" } },
-          { weaponLicenseNumber: { contains: name, mode: "insensitive" } },
-          { waterLicenseNumber: { contains: name, mode: "insensitive" } },
-          { pilotLicenseNumber: { contains: name, mode: "insensitive" } },
+          { driversLicenseNumber: { contains: name } },
+          { weaponLicenseNumber: { contains: name } },
+          { waterLicenseNumber: { contains: name } },
+          { pilotLicenseNumber: { contains: name } },
           { socialSecurityNumber: name },
           {
             aliases: {
               some: {
                 OR: [
                   {
-                    name: { contains: name, mode: "insensitive" },
-                    surname: { contains: surname, mode: "insensitive" },
+                    name: { contains: name },
+                    surname: { contains: surname },
                   },
                   {
-                    name: { contains: surname, mode: "insensitive" },
-                    surname: { contains: name, mode: "insensitive" },
+                    name: { contains: surname },
+                    surname: { contains: name },
                   },
                 ],
               },
@@ -260,7 +260,6 @@ export class LeoSearchController {
       where: {
         name: {
           contains: name,
-          mode: "insensitive",
         },
       },
       include: {
@@ -297,7 +296,6 @@ export class LeoSearchController {
       where: {
         serialNumber: {
           startsWith: serialNumber,
-          mode: "insensitive",
         },
       },
       include: weaponsInclude,
@@ -374,7 +372,7 @@ export class LeoSearchController {
     });
 
     const _results = await prisma.customFieldValue.findMany({
-      where: { fieldId: data.customFieldId, value: { mode: "insensitive", equals: data.query } },
+      where: { fieldId: data.customFieldId, value: { equals: data.query } },
       include: {
         Citizens: citizenSearchIncludeOrSelect(user, cad),
         RegisteredVehicles: { include: vehicleSearchInclude },

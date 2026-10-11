@@ -3,13 +3,7 @@ import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-params";
 import { ContentType, Delete, Description, Get, Post } from "@tsed/schema";
 import { BadRequest, NotFound } from "@tsed/exceptions";
-import {
-  type User,
-  type cad,
-  type MiscCadSettings,
-  Prisma,
-  WhitelistStatus,
-} from "@prisma/client";
+import { type User, type cad, type MiscCadSettings, Prisma, WhitelistStatus } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -73,15 +67,15 @@ export class CitizenClaimsController {
           // SSNs must be an exact match to prevent enumerating SSNs
           { socialSecurityNumber: trimmed },
           {
-            name: { contains: name, mode: Prisma.QueryMode.insensitive },
-            surname: surname ? { contains: surname, mode: Prisma.QueryMode.insensitive } : undefined,
+            name: { contains: name },
+            surname: surname ? { contains: surname } : undefined,
           },
           surname
             ? {
-                name: { contains: surname, mode: Prisma.QueryMode.insensitive },
-                surname: { contains: name, mode: Prisma.QueryMode.insensitive },
+                name: { contains: surname },
+                surname: { contains: name },
               }
-            : { surname: { contains: name, mode: Prisma.QueryMode.insensitive } },
+            : { surname: { contains: name } },
         ],
       },
       orderBy: [{ name: "asc" }, { surname: "asc" }],

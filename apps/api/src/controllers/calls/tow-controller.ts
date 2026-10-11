@@ -71,12 +71,12 @@ export class TowController {
       ? {
           OR: [
             {
-              creator: { name: { contains: query, mode: "insensitive" } },
+              creator: { name: { contains: query } },
             },
-            { description: { contains: query, mode: "insensitive" } },
+            { description: { contains: query } },
             { descriptionData: { array_contains: query } },
-            { location: { contains: query, mode: "insensitive" } },
-            { postal: { contains: query, mode: "insensitive" } },
+            { location: { contains: query } },
+            { postal: { contains: query } },
           ],
         }
       : {};

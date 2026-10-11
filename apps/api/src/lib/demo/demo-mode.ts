@@ -17,7 +17,7 @@ import { findApiRoot } from "lib/recovery/recovery-token";
  * - its credentials are shown on the login page,
  * - every `DEMO_RESET_MINUTES` (default 10) all data is reset to a baseline snapshot.
  *
- * The baseline is a data-only `pg_dump` taken once, the first time demo mode starts, and stored in
+ * The baseline is a data-only `mysqldump` / `mariadb-dump` taken once, the first time demo mode starts, and stored in
  * `apps/api/.demo-baseline.sql`. Delete that file and restart the API to take a new baseline.
  */
 
@@ -72,35 +72,60 @@ function getBaselinePath() {
   return process.env.DEMO_BASELINE_FILE || join(findApiRoot(), ".demo-baseline.sql");
 }
 
-function getPgEnv() {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  const url = process.env.DATABASE_URL;
+interface DbConnection {
+  host: string;
+  port: string;
+  user: string;
+  password: string;
+  database: string;
+}
 
-  if (url && !url.includes("${")) {
-    try {
-      const parsed = new URL(url);
-      env.PGHOST = parsed.hostname;
-      env.PGPORT = parsed.port || "5432";
-      env.PGUSER = decodeURIComponent(parsed.username);
-      env.PGPASSWORD = decodeURIComponent(parsed.password);
-      env.PGDATABASE = decodeURIComponent(parsed.pathname.slice(1));
-      return env;
-    } catch {
-      // fall back to the individual variables
-    }
+function getDbConnection(): DbConnection {
+  const url = process.env.DATABASE_URL;
+  if (!url || url.includes("${")) {
+    throw new Error("DATABASE_URL must be a complete mysql:// URL for demo mode");
   }
 
-  env.PGHOST = process.env.DB_HOST || "localhost";
-  env.PGPORT = process.env.DB_PORT || "5432";
-  env.PGUSER = process.env.POSTGRES_USER;
-  env.PGPASSWORD = process.env.POSTGRES_PASSWORD;
-  env.PGDATABASE = process.env.POSTGRES_DB;
-  return env;
+  const parsed = new URL(url);
+  return {
+    host: parsed.hostname,
+    port: parsed.port || "3306",
+    user: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+    database: decodeURIComponent(parsed.pathname.slice(1)),
+  };
+}
+
+/** MariaDB ships `mariadb-dump`/`mariadb`; MySQL's `mysqldump` is not fully compatible with it */
+async function getClientCommands() {
+  const [row] = await prisma.$queryRaw<{ version: string }[]>`SELECT VERSION() AS version`;
+  const isMariaDb = /mariadb/i.test(row?.version ?? "");
+  return isMariaDb
+    ? { dump: "mariadb-dump", client: "mariadb", extraDumpArgs: [] as string[] }
+    : {
+        dump: "mysqldump",
+        client: "mysql",
+        extraDumpArgs: ["--set-gtid-purged=OFF", "--no-tablespaces"],
+      };
+}
+
+function connectionArgs(connection: DbConnection) {
+  return [
+    "--protocol=TCP",
+    `--host=${connection.host}`,
+    `--port=${connection.port}`,
+    `--user=${connection.user}`,
+  ];
 }
 
 function run(command: string, args: string[]) {
+  const connection = getDbConnection();
   return new Promise<void>((resolve, reject) => {
-    const child = spawn(command, args, { env: getPgEnv(), stdio: ["ignore", "ignore", "pipe"] });
+    const child = spawn(command, args, {
+      // keeps the password out of the process list
+      env: { ...process.env, MYSQL_PWD: connection.password },
+      stdio: ["ignore", "ignore", "pipe"],
+    });
     let stderr = "";
     child.stderr.on("data", (chunk) => {
       stderr += String(chunk);
@@ -141,14 +166,21 @@ async function ensureDemoAccount() {
 async function takeBaseline() {
   const baselinePath = getBaselinePath();
   const tmpPath = `${baselinePath}.${process.pid}.tmp`;
+  const connection = getDbConnection();
+  const commands = await getClientCommands();
 
-  await run("pg_dump", [
-    "--data-only",
-    "--no-owner",
-    "--no-privileges",
-    "--exclude-table=_prisma_migrations",
-    "--file",
-    tmpPath,
+  await run(commands.dump, [
+    ...connectionArgs(connection),
+    "--no-create-info",
+    "--skip-triggers",
+    "--complete-insert",
+    "--single-transaction",
+    "--skip-add-locks",
+    "--skip-disable-keys",
+    ...commands.extraDumpArgs,
+    `--ignore-table=${connection.database}._prisma_migrations`,
+    `--result-file=${tmpPath}`,
+    connection.database,
   ]);
   // the snapshot contains password hashes
   chmodSync(tmpPath, 0o600);
@@ -164,27 +196,37 @@ export async function resetDemoData() {
   const scriptPath = join(findApiRoot(), `.demo-reset.${process.pid}.sql`);
 
   try {
-    const tables = await prisma.$queryRaw<{ tablename: string }[]>`
-      SELECT tablename FROM pg_tables
-      WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'
+    const connection = getDbConnection();
+    const commands = await getClientCommands();
+    const tables = await prisma.$queryRaw<{ name: string }[]>`
+      SELECT TABLE_NAME AS name FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'
+        AND TABLE_NAME <> '_prisma_migrations'
     `;
-    const tableList = tables.map((t) => `"public"."${t.tablename.replace(/"/g, '""')}"`).join(", ");
 
-    // single transaction: either everything is reset, or nothing changes.
+    // one transaction: either everything is reset, or nothing changes. TRUNCATE can't be used
+    // because it commits implicitly in MySQL/MariaDB.
     writeFileSync(
       scriptPath,
       [
-        "SET lock_timeout = '15s';",
-        // skip FK triggers while reloading, the baseline is consistent as a whole
-        "SET session_replication_role = replica;",
-        `TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE;`,
-        `\\i '${baselinePath.replace(/'/g, "''")}'`,
+        "SET SESSION innodb_lock_wait_timeout = 15;",
+        // the baseline is consistent as a whole, so foreign keys are checked by the snapshot itself
+        "SET FOREIGN_KEY_CHECKS = 0;",
+        "START TRANSACTION;",
+        ...tables.map((table) => `DELETE FROM \`${table.name.replace(/`/g, "``")}\`;`),
+        `SOURCE ${baselinePath};`,
+        "COMMIT;",
+        "SET FOREIGN_KEY_CHECKS = 1;",
         "",
       ].join("\n"),
       { mode: 0o600 },
     );
 
-    await run("psql", ["-v", "ON_ERROR_STOP=1", "--single-transaction", "-q", "-f", scriptPath]);
+    await run(commands.client, [
+      ...connectionArgs(connection),
+      `--database=${connection.database}`,
+      `--execute=SOURCE ${scriptPath}`,
+    ]);
     $log.info("[demo] data reset to baseline");
   } catch (error) {
     $log.error("[demo] failed to reset data", error);

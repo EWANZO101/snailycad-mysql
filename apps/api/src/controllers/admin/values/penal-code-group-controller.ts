@@ -18,7 +18,7 @@ export class PenalCodeGroupController {
     @QueryParams("includeAll", Boolean) includeAll = false,
     @QueryParams("query", String) query = "",
   ): Promise<APITypes.GetPenalCodeGroupsData> {
-    const where = query ? ({ name: { contains: query, mode: "insensitive" } } as const) : undefined;
+    const where = query ? ({ name: { contains: query } } as const) : undefined;
 
     const [totalCount, penalCodeGroups] = await prisma.$transaction([
       prisma.penalCodeGroup.count({ where, orderBy: { position: "asc" } }),

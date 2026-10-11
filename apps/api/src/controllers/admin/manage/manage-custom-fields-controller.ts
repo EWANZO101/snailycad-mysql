@@ -24,7 +24,7 @@ export class AdminManageCustomFieldsController {
   ): Promise<APITypes.GetManageCustomFieldsData> {
     const where = query
       ? ({
-          OR: [{ name: { contains: query, mode: "insensitive" } }],
+          OR: [{ name: { contains: query } }],
         } satisfies Prisma.CustomFieldWhereInput)
       : undefined;
 

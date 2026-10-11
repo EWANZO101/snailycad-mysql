@@ -59,11 +59,11 @@ export class VehiclesController {
       ...(query
         ? {
             OR: [
-              { color: { contains: query, mode: "insensitive" } },
-              { model: { value: { value: { contains: query, mode: "insensitive" } } } },
-              { registrationStatus: { value: { contains: query, mode: "insensitive" } } },
-              { vinNumber: { contains: query, mode: "insensitive" } },
-              { plate: { contains: query, mode: "insensitive" } },
+              { color: { contains: query } },
+              { model: { value: { value: { contains: query } } } },
+              { registrationStatus: { value: { contains: query } } },
+              { vinNumber: { contains: query } },
+              { plate: { contains: query } },
             ],
           }
         : {}),
@@ -101,11 +101,11 @@ export class VehiclesController {
       ...(query
         ? {
             OR: [
-              { color: { contains: query, mode: "insensitive" } },
-              { model: { value: { value: { contains: query, mode: "insensitive" } } } },
-              { registrationStatus: { value: { contains: query, mode: "insensitive" } } },
-              { vinNumber: { contains: query, mode: "insensitive" } },
-              { plate: { contains: query, mode: "insensitive" } },
+              { color: { contains: query } },
+              { model: { value: { value: { contains: query } } } },
+              { registrationStatus: { value: { contains: query } } },
+              { vinNumber: { contains: query } },
+              { plate: { contains: query } },
             ],
           }
         : {}),
@@ -150,7 +150,7 @@ export class VehiclesController {
 
     const isPlateBlacklisted = await prisma.blacklistedWord.findFirst({
       where: {
-        word: { contains: data.plate, mode: "insensitive" },
+        word: { contains: data.plate },
       },
     });
     if (isPlateBlacklisted) {
@@ -324,7 +324,7 @@ export class VehiclesController {
 
     const isPlateBlacklisted = await prisma.blacklistedWord.findFirst({
       where: {
-        word: { contains: data.plate, mode: "insensitive" },
+        word: { contains: data.plate },
       },
     });
     if (isPlateBlacklisted) {
@@ -394,7 +394,7 @@ export class VehiclesController {
       valueModel = await prisma.vehicleValue.findFirst({
         where: {
           value: {
-            value: { contains: data.model, mode: "insensitive" },
+            value: { contains: data.model },
           },
         },
       });
@@ -671,7 +671,7 @@ export class VehiclesController {
 
     const existing = await prisma.registeredVehicle.findFirst({
       where: {
-        vinNumber: { mode: "insensitive", equals: vinNumber },
+        vinNumber: { equals: vinNumber },
         NOT: options.vehicle ? { id: options.vehicle.id } : undefined,
       },
     });

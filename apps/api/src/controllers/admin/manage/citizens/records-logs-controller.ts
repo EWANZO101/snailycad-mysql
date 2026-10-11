@@ -50,12 +50,12 @@ export class AdminManageCitizensController {
     const where = {
       OR: [
         {
-          name: { contains: name, mode: Prisma.QueryMode.insensitive },
-          surname: { contains: surname, mode: Prisma.QueryMode.insensitive },
+          name: { contains: name },
+          surname: { contains: surname },
         },
         {
-          name: { equals: surname, mode: Prisma.QueryMode.insensitive },
-          surname: { equals: name, mode: Prisma.QueryMode.insensitive },
+          name: { equals: surname },
+          surname: { equals: name },
         },
       ],
     };

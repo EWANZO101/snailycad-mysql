@@ -144,7 +144,7 @@ export async function upsertOfficer({
     const onDutyStatus = await prisma.statusValue.findFirst({
       where: {
         shouldDo: ShouldDoType.SET_ON_DUTY,
-        OR: [{ whatPages: { isEmpty: true } }, { whatPages: { has: WhatPages.LEO } }],
+        OR: [{ whatPages: { equals: [] } }, { whatPages: { array_contains: WhatPages.LEO } }],
       },
     });
 

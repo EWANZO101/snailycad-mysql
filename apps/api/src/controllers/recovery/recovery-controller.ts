@@ -198,7 +198,7 @@ export class RecoveryController {
       where: query
         ? {
             OR: [
-              { username: { contains: query, mode: "insensitive" } },
+              { username: { contains: query } },
               { id: query },
               { discordId: query },
               { steamId: query },

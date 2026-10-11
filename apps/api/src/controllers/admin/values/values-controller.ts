@@ -253,7 +253,7 @@ export class ValuesController {
     }
 
     const values = await prisma.value.findMany({
-      where: { type, isDisabled: false, value: { contains: query, mode: "insensitive" } },
+      where: { type, isDisabled: false, value: { contains: query } },
       orderBy: { position: "asc" },
       take: 35,
       include:

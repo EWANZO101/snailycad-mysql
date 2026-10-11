@@ -110,10 +110,10 @@ export class ManageUsersController {
             ...(query
               ? {
                   OR: [
-                    { username: { contains: query, mode: Prisma.QueryMode.insensitive } },
-                    { id: { contains: query, mode: Prisma.QueryMode.insensitive } },
-                    { steamId: { contains: query, mode: Prisma.QueryMode.insensitive } },
-                    { discordId: { contains: query, mode: Prisma.QueryMode.insensitive } },
+                    { username: { contains: query } },
+                    { id: { contains: query } },
+                    { steamId: { contains: query } },
+                    { discordId: { contains: query } },
                   ],
                 }
               : {}),
@@ -276,7 +276,7 @@ export class ManageUsersController {
     @BodyParams("username") username: string,
   ): Promise<APITypes.PostManageUsersSearchData> {
     const users = await prisma.user.findMany({
-      where: { username: { contains: username, mode: "insensitive" } },
+      where: { username: { contains: username } },
       select: userProperties,
       take: 35,
     });

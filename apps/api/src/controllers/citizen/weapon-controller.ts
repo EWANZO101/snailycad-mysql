@@ -47,9 +47,9 @@ export class WeaponController {
       ...(query
         ? {
             OR: [
-              { model: { value: { value: { contains: query, mode: "insensitive" } } } },
-              { registrationStatus: { value: { contains: query, mode: "insensitive" } } },
-              { serialNumber: { contains: query, mode: "insensitive" } },
+              { model: { value: { value: { contains: query } } } },
+              { registrationStatus: { value: { contains: query } } },
+              { serialNumber: { contains: query } },
             ],
           }
         : {}),
@@ -179,7 +179,7 @@ export class WeaponController {
 
     if (isCustomEnabled) {
       const weaponModel = await prisma.weaponValue.findFirst({
-        where: { value: { value: { equals: data.model, mode: "insensitive" } } },
+        where: { value: { value: { equals: data.model } } },
       });
 
       const newModel = await prisma.weaponValue.upsert({
@@ -266,7 +266,7 @@ export class WeaponController {
 
     const existing = await prisma.weapon.findFirst({
       where: {
-        serialNumber: { mode: "insensitive", equals: serialNumber },
+        serialNumber: { equals: serialNumber },
         NOT: weapon ? { id: weapon.id } : undefined,
       },
     });

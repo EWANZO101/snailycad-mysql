@@ -111,7 +111,7 @@ export class IncidentController {
                 ...(Number.isNaN(parsedCaseNumber)
                   ? []
                   : [{ caseNumber: { equals: parsedCaseNumber } }]),
-                { description: { contains: trimmedQuery, mode: "insensitive" as const } },
+                { description: { contains: trimmedQuery } },
               ],
             },
           ],

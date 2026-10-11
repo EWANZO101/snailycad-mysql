@@ -1,2 +1,0 @@
--- AlterEnum
-ALTER TYPE "Feature" ADD VALUE 'API_TOKEN_REMINDER';

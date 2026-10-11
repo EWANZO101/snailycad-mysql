@@ -80,7 +80,7 @@ export class CombinedUnitsController {
     const status = await prisma.statusValue.findFirst({
       where: {
         shouldDo: ShouldDoType.SET_ON_DUTY,
-        OR: [{ whatPages: { isEmpty: true } }, { whatPages: { has: WhatPages.LEO } }],
+        OR: [{ whatPages: { equals: [] } }, { whatPages: { array_contains: WhatPages.LEO } }],
       },
       select: { id: true },
     });
@@ -99,7 +99,7 @@ export class CombinedUnitsController {
 
     if (isUserDefinedCallsignEnabled) {
       const existing = await prisma.combinedLeoUnit.findFirst({
-        where: { userDefinedCallsign: { equals: data.userDefinedCallsign, mode: "insensitive" } },
+        where: { userDefinedCallsign: { equals: data.userDefinedCallsign } },
       });
 
       if (existing) {
@@ -195,7 +195,7 @@ export class CombinedUnitsController {
     const status = await prisma.statusValue.findFirst({
       where: {
         shouldDo: ShouldDoType.SET_ON_DUTY,
-        OR: [{ whatPages: { isEmpty: true } }, { whatPages: { has: WhatPages.EMS_FD } }],
+        OR: [{ whatPages: { equals: [] } }, { whatPages: { array_contains: WhatPages.EMS_FD } }],
       },
       select: { id: true },
     });
@@ -212,7 +212,7 @@ export class CombinedUnitsController {
 
     if (isUserDefinedCallsignEnabled) {
       const existing = await prisma.combinedEmsFdUnit.findFirst({
-        where: { userDefinedCallsign: { equals: data.userDefinedCallsign, mode: "insensitive" } },
+        where: { userDefinedCallsign: { equals: data.userDefinedCallsign } },
       });
 
       if (existing) {
@@ -290,7 +290,7 @@ export class CombinedUnitsController {
     const onDutyStatusCode = await prisma.statusValue.findFirst({
       where: {
         shouldDo: ShouldDoType.SET_ON_DUTY,
-        OR: [{ whatPages: { isEmpty: true } }, { whatPages: { has: pageType } }],
+        OR: [{ whatPages: { equals: [] } }, { whatPages: { array_contains: pageType } }],
       },
     });
 

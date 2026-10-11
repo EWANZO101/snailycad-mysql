@@ -83,12 +83,12 @@ export class Calls911Controller {
       OR: query
         ? [
             { descriptionData: { array_contains: query } },
-            { name: { contains: query, mode: "insensitive" } },
-            { postal: { contains: query, mode: "insensitive" } },
-            { location: { contains: query, mode: "insensitive" } },
-            { description: { contains: query, mode: "insensitive" } },
-            { type: { value: { value: { contains: query, mode: "insensitive" } } } },
-            { situationCode: { value: { value: { contains: query, mode: "insensitive" } } } },
+            { name: { contains: query } },
+            { postal: { contains: query } },
+            { location: { contains: query } },
+            { description: { contains: query } },
+            { type: { value: { value: { contains: query } } } },
+            { situationCode: { value: { value: { contains: query } } } },
           ]
         : undefined,
     };
@@ -629,7 +629,7 @@ export class Calls911Controller {
         OR:
           callType === "assign"
             ? undefined
-            : [{ whatPages: { isEmpty: true } }, { whatPages: { has: pageType } }],
+            : [{ whatPages: { equals: [] } }, { whatPages: { array_contains: pageType } }],
       },
     });
 

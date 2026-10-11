@@ -44,13 +44,13 @@ export class EMSFDSearchController {
       where: {
         OR: [
           {
-            name: { contains: name, mode: "insensitive" },
-            surname: { contains: surname, mode: "insensitive" },
+            name: { contains: name },
+            surname: { contains: surname },
           },
           { socialSecurityNumber: name },
           {
-            name: { contains: surname, mode: "insensitive" },
-            surname: { contains: name, mode: "insensitive" },
+            name: { contains: surname },
+            surname: { contains: name },
           },
         ],
       },

@@ -1,2 +1,0 @@
--- AlterEnum
-ALTER TYPE "Feature" ADD VALUE 'CITIZEN_DELETE_ON_DEAD';
