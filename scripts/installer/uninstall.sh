@@ -15,6 +15,7 @@ main() {
     [[ -f "$manifest" ]] || { echo "No installer manifest in $dir; is this a SnailyCAD install folder?" >&2; exit 1; }
 
     local NAME="" INSTALL_DIR="" SERVICE="" CAD_SERVICE="" DB_NAME="" DB_USER="" DB_ADMIN="" APT_MARIADB=""
+    local DOCKER_PROJECT="" DOCKER_NETWORK="" APT_DOCKER=""
     local -a UFW_PORTS=() APT_PACKAGES=()
     local key value
     while IFS='=' read -r key value; do
@@ -29,6 +30,9 @@ main() {
             UFW_PORT) UFW_PORTS+=("$value") ;;
             APT_PACKAGE) APT_PACKAGES+=("$value") ;;
             APT_MARIADB) APT_MARIADB="$value" ;;
+            DOCKER_PROJECT) DOCKER_PROJECT="$value" ;;
+            DOCKER_NETWORK) DOCKER_NETWORK="$value" ;;
+            APT_DOCKER) APT_DOCKER="$value" ;;
         esac
     done < "$manifest"
 
@@ -37,6 +41,9 @@ main() {
     echo "This permanently removes:"
     echo "  - $INSTALL_DIR (the CAD, its build, Node.js copy and logs)"
     [[ -n "$CAD_SERVICE" ]] && echo "  - systemd service $CAD_SERVICE"
+    [[ -n "$DOCKER_PROJECT" ]] && echo "  - Docker containers, images and data of project $DOCKER_PROJECT"
+    [[ -n "$DOCKER_NETWORK" ]] && echo "  - Docker network $DOCKER_NETWORK"
+    [[ "$APT_DOCKER" == 1 ]] && echo "  - Docker itself (it was installed by the wizard), with all its data"
     [[ -n "$DB_NAME" ]] && echo "  - database $DB_NAME and MySQL user $DB_USER (all CAD data)"
     [[ ${#UFW_PORTS[@]} -gt 0 ]] && echo "  - firewall rules for port(s) ${UFW_PORTS[*]}"
     [[ "$APT_MARIADB" == 1 ]] && echo "  - the MariaDB server it installed (and every database in it)"
@@ -57,8 +64,22 @@ main() {
         systemctl daemon-reload
         systemctl reset-failed "$CAD_SERVICE" 2>/dev/null
     fi
-    # the CAD's start script also runs a status page server from the install folder
+    # the CAD's start script also runs a status page server from the install folder; without
+    # systemd the wizard runs under nohup
     pkill -f "$INSTALL_DIR/app/" 2>/dev/null
+    pkill -f "$INSTALL_DIR/installer/wizard-server.py" 2>/dev/null
+
+    if [[ -n "$DOCKER_PROJECT" ]] && command -v docker >/dev/null 2>&1; then
+        echo "[*] Removing Docker containers, images and volumes of $DOCKER_PROJECT..."
+        if [[ -f "$INSTALL_DIR/app/production.docker-compose.yml" ]]; then
+            (cd "$INSTALL_DIR/app" && docker compose -p "$DOCKER_PROJECT" -f production.docker-compose.yml \
+                down --rmi all --volumes --remove-orphans)
+        fi
+    fi
+    if [[ -n "$DOCKER_NETWORK" ]] && command -v docker >/dev/null 2>&1; then
+        docker network rm "$DOCKER_NETWORK" >/dev/null 2>&1 \
+            || echo "[!] Docker network $DOCKER_NETWORK is still used by other containers; left in place." >&2
+    fi
 
     if [[ -n "$DB_NAME" && "$APT_MARIADB" != 1 && "$DB_ADMIN" == socket ]]; then
         echo "[*] Dropping database $DB_NAME and user $DB_USER..."
@@ -75,10 +96,17 @@ main() {
         DEBIAN_FRONTEND=noninteractive apt-get autoremove -y -qq >/dev/null
         rm -rf /var/lib/mysql /etc/mysql/mariadb.conf.d
     fi
+    if [[ "$APT_DOCKER" == 1 ]]; then
+        systemctl stop docker.socket docker containerd 2>/dev/null
+    fi
     if [[ ${#APT_PACKAGES[@]} -gt 0 ]]; then
         echo "[*] Removing ${APT_PACKAGES[*]}..."
         DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq "${APT_PACKAGES[@]}" >/dev/null
-        DEBIAN_FRONTEND=noninteractive apt-get autoremove -y -qq >/dev/null
+        DEBIAN_FRONTEND=noninteractive apt-get autoremove --purge -y -qq >/dev/null
+    fi
+    if [[ "$APT_DOCKER" == 1 ]]; then
+        rm -rf /var/lib/docker /var/lib/containerd /etc/docker
+        ip link delete docker0 2>/dev/null
     fi
 
     local port

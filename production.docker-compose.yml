@@ -14,7 +14,8 @@ services:
       timeout: 5s
       retries: 10
     ports:
-      - "${DB_PORT}:3306"
+      # localhost only by default; set DB_BIND="0.0.0.0" to reach the database from other machines
+      - "${DB_BIND:-127.0.0.1}:${DB_HOST_PORT:-${DB_PORT}}:3306"
     networks:
       - cad_web
     volumes:

@@ -1,25 +1,25 @@
 #!/bin/bash
 # SnailyCAD one-line installer for Ubuntu.
 #
-#   curl -fsSL <url>/scripts/installer/install.sh | sudo bash
+#   curl -fsSL <raw url>/scripts/installer/install.sh | sudo SNAILY_REPO=<git url> bash
 #
-# Keeps everything in one folder so it is easy to throw away:
-#   $INSTALL_DIR/app        the CAD (git clone)
-#   $INSTALL_DIR/runtime    its own Node.js + pnpm (the system Node.js is not touched)
-#   $INSTALL_DIR/installer  manifest of what was added outside the folder, wizard token
-# Outside the folder it only adds what the manifest lists (systemd units, firewall rules,
-# the database and its user, MariaDB if you let the wizard install it).
+# This only starts the setup wizard (python3, which Ubuntu ships). Everything else is installed
+# from the wizard in the browser, one button per requirement: system tools, Node.js + pnpm or
+# Docker, the CAD itself, its database.
+#
+# Everything lives in one folder so it is easy to throw away:
+#   $INSTALL_DIR/app        the CAD (git clone, made by the wizard)
+#   $INSTALL_DIR/runtime    its own Node.js + pnpm (standalone method; system Node.js untouched)
+#   $INSTALL_DIR/installer  the wizard, its token and a manifest of everything added outside
+#                           the folder (packages, services, firewall rules, database, Docker)
 # Remove it all with: sudo bash $INSTALL_DIR/uninstall.sh
-#
-# Then it starts a setup wizard in the browser on http://<server-ip>:<wizard port>.
 #
 # Environment:
 #   SNAILY_NAME         install name: folder /opt/<name>, service <name>   (default: snailycad)
 #   SNAILY_DIR          install folder                                      (default: /opt/$SNAILY_NAME)
-#   SNAILY_REPO         git repository (URL or local path) to install from
+#   SNAILY_REPO         git repository (GitHub URL or local path) to install from
 #   SNAILY_BRANCH       branch to install                                   (default: feat/mysql-support)
 #   SNAILY_WIZARD_PORT  port of the setup wizard                            (default: 3100)
-#   SNAILY_NODE_MAJOR   Node.js major version                               (default: 22)
 set -euo pipefail
 
 NAME="${SNAILY_NAME:-snailycad}"
@@ -27,8 +27,7 @@ INSTALL_DIR="${SNAILY_DIR:-/opt/$NAME}"
 REPO="${SNAILY_REPO:-https://github.com/SnailyCAD/snaily-cadv4.git}"
 BRANCH="${SNAILY_BRANCH:-feat/mysql-support}"
 WIZARD_PORT="${SNAILY_WIZARD_PORT:-3100}"
-NODE_MAJOR="${SNAILY_NODE_MAJOR:-22}"
-PNPM_VERSION="9.0.4"
+WIZARD_FILES=(wizard-server.py wizard.html uninstall.sh)
 
 GREEN="\033[0;32m"
 RED="\033[0;31m"
@@ -52,12 +51,6 @@ if [[ -r /etc/os-release ]] && ! (. /etc/os-release && [[ "${ID:-}" == ubuntu ||
     warn "This installer is made for Ubuntu; $(. /etc/os-release && echo "${PRETTY_NAME:-this OS}") is not tested."
 fi
 
-case "$(uname -m)" in
-    x86_64) NODE_ARCH="x64" ;;
-    aarch64 | arm64) NODE_ARCH="arm64" ;;
-    *) fail "Unsupported CPU architecture: $(uname -m)" ;;
-esac
-
 if [[ -e "$INSTALL_DIR" ]]; then
     fail "$INSTALL_DIR already exists. Remove the old install first: sudo bash $INSTALL_DIR/uninstall.sh"
 fi
@@ -68,74 +61,60 @@ if (exec 3<>"/dev/tcp/127.0.0.1/$WIZARD_PORT") 2>/dev/null; then
     fail "Port $WIZARD_PORT is already in use. Pick another one with SNAILY_WIZARD_PORT=..."
 fi
 
-# --- system packages (only the missing ones) -----------------------------------
-
-missing=()
-for pair in git:git curl:curl xz:xz-utils sha256sum:coreutils; do
-    command -v "${pair%%:*}" >/dev/null 2>&1 || missing+=("${pair#*:}")
-done
-if [[ ${#missing[@]} -gt 0 ]]; then
-    log "Installing ${missing[*]}..."
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -y -qq "${missing[@]}" ca-certificates >/dev/null
-fi
-
 # --- folder + manifest ----------------------------------------------------------
 
-mkdir -p "$INSTALL_DIR/installer" "$INSTALL_DIR/runtime"
+mkdir -p "$INSTALL_DIR/installer"
 chmod 700 "$INSTALL_DIR/installer"
 MANIFEST="$INSTALL_DIR/installer/manifest.env"
 cat > "$MANIFEST" <<EOF
 # What this install added outside $INSTALL_DIR. Read by uninstall.sh.
 NAME=$NAME
 INSTALL_DIR=$INSTALL_DIR
-EOF
-
-# --- Node.js + pnpm, private to this install ----------------------------------
-
-log "Downloading Node.js $NODE_MAJOR (private copy in $INSTALL_DIR/runtime)..."
-NODE_DIST="https://nodejs.org/dist/latest-v${NODE_MAJOR}.x"
-SHASUMS=$(curl -fsSL "$NODE_DIST/SHASUMS256.txt") || fail "Could not reach nodejs.org."
-NODE_FILE=$(echo "$SHASUMS" | awk '{print $2}' | grep -E "^node-v[0-9.]+-linux-${NODE_ARCH}\.tar\.xz$" | head -1)
-[[ -n "$NODE_FILE" ]] || fail "Could not find a Node.js $NODE_MAJOR download for linux-$NODE_ARCH."
-curl -fsSL "$NODE_DIST/$NODE_FILE" -o "$INSTALL_DIR/runtime/$NODE_FILE"
-(cd "$INSTALL_DIR/runtime" && echo "$SHASUMS" | grep " $NODE_FILE\$" | sha256sum -c --quiet -) \
-    || fail "Node.js download checksum mismatch."
-mkdir -p "$INSTALL_DIR/runtime/node"
-tar -xJf "$INSTALL_DIR/runtime/$NODE_FILE" -C "$INSTALL_DIR/runtime/node" --strip-components=1
-rm -f "$INSTALL_DIR/runtime/$NODE_FILE"
-export PATH="$INSTALL_DIR/runtime/node/bin:$PATH"
-log "Node.js $(node -v) ready."
-
-log "Installing pnpm $PNPM_VERSION..."
-npm install -g --silent --no-fund --no-audit "pnpm@$PNPM_VERSION" >/dev/null
-log "pnpm $(pnpm -v) ready."
-
-# --- the CAD --------------------------------------------------------------------
-
-# --depth is ignored for plain local paths, file:// keeps the clone shallow
-CLONE_FROM="$REPO"
-[[ -d "$REPO" ]] && CLONE_FROM="file://$(cd "$REPO" && pwd)"
-log "Downloading SnailyCAD ($BRANCH)..."
-git clone -q --depth 1 --branch "$BRANCH" "$CLONE_FROM" "$INSTALL_DIR/app" \
-    || fail "Could not clone $REPO (branch $BRANCH)."
-cp "$INSTALL_DIR/app/scripts/installer/uninstall.sh" "$INSTALL_DIR/uninstall.sh"
-chmod 700 "$INSTALL_DIR/uninstall.sh"
-cat >> "$MANIFEST" <<EOF
 REPO=$REPO
 BRANCH=$BRANCH
 EOF
 
+# --- python3 (the wizard) --------------------------------------------------------
+
+if ! command -v python3 >/dev/null 2>&1; then
+    log "Installing python3 for the setup wizard..."
+    echo "APT_PACKAGE=python3" >> "$MANIFEST"
+    DEBIAN_FRONTEND=noninteractive apt-get update -qq
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3 >/dev/null
+fi
+
+# --- wizard files -------------------------------------------------------------------
+
+log "Downloading the setup wizard..."
+if [[ -d "$REPO" ]]; then
+    for f in "${WIZARD_FILES[@]}"; do
+        git -C "$REPO" show "$BRANCH:scripts/installer/$f" > "$INSTALL_DIR/installer/$f" \
+            || fail "Could not read scripts/installer/$f from $REPO ($BRANCH)."
+    done
+else
+    if [[ "$REPO" =~ ^https://github\.com/([^/]+)/([^/]+)$ ]]; then
+        RAW="https://raw.githubusercontent.com/${BASH_REMATCH[1]}/${BASH_REMATCH[2]%.git}/$BRANCH/scripts/installer"
+    else
+        RAW="${SNAILY_RAW_BASE:-}"
+        [[ -n "$RAW" ]] || fail "Set SNAILY_RAW_BASE to the raw-file URL of scripts/installer for $REPO."
+    fi
+    command -v curl >/dev/null 2>&1 || fail "curl is needed to download the wizard: apt-get install curl"
+    for f in "${WIZARD_FILES[@]}"; do
+        curl -fsSL "$RAW/$f" -o "$INSTALL_DIR/installer/$f" || fail "Could not download $RAW/$f"
+    done
+fi
+mv "$INSTALL_DIR/installer/uninstall.sh" "$INSTALL_DIR/uninstall.sh"
+chmod 700 "$INSTALL_DIR/uninstall.sh"
+
 # --- firewall -------------------------------------------------------------------
 
 if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
-    ufw allow "$WIZARD_PORT/tcp" comment "$NAME setup wizard" >/dev/null
     echo "UFW_PORT=$WIZARD_PORT" >> "$MANIFEST"
+    ufw allow "$WIZARD_PORT/tcp" comment "$NAME setup wizard" >/dev/null
     log "Firewall: opened port $WIZARD_PORT for the setup wizard (closed again when you finish)."
 fi
 
-# --- setup wizard -----------------------------------------------------------------
+# --- start the wizard -----------------------------------------------------------------
 
 TOKEN=$(head -c 18 /dev/urandom | od -An -tx1 | tr -d ' \n')
 echo "$TOKEN" > "$INSTALL_DIR/installer/token"
@@ -143,20 +122,25 @@ chmod 600 "$INSTALL_DIR/installer/token"
 
 WIZARD_UNIT="$NAME-installer"
 echo "SERVICE=$WIZARD_UNIT" >> "$MANIFEST"
-systemd-run --quiet --unit="$WIZARD_UNIT" --collect \
-    --property=WorkingDirectory="$INSTALL_DIR" \
-    --setenv=PATH="$INSTALL_DIR/runtime/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-    --setenv=SNAILY_INSTALL_DIR="$INSTALL_DIR" \
-    --setenv=SNAILY_WIZARD_PORT="$WIZARD_PORT" \
-    "$INSTALL_DIR/runtime/node/bin/node" "$INSTALL_DIR/app/scripts/installer/wizard-server.mjs" \
-    || fail "Could not start the setup wizard."
+WIZARD_CMD=(python3 -u "$INSTALL_DIR/installer/wizard-server.py")
+if command -v systemd-run >/dev/null 2>&1 && [[ -d /run/systemd/system ]]; then
+    systemd-run --quiet --unit="$WIZARD_UNIT" --collect \
+        --property=WorkingDirectory="$INSTALL_DIR" \
+        --setenv=SNAILY_INSTALL_DIR="$INSTALL_DIR" \
+        --setenv=SNAILY_WIZARD_PORT="$WIZARD_PORT" \
+        "${WIZARD_CMD[@]}" || fail "Could not start the setup wizard."
+    LOGS="journalctl -u $WIZARD_UNIT"
+else
+    SNAILY_INSTALL_DIR="$INSTALL_DIR" SNAILY_WIZARD_PORT="$WIZARD_PORT" \
+        nohup "${WIZARD_CMD[@]}" > "$INSTALL_DIR/installer/wizard.log" 2>&1 &
+    LOGS="cat $INSTALL_DIR/installer/wizard.log"
+fi
 
 for _ in $(seq 1 20); do
     (exec 3<>"/dev/tcp/127.0.0.1/$WIZARD_PORT") 2>/dev/null && break
     sleep 0.5
 done
-(exec 3<>"/dev/tcp/127.0.0.1/$WIZARD_PORT") 2>/dev/null \
-    || fail "The setup wizard did not start. See: journalctl -u $WIZARD_UNIT"
+(exec 3<>"/dev/tcp/127.0.0.1/$WIZARD_PORT") 2>/dev/null || fail "The setup wizard did not start. See: $LOGS"
 
 IP=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+(\.[0-9]+){3}$' | head -1)
 echo

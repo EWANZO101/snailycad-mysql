@@ -3,7 +3,7 @@ FROM node:20-slim AS base
 WORKDIR /snailycad
 
 # Install pnpm globally and set config in one layer
-RUN npm install -g pnpm && pnpm config set httpTimeout 1200000
+RUN npm install -g pnpm@9.0.4 && pnpm config set httpTimeout 1200000
 
 # Copy the rest of the source code
 COPY . ./

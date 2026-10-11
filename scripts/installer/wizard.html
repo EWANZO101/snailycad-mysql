@@ -55,7 +55,7 @@
       }
       .shell {
         width: 100%;
-        max-width: 760px;
+        max-width: 800px;
       }
       .brand {
         display: flex;
@@ -74,19 +74,18 @@
       ol.steps {
         list-style: none;
         display: flex;
-        gap: 8px;
+        gap: 6px;
         margin: 0 0 16px;
         padding: 0;
-        counter-reset: s;
       }
       ol.steps li {
         flex: 1;
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 0.8125rem;
+        gap: 6px;
+        font-size: 0.75rem;
         color: var(--gray-400);
-        padding: 8px 10px;
+        padding: 8px;
         border-radius: 0.5rem;
         background: var(--gray-800);
         border: 1px solid var(--gray-700);
@@ -122,7 +121,7 @@
         background: var(--green-900);
         color: var(--green-300);
       }
-      @media (max-width: 620px) {
+      @media (max-width: 720px) {
         ol.steps li span.t {
           display: none;
         }
@@ -181,6 +180,10 @@
         align-items: center;
         gap: 8px;
       }
+      button.small {
+        padding: 6px 14px;
+        font-size: 0.8125rem;
+      }
       .primary {
         background: var(--blue-700);
         color: var(--white);
@@ -222,7 +225,7 @@
       ul.checks li {
         display: grid;
         grid-template-columns: 28px 1fr auto;
-        gap: 10px;
+        gap: 12px;
         align-items: center;
         background: var(--gray-900);
         border: 1px solid var(--gray-700);
@@ -237,6 +240,7 @@
         place-items: center;
         font-size: 0.8rem;
         font-weight: 700;
+        position: relative;
       }
       .mark.ok {
         background: var(--green-900);
@@ -250,6 +254,18 @@
         background: var(--red-900);
         color: var(--red-300);
       }
+      .mark.busy {
+        background: var(--blue-900);
+      }
+      .mark.busy::after {
+        content: "";
+        position: absolute;
+        inset: -3px;
+        border-radius: 50%;
+        border: 2px solid var(--blue-500);
+        border-top-color: transparent;
+        animation: spin 0.9s linear infinite;
+      }
       ul.checks .label {
         font-size: 0.9rem;
       }
@@ -258,15 +274,35 @@
         font-size: 0.75rem;
         color: var(--gray-400);
       }
+      ul.checks .hint.error {
+        color: var(--red-300);
+      }
       ul.checks .value {
         font-size: 0.85rem;
         color: var(--gray-300);
         text-align: right;
       }
+      @media (max-width: 520px) {
+        ul.checks li {
+          grid-template-columns: 28px 1fr;
+        }
+        ul.checks .value {
+          grid-column: 2;
+          text-align: left;
+        }
+      }
 
       .options {
         display: grid;
         gap: 10px;
+      }
+      .options.two {
+        grid-template-columns: 1fr 1fr;
+      }
+      @media (max-width: 620px) {
+        .options.two {
+          grid-template-columns: 1fr;
+        }
       }
       label.option {
         display: grid;
@@ -295,6 +331,12 @@
         font-size: 0.95rem;
       }
       label.option small {
+        color: var(--gray-400);
+        font-size: 0.8125rem;
+      }
+      label.option ul {
+        margin: 6px 0 0;
+        padding-left: 18px;
         color: var(--gray-400);
         font-size: 0.8125rem;
       }
@@ -354,7 +396,6 @@
         background: var(--blue-900);
         color: var(--blue-300);
       }
-      .alert code,
       code {
         font:
           0.8125rem ui-monospace,
@@ -362,6 +403,7 @@
           Menlo,
           Consolas,
           monospace;
+        word-break: break-all;
       }
 
       dl.summary {
@@ -519,6 +561,9 @@
           Consolas,
           monospace;
       }
+      .log.short {
+        height: 150px;
+      }
       .log div {
         display: grid;
         grid-template-columns: 64px 1fr;
@@ -551,11 +596,13 @@
     <div class="shell">
       <div class="brand"><b>SnailyCAD</b> setup wizard</div>
       <ol class="steps" id="steps">
-        <li data-step="0"><span class="n">1</span><span class="t">Check server</span></li>
-        <li data-step="1"><span class="n">2</span><span class="t">Database</span></li>
-        <li data-step="2"><span class="n">3</span><span class="t">Website</span></li>
-        <li data-step="3"><span class="n">4</span><span class="t">Review</span></li>
-        <li data-step="4"><span class="n">5</span><span class="t">Install</span></li>
+        <li data-step="0"><span class="n">1</span><span class="t">Server</span></li>
+        <li data-step="1"><span class="n">2</span><span class="t">Method</span></li>
+        <li data-step="2"><span class="n">3</span><span class="t">Requirements</span></li>
+        <li data-step="3"><span class="n">4</span><span class="t">Database</span></li>
+        <li data-step="4"><span class="n">5</span><span class="t">Website</span></li>
+        <li data-step="5"><span class="n">6</span><span class="t">Review</span></li>
+        <li data-step="6"><span class="n">7</span><span class="t">Install</span></li>
       </ol>
 
       <!-- 1. checks -->
@@ -565,7 +612,7 @@
           This wizard installs SnailyCAD on this server. First, a quick look at the machine.
         </p>
         <ul class="checks" id="checks">
-          <li><span class="mark warn">…</span><span class="label">Checking…</span><span></span></li>
+          <li><span class="mark busy"></span><span class="label">Checking…</span><span></span></li>
         </ul>
         <div class="alert error hidden" id="checks-error"></div>
         <div class="actions">
@@ -573,11 +620,76 @@
         </div>
       </section>
 
-      <!-- 2. database -->
+      <!-- 2. method -->
       <section class="card hidden" data-page="1">
+        <h1>How should SnailyCAD run?</h1>
+        <p class="lead">Both work the same for your users. Pick the one you'd rather manage.</p>
+        <div class="options two">
+          <label class="option"
+            ><input type="radio" name="method" value="docker" />
+            <span
+              ><b>Docker</b>
+              <small>The CAD and its own MariaDB run in containers.</small>
+              <ul>
+                <li>Nothing but Docker on the server</li>
+                <li>Database included</li>
+                <li>Restarts on its own after a reboot</li>
+              </ul></span
+            ></label
+          >
+          <label class="option"
+            ><input type="radio" name="method" value="standalone" />
+            <span
+              ><b>Standalone</b>
+              <small>Runs directly on the server with Node.js.</small>
+              <ul>
+                <li>Uses less memory</li>
+                <li>Can use a MySQL/MariaDB you already have</li>
+                <li>Built-in "Update CAD" button works</li>
+              </ul></span
+            ></label
+          >
+        </div>
+        <div class="alert error hidden" id="method-error"></div>
+        <div class="actions">
+          <button class="secondary" data-back>Back</button>
+          <div class="right"><button class="primary" id="method-next">Next</button></div>
+        </div>
+      </section>
+
+      <!-- 3. requirements -->
+      <section class="card hidden" data-page="2">
+        <h1>Requirements</h1>
+        <p class="lead">
+          Install what's missing, one by one or all at once. Everything installed here is removed
+          again by the uninstaller.
+        </p>
+        <ul class="checks" id="reqs"></ul>
+        <div class="log short hidden" id="req-log" aria-live="off"></div>
+        <div class="actions">
+          <button class="secondary" data-back id="req-back">Back</button>
+          <div class="right">
+            <button class="secondary" id="req-all">Install all missing</button>
+            <button class="primary" id="req-next" disabled>Next</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. database -->
+      <section class="card hidden" data-page="3">
         <h1>Database</h1>
         <p class="lead">SnailyCAD stores its data in MySQL or MariaDB.</p>
         <div class="options">
+          <label class="option" id="opt-container"
+            ><input type="radio" name="dbmode" value="container" />
+            <span
+              ><b>MariaDB container</b>
+              <small
+                >A MariaDB 11.4 container next to the CAD, only reachable from this server. Its data
+                is kept in the install folder.</small
+              ></span
+            ></label
+          >
           <label class="option" id="opt-local"
             ><input type="radio" name="dbmode" value="local" />
             <span
@@ -646,8 +758,8 @@
         </div>
       </section>
 
-      <!-- 3. website -->
-      <section class="card hidden" data-page="2">
+      <!-- 5. website -->
+      <section class="card hidden" data-page="4">
         <h1>Website</h1>
         <p class="lead">
           Where people will open the CAD. The server's IP works right away; a domain needs its DNS
@@ -673,11 +785,11 @@
         </div>
       </section>
 
-      <!-- 4. review -->
-      <section class="card hidden" data-page="3">
+      <!-- 6. review -->
+      <section class="card hidden" data-page="5">
         <h1>Ready to install</h1>
         <p class="lead">
-          Check the settings. Installing takes about 10–20 minutes, most of it compiling.
+          Check the settings. Installing takes about 10–25 minutes, most of it compiling.
         </p>
         <dl class="summary" id="summary"></dl>
         <div class="alert error hidden" id="install-error"></div>
@@ -687,8 +799,8 @@
         </div>
       </section>
 
-      <!-- 5. progress -->
-      <section class="card hidden" data-page="4">
+      <!-- 7. progress -->
+      <section class="card hidden" data-page="6">
         <h1 id="p-title">Installing SnailyCAD</h1>
         <p class="lead" id="p-lead">
           You can leave this page open; it updates on its own. Closing it does not stop the install.
@@ -714,7 +826,14 @@
 
     <script>
       const $ = (id) => document.getElementById(id);
-      const state = { page: 0, checks: null, dbTested: false, polling: null };
+      const state = {
+        page: 0,
+        checks: null,
+        method: null,
+        dbTested: false,
+        polling: null,
+        reqPolling: null,
+      };
 
       async function api(path, body) {
         const options =
@@ -742,6 +861,7 @@
           li.classList.toggle("done", n < page);
           li.querySelector(".n").textContent = n < page ? "✓" : String(n + 1);
         });
+        if (page === 2) loadRequirements();
         window.scrollTo({ top: 0 });
       }
       document
@@ -755,10 +875,26 @@
       }
 
       function esc(text) {
-        return String(text).replace(
+        return String(text ?? "").replace(
           /[&<>"']/g,
           (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
         );
+      }
+
+      function renderLog(el, lines) {
+        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
+        el.innerHTML =
+          lines
+            .map((line) => {
+              const time = new Date(line.t * 1000).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              });
+              return `<div class="${esc(line.level || "info")}"><span>${time}</span><span>${esc(line.text)}</span></div>`;
+            })
+            .join("") || `<div><span></span><span>Waiting for output…</span></div>`;
+        if (atBottom) el.scrollTop = el.scrollHeight;
       }
 
       // --- 1. checks
@@ -780,15 +916,8 @@
         if (blocked)
           alertBox($("checks-error"), "error", "Fix the item marked ✕ before installing.");
 
-        // database options
-        $("opt-local").classList.toggle("disabled", !data.db.local);
-        $("opt-local").querySelector("input").disabled = !data.db.local;
-        $("opt-install").classList.toggle("disabled", !data.db.install);
-        $("opt-install").querySelector("input").disabled = !data.db.install;
-        const preferred = data.db.local ? "local" : data.db.install ? "install" : "external";
-        document.querySelector(`input[name=dbmode][value=${preferred}]`).checked = true;
-        syncDbFields();
-
+        const method = data.method || "docker";
+        document.querySelector(`input[name=method][value=${method}]`).checked = true;
         $("address").value = data.ip;
         $("client-port").value = data.ports.client ?? 3000;
         $("api-port").value = data.ports.api ?? 8080;
@@ -796,7 +925,87 @@
       }
       $("checks-next").addEventListener("click", () => show(1));
 
-      // --- 2. database
+      // --- 2. method
+      $("method-next").addEventListener("click", async () => {
+        const method = document.querySelector("input[name=method]:checked")?.value;
+        const { ok, data } = await api("/api/method", { method });
+        if (!ok)
+          return alertBox($("method-error"), "error", data.error || "Could not save the method.");
+        alertBox($("method-error"), "error", "");
+        state.method = method;
+        setupDbOptions();
+        show(2);
+      });
+
+      // --- 3. requirements
+      const reqMarks = {
+        installed: ["ok", "✓"],
+        missing: ["warn", "!"],
+        installing: ["busy", ""],
+        failed: ["bad", "✕"],
+      };
+      async function loadRequirements() {
+        clearTimeout(state.reqPolling);
+        const { ok, data } = await api("/api/requirements");
+        if (!ok) return;
+        $("reqs").innerHTML = data.items
+          .map((item) => {
+            const [kind, mark] = reqMarks[item.state];
+            const hint = item.error
+              ? `<span class="hint error">${esc(item.error)}</span>`
+              : `<span class="hint">${esc(item.detail)}</span>`;
+            const right = item.installed
+              ? esc(item.version)
+              : item.state === "installing"
+                ? "Installing…"
+                : `<button class="primary small" data-req="${esc(item.id)}" ${data.busy ? "disabled" : ""}>${item.state === "failed" ? "Retry" : "Install"}</button>`;
+            return `<li><span class="mark ${kind}">${mark}</span><span class="label">${esc(item.title)}${hint}</span><span class="value">${right}</span></li>`;
+          })
+          .join("");
+        const allInstalled = data.items.every((item) => item.installed);
+        $("req-next").disabled = !allInstalled || data.busy;
+        $("req-all").disabled = allInstalled || data.busy;
+        $("req-back").disabled = data.busy;
+        $("req-log").classList.toggle("hidden", !data.lines.length);
+        renderLog($("req-log"), data.lines);
+        if (data.busy && state.page === 2) state.reqPolling = setTimeout(loadRequirements, 1500);
+      }
+      async function installRequirement(id) {
+        await api("/api/requirements/install", { id });
+        loadRequirements();
+      }
+      $("reqs").addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-req]");
+        if (button) installRequirement(button.dataset.req);
+      });
+      $("req-all").addEventListener("click", () => installRequirement("all"));
+      $("req-next").addEventListener("click", () => show(3));
+
+      // --- 4. database
+      function setupDbOptions() {
+        const docker = state.method === "docker";
+        const db = state.checks?.db ?? {};
+        const options = {
+          container: docker,
+          local: !docker && db.local,
+          install: !docker && db.install,
+          external: !docker,
+        };
+        for (const [mode, enabled] of Object.entries(options)) {
+          $(`opt-${mode}`).classList.toggle("hidden", mode === "container" ? !docker : docker);
+          $(`opt-${mode}`).classList.toggle("disabled", !enabled);
+          $(`opt-${mode}`).querySelector("input").disabled = !enabled;
+        }
+        const preferred = docker
+          ? "container"
+          : db.local
+            ? "local"
+            : db.install
+              ? "install"
+              : "external";
+        document.querySelector(`input[name=dbmode][value=${preferred}]`).checked = true;
+        syncDbFields();
+      }
       const dbMode = () => document.querySelector("input[name=dbmode]:checked")?.value;
       function syncDbFields() {
         const external = dbMode() === "external";
@@ -834,7 +1043,11 @@
         const { data } = await api("/api/db-test", { db: dbSettings() });
         $("db-test").disabled = false;
         state.dbTested = !!data.ok;
-        alertBox($("db-alert"), data.ok ? "ok" : "error", data.message || "Could not connect.");
+        alertBox(
+          $("db-alert"),
+          data.ok ? "ok" : "error",
+          data.message || data.error || "Could not connect.",
+        );
         return state.dbTested;
       }
       $("db-test").addEventListener("click", testDb);
@@ -848,10 +1061,10 @@
         if (db.mode !== "external" && !safe.test(db.user))
           return alertBox($("db-alert"), "error", "Database user: letters, numbers and _ only.");
         if (db.mode === "external" && !state.dbTested && !(await testDb())) return;
-        show(2);
+        show(4);
       });
 
-      // --- 3. website
+      // --- 5. website
       function syncUrls() {
         const a = $("address").value.trim() || "…";
         $("urls").innerHTML =
@@ -882,10 +1095,10 @@
         }
         alertBox($("site-error"), "error", "");
         renderSummary();
-        show(3);
+        show(5);
       });
 
-      // --- 4. review
+      // --- 6. review
       function settings() {
         return {
           address: $("address").value.trim(),
@@ -897,16 +1110,19 @@
       function renderSummary() {
         const s = settings();
         const dbText = {
+          container: `MariaDB container, database <code>${esc(s.db.name)}</code>, user <code>${esc(s.db.user)}</code>`,
           local: `New database <code>${esc(s.db.name)}</code> and user <code>${esc(s.db.user)}</code> on this server's MySQL/MariaDB`,
           install: `Install MariaDB, then create database <code>${esc(s.db.name)}</code> and user <code>${esc(s.db.user)}</code>`,
           external: `<code>${esc(s.db.name)}</code> on <code>${esc(s.db.host)}:${esc(s.db.port)}</code> as <code>${esc(s.db.user)}</code>`,
         }[s.db.mode];
+        const docker = state.method === "docker";
         $("summary").innerHTML = `
+      <dt>Method</dt><dd>${docker ? "Docker containers" : "Standalone (Node.js)"}</dd>
       <dt>Database</dt><dd>${dbText}</dd>
       <dt>CAD address</dt><dd><code>http://${esc(s.address)}:${s.clientPort}</code></dd>
       <dt>API address</dt><dd><code>http://${esc(s.address)}:${s.apiPort}/v1</code></dd>
       <dt>Firewall</dt><dd>Opens ports ${s.clientPort} and ${s.apiPort} if ufw is active</dd>
-      <dt>Runs as</dt><dd>A system service that starts on boot</dd>`;
+      <dt>Runs as</dt><dd>${docker ? "Containers that restart on their own" : "A system service that starts on boot"}</dd>`;
       }
 
       $("install").addEventListener("click", async () => {
@@ -920,11 +1136,11 @@
             data.error || "Could not start the install.",
           );
         alertBox($("install-error"), "error", "");
-        show(4);
+        show(6);
         poll();
       });
 
-      // --- 5. progress
+      // --- 7. progress
       const icons = { done: "✓", failed: "✕", active: "", pending: "" };
       function renderProgress(s) {
         $("p-steps").innerHTML = s.steps
@@ -949,32 +1165,18 @@
           $("p-time").textContent =
             `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
         }
+        renderLog($("p-log"), s.lines);
 
-        const log = $("p-log");
-        const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
-        log.innerHTML =
-          s.lines
-            .map((line) => {
-              const time = new Date(line.t * 1000).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-              });
-              return `<div class="${esc(line.level || "info")}"><span>${time}</span><span>${esc(line.text)}</span></div>`;
-            })
-            .join("") || `<div><span></span><span>Waiting for output…</span></div>`;
-        if (atBottom) log.scrollTop = log.scrollHeight;
-
-        // failed before the CAD service started: settings can be changed and the install tried again
+        // failed before the CAD runs: settings can be changed and the install tried again
         const setupFailed = !!s.failed && !s.started;
         $("p-edit").classList.toggle("hidden", !setupFailed);
-        $("p-retry").classList.toggle("hidden", !(s.phase === "failed"));
+        $("p-retry").classList.toggle("hidden", s.phase !== "failed");
         alertBox(
           $("p-error"),
           "error",
           s.failed ||
             (s.phase === "failed"
-              ? "The CAD failed to install or start. The log above shows the last step; the full log is in the app folder's start.log. Retry runs the CAD service again."
+              ? "The CAD failed to install or start. The log above shows the last step; the full log is start.log in the app folder. Retry runs it again."
               : ""),
         );
 
@@ -999,7 +1201,7 @@
         if (!stop) state.polling = setTimeout(poll, 2000);
       }
 
-      $("p-edit").addEventListener("click", () => show(1));
+      $("p-edit").addEventListener("click", () => show(3));
       $("p-retry").addEventListener("click", async () => {
         $("p-retry").disabled = true;
         const { ok, data } = await api("/api/retry", {});
@@ -1015,14 +1217,15 @@
 
       // resume where the install is (e.g. after a page reload)
       (async () => {
+        await loadChecks();
+        state.method = state.checks?.method || null;
+        if (state.method) setupDbOptions();
         const { ok, data } = await api("/api/state");
         if (ok && (data.started || data.steps.some((step) => step.state !== "pending"))) {
-          await loadChecks();
-          show(4);
+          show(6);
           poll();
         } else {
           show(0);
-          loadChecks();
         }
       })();
     </script>
