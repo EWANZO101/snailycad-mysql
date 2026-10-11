@@ -822,6 +822,7 @@ model DepartmentValue {
   ActiveDispatchers     ActiveDispatchers[]
   links                 DepartmentValueLink[]
   tonePresets           TonePreset[]
+  radioChannels         RadioChannel[]          @relation("radioChannelDepartments")
 }
 
 model DepartmentValueLink {
@@ -1822,6 +1823,35 @@ model TonePreset {
   position     Int              @default(0)
 }
 
+// a talk group of the built-in radio (see docs/radio)
+model RadioChannel {
+  id            String            @id @default(cuid())
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @default(now()) @updatedAt
+  name          String            @db.VarChar(255)
+  frequency     String?           @db.VarChar(64)
+  description   String?           @db.Text
+  position      Int               @default(0)
+  // when set, only units of these departments (and dispatchers) can use the channel
+  departments   DepartmentValue[] @relation("radioChannelDepartments")
+  // game servers and other radios may put people without a linked CAD account on it
+  allowExternal Boolean           @default(true)
+  // members only listen; only dispatchers can transmit
+  receiveOnly   Boolean           @default(false)
+}
+
+// admin-only radio settings; LiveKit credentials stay in the API's environment
+model RadioSettings {
+  id        String         @id @default(cuid())
+  updatedAt DateTime       @default(now()) @updatedAt
+  transport RadioTransport @default(BUILTIN)
+}
+
+enum RadioTransport {
+  BUILTIN
+  LIVEKIT
+}
+
 enum ActiveToneType {
   LEO
   EMS_FD
@@ -2110,6 +2140,7 @@ enum Feature {
   MODERN_CITIZEN_THEME
   API_TOKEN_REMINDER
   UNIT_PRIVATE_MESSAGES
+  RADIO
 }
 
 enum DashboardLayoutCardType {

@@ -31,6 +31,7 @@
     "@types/node": "^20.14.2",
     "@types/qrcode": "^1.5.5",
     "@types/sharp": "^0.31.1",
+    "@types/ws": "8.5.12",
     "dotenv": "^16.4.5",
     "regenerator-runtime": "^0.14.1",
     "tsconfig-paths": "^4.2.0",
@@ -48,6 +49,7 @@
     "@snailycad/image-data-uri": "^3.2.0",
     "@snailycad/permissions": "workspace:*",
     "@snailycad/prisma-generator-redundant-types": "^2.0.2",
+    "@snailycad/radio": "workspace:*",
     "@snailycad/schemas": "workspace:*",
     "@snailycad/types": "workspace:*",
     "@snailycad/utils": "workspace:*",
@@ -93,6 +95,7 @@
     "tslib": "^2.6.3",
     "undici": "^6.18.2",
     "use-intl": "2.22.1",
+    "ws": "8.18.0",
     "zod": "3.25.67"
   }
 }

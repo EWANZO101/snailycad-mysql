@@ -37,6 +37,7 @@ import { createFeaturesObject } from "middlewares/is-enabled";
 import { hasPermission } from "@snailycad/permissions";
 import { parseImportFile } from "~/utils/file";
 import { getPrismaModelOrderBy } from "~/utils/order-by";
+import { radioServer } from "lib/radio/radio-server";
 
 @Controller("/admin/manage/cad-settings")
 @ContentType("application/json")
@@ -230,6 +231,9 @@ export class CADSettingsController {
 
     const previousEnabledFeatures = cad.features;
     const newEnabledFeatures = createFeaturesObject(updated.features);
+
+    // turning the radio on or off applies to connected radios right away
+    await radioServer.refreshAccess().catch(() => undefined);
 
     await createAuditLogEntry({
       action: {
