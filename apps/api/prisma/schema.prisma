@@ -1849,6 +1849,42 @@ model RadioSettings {
   transport RadioTransport @default(BUILTIN)
 }
 
+// ops-phone (OpsLab Systems FiveM phone) integration. The API key never goes back to the client.
+model OpsPhoneSettings {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+  enabled       Boolean  @default(false)
+  apiUrl        String?  @db.VarChar(512)
+  apiKey        String?  @db.Text
+  webhookSecret String   @db.VarChar(255)
+  sendSms       Boolean  @default(true)
+  // { [ops-phone service id]: "CALL_911_LEO" | "CALL_911_EMS_FD" | "TOW" | "TAXI" | "IGNORE" }
+  serviceMap    Json?
+}
+
+// links an ops-phone service request to the CAD call it created
+model OpsPhoneRequest {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+  requestId     Int      @unique
+  service       String   @db.VarChar(64)
+  serviceNumber String?  @db.VarChar(64)
+  target        String   @db.VarChar(32)
+  callerNumber  String   @db.VarChar(64)
+  callerName    String?  @db.VarChar(255)
+  call911Id     String?
+  towCallId     String?
+  taxiCallId    String?
+  // open -> accepted -> closed (mirrors the ops-phone request status)
+  status        String   @default("open") @db.VarChar(16)
+
+  @@index([call911Id])
+  @@index([towCallId])
+  @@index([taxiCallId])
+}
+
 enum RadioTransport {
   BUILTIN
   LIVEKIT

@@ -4,6 +4,7 @@ import { prisma } from "~/lib/data/prisma";
 import { getPrismaNameActiveCallIncident } from "~/lib/leo/utils";
 import type { Socket } from "~/services/socket-service";
 import { getNextActive911CallId } from "./get-next-active-911-call";
+import { notifyOpsPhoneCall911 } from "~/lib/ops-phone/back-channel";
 
 interface HandleEndCallOptions {
   socket: Socket;
@@ -22,6 +23,8 @@ export async function handleEndCall(options: HandleEndCallOptions) {
       },
     },
   });
+
+  notifyOpsPhoneCall911({ callIds: [call.id], event: "closed" });
 
   try {
     await Promise.allSettled(

@@ -9,6 +9,7 @@ import type { ASSIGNED_UNIT } from "@snailycad/schemas";
 import { createAssignedText } from "./utils/create-assigned-text";
 import { getNextActive911CallId } from "./get-next-active-911-call";
 import { assignedUnitsInclude } from "~/utils/leo/includes";
+import { notifyOpsPhoneCall911 } from "~/lib/ops-phone/back-channel";
 
 interface Options {
   call: Call911 & { assignedUnits: AssignedUnit[] };
@@ -74,6 +75,10 @@ export async function assignUnitsTo911Call(options: Options) {
       }),
     ),
   );
+
+  if (connectedUnits.length > 0) {
+    notifyOpsPhoneCall911({ callIds: [options.call.id], event: "accepted" });
+  }
 
   if (options.socket) {
     await options.socket.emitUpdateOfficerStatus();
