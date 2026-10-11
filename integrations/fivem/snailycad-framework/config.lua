@@ -77,8 +77,8 @@ Config.Duty = {
   pollSeconds = 15,
 }
 
--- the callsign to pick the CAD unit with (nil = let the CAD pick). Example for a metadata callsign
--- (QBCore / Qbox: PlayerData.metadata.callsign):
+-- the callsign to pick the CAD unit with (nil = let the CAD pick). `player` is the ESX xPlayer, or
+-- the QBCore / Qbox PlayerData. Example for the QBCore / Qbox metadata callsign:
 --   Config.Callsign = function(source, player) return player.metadata and player.metadata.callsign end
 Config.Callsign = function(source, player)
   return nil
