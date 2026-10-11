@@ -2,12 +2,19 @@ import { z } from "zod";
 
 export const FIVEM_FRAMEWORKS = ["esx", "qbcore", "qbox"] as const;
 
-const IDENTIFIERS = z
-  .object({
-    discordId: z.string().trim().max(64).nullish(),
-    steamId: z.string().trim().max(64).nullish(),
-  })
-  .nullish();
+/** FiveM's json.encode turns an empty Lua table into [] : read that as an empty object */
+function emptyArrayAsObject<Schema extends z.ZodTypeAny>(schema: Schema) {
+  return z.preprocess((value) => (Array.isArray(value) && value.length === 0 ? {} : value), schema);
+}
+
+const IDENTIFIERS = emptyArrayAsObject(
+  z
+    .object({
+      discordId: z.string().trim().max(64).nullish(),
+      steamId: z.string().trim().max(64).nullish(),
+    })
+    .nullish(),
+);
 
 const SERVER = {
   framework: z.enum(FIVEM_FRAMEWORKS),
@@ -71,15 +78,19 @@ export const FIVEM_DUTY_SCHEMA = z.object({
   callsign: z.string().trim().max(64).nullish(),
 });
 
-export const FIVEM_CHECK_SCHEMA = z.object({
-  framework: z.enum(FIVEM_FRAMEWORKS).nullish(),
-  players: z
-    .array(
-      z.object({
-        characterId: CHARACTER_ID.nullish(),
-        identifiers: IDENTIFIERS,
-      }),
-    )
-    .max(256)
-    .nullish(),
-});
+export const FIVEM_CHECK_SCHEMA = emptyArrayAsObject(
+  z.object({
+    framework: z.enum(FIVEM_FRAMEWORKS).nullish(),
+    players: z
+      .array(
+        emptyArrayAsObject(
+          z.object({
+            characterId: CHARACTER_ID.nullish(),
+            identifiers: IDENTIFIERS,
+          }),
+        ),
+      )
+      .max(256)
+      .nullish(),
+  }),
+);
