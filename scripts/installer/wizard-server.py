@@ -795,13 +795,18 @@ def docker_install(settings, deploy_only=False):
                 say("Website is answering.")
             if api_ok and client_ok:
                 return
-            ok, status = quiet(["docker", "ps", "-a", "--filter", f"label=com.docker.compose.project={NAME}",
-                                "--format", "{{.Names}} {{.Status}}"])
-            for row in status.split("\n"):
-                if "Exited" in row or "Restarting" in row:
-                    name = row.split(" ")[0]
-                    tail = quiet(["docker", "logs", "--tail", "5", name])[1]
-                    raise StepError(f"Container {name} stopped. Last log: {tail[-200:] or 'none'}")
+            # a crash-looping container shows "Up" most of the time: look at its restart count
+            ok, ids = quiet(["docker", "ps", "-aq", "--filter", f"label=com.docker.compose.project={NAME}"])
+            for container in ids.split():
+                ok, info = quiet(["docker", "inspect", "-f", "{{.Name}} {{.RestartCount}} {{.State.Status}}", container])
+                if not ok:
+                    continue
+                name, restarts, status = info.lstrip("/").split(" ", 2)
+                if int(restarts) > 0 or status in ("exited", "dead"):
+                    tail = quiet(["docker", "logs", "--tail", "8", name])[1].strip().split("\n")
+                    last = next((l for l in reversed(tail) if l.strip() and "ELIFECYCLE" not in l), "none")
+                    raise StepError(f"Container {name} keeps stopping. Last log line: {last[-200:]} "
+                                    f"(full log: docker logs {name})")
             time.sleep(5)
         raise StepError("The CAD did not answer within 15 minutes.")
 

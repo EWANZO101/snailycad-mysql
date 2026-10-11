@@ -2,8 +2,8 @@ FROM node:20-slim AS base
 
 WORKDIR /snailycad
 
-# Prisma needs OpenSSL, which the slim image doesn't include
-RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+# not in the slim image: OpenSSL for Prisma, git for the API's startup requirements check
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates git \
   && rm -rf /var/lib/apt/lists/*
 
 # Install pnpm globally and set config in one layer
