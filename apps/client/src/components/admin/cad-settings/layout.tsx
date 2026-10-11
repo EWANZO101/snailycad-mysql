@@ -32,6 +32,7 @@ export enum SettingsTabs {
   /** integrations */
   LiveMap = "LIVE_MAP",
   APIToken = "API_TOKEN",
+  OpsPhone = "OPS_PHONE",
 
   /** permissions */
   DefaultPermissions = "DEFAULT_PERMISSIONS",
@@ -119,7 +120,7 @@ function CadSettingsSidebar() {
     },
     {
       name: t("integrations"),
-      items: [SettingsTabs.LiveMap, SettingsTabs.APIToken],
+      items: [SettingsTabs.LiveMap, SettingsTabs.APIToken, SettingsTabs.OpsPhone],
     },
     {
       name: t("webhooks"),

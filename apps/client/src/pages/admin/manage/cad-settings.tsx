@@ -100,6 +100,12 @@ const Tabs = {
       (await import("components/admin/manage/cad-settings/misc-features/radio-tab")).RadioTab,
     { ssr: false },
   ),
+  OpsPhoneTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/ops-phone-tab"))
+        .OpsPhoneTab,
+    { ssr: false },
+  ),
   BlacklistedWordsTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/general/blacklisted-words-tab"))
@@ -127,6 +133,7 @@ export default function CadSettings(props: Props) {
       <Tabs.DefaultPermissionsTab />
       <Tabs.LiveMapTab />
       <Tabs.ApiTokenTab />
+      <Tabs.OpsPhoneTab />
       <Tabs.DiscordRolesTab />
       <Tabs.DiscordWebhooksTab />
       <Tabs.RawWebhooksTab />
@@ -153,7 +160,7 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, res, req 
       session: user,
       messages: {
         ...(await getTranslations(
-          ["admin", "values", "common", "cad-settings", "radio"],
+          ["admin", "values", "common", "cad-settings", "radio", "ops-phone"],
           user?.locale ?? locale,
         )),
       },
