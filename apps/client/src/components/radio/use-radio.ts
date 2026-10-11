@@ -23,7 +23,7 @@ export const DEFAULT_RADIO_PREFERENCES: RadioPreferences = {
   pttKey: "Backquote",
   microphoneDeviceId: null,
   minimized: false,
-  position: "bottom-left",
+  position: "bottom-right",
 };
 
 function readStored(): RadioPreferences {
