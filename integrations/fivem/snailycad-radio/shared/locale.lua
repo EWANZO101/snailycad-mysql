@@ -16,6 +16,7 @@ Locales = {
     not_configured = "The radio isn't set up: the server owner has to set snailycad_radio_api_url and snailycad_radio_api_token.",
     setup = "Radio: setup (admins)",
     setup_denied = "Only server admins can set up the radio.",
+    mic_error = "Radio microphone unavailable: %s",
     -- shown on the handheld / HUD (the in-game UI)
     connecting = "SEARCHING…",
     noChannel = "NO CHANNEL",

@@ -168,7 +168,14 @@ RegisterNUICallback("busy", function(_, cb)
 end)
 
 RegisterNUICallback("error", function(data, cb)
-  if Config.Debug then print(("[snailycad-radio] %s"):format(data.message)) end
+  local message = tostring(data.message or "")
+  -- microphone problems always show (FiveM's in-game browser may refuse the microphone)
+  if data.code == "microphone" then
+    print(("^1[snailycad-radio] microphone: %s^0"):format(message))
+    notify(_L("mic_error", message))
+  elseif Config.Debug then
+    print(("[snailycad-radio] %s: %s"):format(tostring(data.code), message))
+  end
   reply(cb)
 end)
 

@@ -215,7 +215,7 @@ function start(message: InitMessage) {
     render();
   });
   client.on("busy", () => void post("busy"));
-  client.on("error", ({ message: error }) => void post("error", { message: error }));
+  client.on("error", ({ code, message: error }) => void post("error", { code, message: error }));
   for (const event of ["status", "joined", "left", "members", "preempted"] as const) {
     client.on(event, () => render());
   }
