@@ -43,6 +43,7 @@ INSTALLER_DIR = os.path.join(INSTALL_DIR, "installer")
 MANIFEST_PATH = os.path.join(INSTALLER_DIR, "manifest.env")
 TOKEN_PATH = os.path.join(INSTALLER_DIR, "token")
 RAW_LOG_PATH = os.path.join(INSTALLER_DIR, "install.log")
+STATE_PATH = os.path.join(INSTALLER_DIR, "state.json")
 STATUS_DIR = os.path.join(APP_DIR, ".snaily-cache", "status")
 PAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "wizard.html")
 COMPOSE_FILE = "production.docker-compose.yml"
@@ -122,7 +123,10 @@ def sanitize(text):
 
 
 def say(text, level="info"):
-    LINES.append({"t": int(time.time()), "level": level, "text": sanitize(text)})
+    text = sanitize(text)
+    if LINES and LINES[-1]["text"] == text:
+        return  # e.g. the same build step reported for both images
+    LINES.append({"t": int(time.time()), "level": level, "text": text})
     del LINES[:-120]
     print(f"[{level}] {text}", flush=True)
 
@@ -741,12 +745,14 @@ def copy_env_for_docker(env_text, client_port):
         f.write(json.dumps(package, indent=2) + "\n")
 
 
-def docker_install(settings):
+def docker_install(settings, deploy_only=False):
     def step(step_id, fn):
         JOB["current"] = step_id
         JOB["steps"][step_id] = "active"
+        save_state()
         result = fn()
         JOB["steps"][step_id] = "done"
+        save_state()
         return result
 
     def config():
@@ -799,9 +805,13 @@ def docker_install(settings):
             time.sleep(5)
         raise StepError("The CAD did not answer within 15 minutes.")
 
-    JOB["cadUrl"] = step("config", config)
-    step("firewall", lambda: step_firewall(settings))
-    step("network", network)
+    if not deploy_only:
+        JOB["cadUrl"] = step("config", config)
+        step("firewall", lambda: step_firewall(settings))
+        step("network", network)
+    # from here on the database container may hold data made with this .env, so a failure is
+    # retried with the same settings instead of going back to the settings pages
+    JOB["retryable"] = True
     step("images", images)
     step("containers", containers)
     step("ready", ready)
@@ -813,8 +823,10 @@ def standalone_install(settings):
     def step(step_id, fn):
         JOB["current"] = step_id
         JOB["steps"][step_id] = "active"
+        save_state()
         result = fn()
         JOB["steps"][step_id] = "done"
+        save_state()
         return result
 
     database = step("database", lambda: step_database(settings))
@@ -823,25 +835,74 @@ def standalone_install(settings):
     step("service", step_service)
 
 
+def save_state():
+    """Keeps the install's progress across wizard restarts (no passwords: those live in .env)."""
+    data = {k: v for k, v in JOB.items() if k != "settings"}
+    settings = JOB.get("settings")
+    if settings:
+        data["settings"] = {**settings, "db": {k: v for k, v in settings["db"].items() if k != "password"}}
+    tmp = f"{STATE_PATH}.tmp"
+    with open(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as f:
+        json.dump(data, f)
+    os.replace(tmp, STATE_PATH)
+
+
+def load_state():
+    data = read_json(STATE_PATH)
+    if not data:
+        return
+    JOB.update(data)
+    interrupted = [step_id for step_id, value in JOB["steps"].items() if value == "active"]
+    if interrupted and JOB.get("method") == "docker":
+        for step_id in interrupted:
+            JOB["steps"][step_id] = "failed"
+        JOB["failed"] = "The setup wizard restarted during this step. Press Retry to continue."
+        if JOB.get("retryable"):
+            JOB["phase"] = "failed"
+        else:
+            JOB["started"] = False
+
+
+def install_failed(error):
+    if JOB.get("current"):
+        JOB["steps"][JOB["current"]] = "failed"
+    if isinstance(error, StepError):
+        JOB["failed"] = str(error)
+    else:
+        traceback.print_exc()
+        JOB["failed"] = f"Unexpected error: {error}"
+    if JOB.get("retryable"):
+        JOB["phase"] = "failed"  # shows Retry
+    else:
+        JOB["started"] = False  # before anything ran: the settings can be changed and tried again
+    say(JOB["failed"], "error")
+
+
 def run_install(settings):
     JOB.update(started=True, failed=None, startedAt=int(time.time()), method=method(), phase=None, current=None,
-               settings=settings)
+               settings=settings, retryable=False)
     JOB["steps"] = {step_id: "pending" for step_id, _, _ in job_steps()}
     try:
         (docker_install if JOB["method"] == "docker" else standalone_install)(settings)
     except Exception as error:  # noqa: BLE001
-        if JOB.get("current"):
-            JOB["steps"][JOB["current"]] = "failed"
-        if isinstance(error, StepError):
-            JOB["failed"] = str(error)
-        else:
-            traceback.print_exc()
-            JOB["failed"] = f"Unexpected error: {error}"
-        # before the CAD runs, the settings can be changed and the install tried again
-        JOB["started"] = False
-        say(JOB["failed"], "error")
+        install_failed(error)
     finally:
         BUSY.pop("install", None)
+        save_state()
+
+
+def run_docker_retry():
+    JOB.update(failed=None, phase=None)
+    for step_id in ("images", "containers", "ready"):
+        JOB["steps"][step_id] = "pending"
+    try:
+        say("Retrying: rebuilding the images (cached steps are skipped) and restarting the containers...")
+        docker_install(JOB["settings"], deploy_only=True)
+    except Exception as error:  # noqa: BLE001
+        install_failed(error)
+    finally:
+        BUSY.pop("install", None)
+        save_state()
 
 
 def service_progress():
@@ -883,8 +944,8 @@ def state():
 
 def retry():
     if JOB.get("method") == "docker":
-        say("Restarting the containers...")
-        check(compose("up", "-d", timeout=900), "Could not start the containers")
+        BUSY["install"] = True
+        threading.Thread(target=run_docker_retry, daemon=True).start()
         return
     say("Restarting the CAD service...")
     run(["systemctl", "reset-failed", NAME])
@@ -1033,8 +1094,8 @@ class Handler(BaseHTTPRequestHandler):
             threading.Thread(target=run_install, args=(settings,), daemon=True).start()
             return self.send(202, {"ok": True})
         if path == "/api/retry":
-            if not JOB["started"]:
-                return self.send(409, {"error": "Nothing to retry yet."})
+            if not JOB["started"] or BUSY:
+                return self.send(409, {"error": "Nothing to retry right now."})
             retry()
             return self.send(200, {"ok": True})
         if path == "/api/finish":
@@ -1044,6 +1105,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    load_state()
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     server.daemon_threads = True
     threading.Timer(MAX_RUNTIME_SECONDS, finish).start()

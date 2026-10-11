@@ -2,6 +2,10 @@ FROM node:20-slim AS base
 
 WORKDIR /snailycad
 
+# Prisma needs OpenSSL, which the slim image doesn't include
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 # Install pnpm globally and set config in one layer
 RUN npm install -g pnpm@9.0.4 && pnpm config set httpTimeout 1200000
 

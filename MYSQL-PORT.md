@@ -28,6 +28,21 @@ Tested with MySQL 8.0.46 and MariaDB 11.4.12.
 
 ## New install
 
+### One-line installer (Ubuntu)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.sh | sudo bash
+```
+
+It prints a link to a setup wizard on `http://<server-ip>:3100`. In the browser you pick Docker or
+standalone, install each requirement with a button (system tools, Node.js + pnpm or Docker, the
+CAD), choose the database and ports, and follow the install live. Everything lives in
+`/opt/snailycad`, and `sudo bash /opt/snailycad/uninstall.sh` removes all of it again, including
+what the wizard added outside that folder. Options (`SNAILY_NAME`, `SNAILY_WIZARD_PORT`, …) are
+listed at the top of `scripts/installer/install.sh`.
+
+### By hand
+
 1. Create a database and user:
    ```sql
    CREATE DATABASE `snaily-cad-v4` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

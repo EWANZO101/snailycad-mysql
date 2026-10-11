@@ -1,7 +1,7 @@
 #!/bin/bash
 # SnailyCAD one-line installer for Ubuntu.
 #
-#   curl -fsSL <raw url>/scripts/installer/install.sh | sudo SNAILY_REPO=<git url> bash
+#   curl -fsSL https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/scripts/installer/install.sh | sudo bash
 #
 # This only starts the setup wizard (python3, which Ubuntu ships). Everything else is installed
 # from the wizard in the browser, one button per requirement: system tools, Node.js + pnpm or
@@ -18,14 +18,14 @@
 #   SNAILY_NAME         install name: folder /opt/<name>, service <name>   (default: snailycad)
 #   SNAILY_DIR          install folder                                      (default: /opt/$SNAILY_NAME)
 #   SNAILY_REPO         git repository (GitHub URL or local path) to install from
-#   SNAILY_BRANCH       branch to install                                   (default: feat/mysql-support)
+#   SNAILY_BRANCH       branch to install                                   (default: main)
 #   SNAILY_WIZARD_PORT  port of the setup wizard                            (default: 3100)
 set -euo pipefail
 
 NAME="${SNAILY_NAME:-snailycad}"
 INSTALL_DIR="${SNAILY_DIR:-/opt/$NAME}"
-REPO="${SNAILY_REPO:-https://github.com/SnailyCAD/snaily-cadv4.git}"
-BRANCH="${SNAILY_BRANCH:-feat/mysql-support}"
+REPO="${SNAILY_REPO:-https://github.com/EWANZO101/snailycad-mysql.git}"
+BRANCH="${SNAILY_BRANCH:-main}"
 WIZARD_PORT="${SNAILY_WIZARD_PORT:-3100}"
 WIZARD_FILES=(wizard-server.py wizard.html uninstall.sh)
 
