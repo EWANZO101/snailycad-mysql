@@ -437,6 +437,7 @@ model Citizen {
   claimRequests        CitizenClaimRequest[]
   aliases              CitizenAlias[]
   drugTests            CitizenDrugTest[]
+  fivemCharacters      FivemCharacter[]
 
   @@index([name, surname], name: "fullname")
 }
@@ -579,6 +580,7 @@ model RegisteredVehicle {
   ImpoundedVehicle ImpoundedVehicle[]
   Business         Business[]         @relation("registeredBusinessVehicles")
   Record           Record[]
+  fivemVehicle     FivemVehicle?
 
   @@index([plate, vinNumber])
 }
@@ -1920,6 +1922,51 @@ model ErlcEmergencyCall {
 
   @@unique([callNumber, startedAt])
   @@index([call911Id])
+}
+
+// FiveM framework integration (ESX, QBCore, Qbox): which CAD citizen a game character is
+// (framework + ESX identifier / QBCore citizenid), so renames update instead of duplicating
+model FivemCharacter {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+  framework    String   @db.VarChar(16)
+  characterId  String   @db.VarChar(191)
+  citizen      Citizen  @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+  citizenId    String
+  lastSyncedAt DateTime @default(now())
+
+  @@unique([framework, characterId])
+  @@index([citizenId])
+}
+
+// a CAD registered vehicle that came from a game garage (owned_vehicles / player_vehicles)
+model FivemVehicle {
+  id           String            @id @default(cuid())
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @default(now()) @updatedAt
+  framework    String            @db.VarChar(16)
+  characterId  String            @db.VarChar(191)
+  vehicle      RegisteredVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId    String            @unique
+  lastSyncedAt DateTime          @default(now())
+
+  @@index([framework, characterId])
+}
+
+// one row: switches for the FiveM framework sync, and when a game server last synced
+model FivemFrameworkSettings {
+  id             String    @id @default(cuid())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+  enabled        Boolean   @default(true)
+  syncCitizens   Boolean   @default(true)
+  syncVehicles   Boolean   @default(true)
+  syncDuty       Boolean   @default(true)
+  lastSyncAt     DateTime?
+  lastServerName String?   @db.VarChar(255)
+  lastFramework  String?   @db.VarChar(16)
+  lastVersion    String?   @db.VarChar(32)
 }
 
 enum RadioTransport {
