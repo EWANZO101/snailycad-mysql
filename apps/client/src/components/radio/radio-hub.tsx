@@ -46,6 +46,8 @@ export interface RadioView {
 
 type Command =
   | { name: "toggleChannel"; id: string }
+  | { name: "listenAll" }
+  | { name: "listenNone" }
   | { name: "selectTransmit"; id: string }
   | { name: "setChannelVolume"; id: string; volume: number }
   | { name: "setMasterVolume"; volume: number }
@@ -79,14 +81,20 @@ export function useRadioHub() {
   return React.useContext(RadioHubContext);
 }
 
-/** is the radio available to this user (feature on, signed in, LEO / EMS-FD / dispatch) */
+/**
+ * is the radio shown to this user: signed in, the RADIO feature on, and a dispatcher or an admin
+ * (Owner / Admin rank or Manage CAD Settings). Units use the radio in game.
+ */
 export function useRadioAvailable() {
   const { user } = useAuth();
   const { RADIO } = useFeatureEnabled();
   const { hasPermissions } = usePermission();
-  return (
-    !!user && RADIO && hasPermissions([Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd])
-  );
+  if (!user || !RADIO) return false;
+  const isAdmin =
+    user.rank === "OWNER" ||
+    user.rank === "ADMIN" ||
+    hasPermissions([Permissions.ManageCADSettings]);
+  return isAdmin || hasPermissions([Permissions.Dispatch]);
 }
 
 function buildView(
@@ -207,21 +215,52 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
       if (!client) return;
       const prefs = preferencesRef.current;
       switch (command.name) {
+        // listening = a silent monitor ("listen" mode: not in the member list); the channel you
+        // talk on is joined as a member
         case "toggleChannel": {
           if (client.joined.has(command.id)) {
             client.leave(command.id);
-            updatePreferences({ channels: prefs.channels.filter((id) => id !== command.id) });
+            updatePreferences({
+              channels: prefs.channels.filter((id) => id !== command.id),
+              transmitChannel:
+                prefs.transmitChannel === command.id
+                  ? client.transmitChannel
+                  : prefs.transmitChannel,
+            });
           } else {
-            client.join(command.id, "member");
+            client.join(command.id, client.transmitChannel === command.id ? "member" : "listen");
             client.setChannelVolume(command.id, prefs.volumes[command.id] ?? 1);
             updatePreferences({ channels: [...new Set([...prefs.channels, command.id])] });
           }
           break;
         }
+        case "listenAll": {
+          for (const channel of client.channels) {
+            if (client.joined.has(channel.id)) continue;
+            client.join(channel.id, "listen");
+            client.setChannelVolume(channel.id, prefs.volumes[channel.id] ?? 1);
+          }
+          updatePreferences({ channels: client.channels.map((c) => c.id) });
+          break;
+        }
+        case "listenNone": {
+          // keeps the channel you talk on
+          for (const id of [...client.joined.keys()]) {
+            if (id !== client.transmitChannel) client.leave(id);
+          }
+          updatePreferences({ channels: client.transmitChannel ? [client.transmitChannel] : [] });
+          break;
+        }
         case "selectTransmit": {
           const channel = client.channels.find((c) => c.id === command.id);
           if (!channel?.canTransmit) break;
-          client.setTransmitChannel(command.id);
+          const previous = client.transmitChannel;
+          client.setTransmitChannel(command.id); // joins it as a member
+          client.setChannelVolume(command.id, prefs.volumes[command.id] ?? 1);
+          // the channel you talked on before stays on as a silent monitor
+          if (previous && previous !== command.id && client.joined.has(previous)) {
+            client.join(previous, "listen");
+          }
           updatePreferences({
             transmitChannel: command.id,
             channels: [...new Set([...prefs.channels, command.id])],
@@ -299,14 +338,14 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
         let wanted = prefs.channels.filter((id) => visible.has(id));
         const unit = unitChannelRef.current;
         if (!wanted.length && unit && visible.has(unit)) wanted = [unit];
-        for (const id of wanted) {
-          if (!client!.joined.has(id)) client!.join(id, "member");
-          client!.setChannelVolume(id, prefs.volumes[id] ?? 1);
-        }
         const transmit =
           prefs.transmitChannel && wanted.includes(prefs.transmitChannel)
             ? prefs.transmitChannel
             : wanted[0];
+        for (const id of wanted) {
+          if (!client!.joined.has(id)) client!.join(id, id === transmit ? "member" : "listen");
+          client!.setChannelVolume(id, prefs.volumes[id] ?? 1);
+        }
         if (transmit) client!.setTransmitChannel(transmit);
         client!.setVolume(prefs.masterVolume);
       };

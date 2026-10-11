@@ -23,7 +23,7 @@ export default function RadioPage() {
 
   return (
     <Layout
-      permissions={{ permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd] }}
+      permissions={{ permissions: [Permissions.Dispatch, Permissions.ManageCADSettings] }}
       className="dark:text-white"
     >
       <header className="mb-5">
