@@ -90,11 +90,9 @@ export function useRadioAvailable() {
   const { RADIO } = useFeatureEnabled();
   const { hasPermissions } = usePermission();
   if (!user || !RADIO) return false;
-  const isAdmin =
-    user.rank === "OWNER" ||
-    user.rank === "ADMIN" ||
-    hasPermissions([Permissions.ManageCADSettings]);
-  return isAdmin || hasPermissions([Permissions.Dispatch]);
+  // the same check as the API's radio token (the owner has every permission); an "ADMIN" rank
+  // without these permissions would only get a permissions error
+  return hasPermissions([Permissions.ManageCADSettings, Permissions.Dispatch]);
 }
 
 function buildView(
