@@ -232,8 +232,8 @@ importers:
         specifier: 8.18.0
         version: 8.18.0
       zod:
-        specifier: 3.25.67
-        version: 3.25.67
+        specifier: 3.25.74
+        version: 3.25.74
     devDependencies:
       "@swc/cli":
         specifier: ^0.1.63
@@ -545,8 +545,8 @@ importers:
         specifier: ^10.0.0
         version: 10.0.0
       zod:
-        specifier: 3.25.67
-        version: 3.25.67
+        specifier: 3.25.74
+        version: 3.25.74
       zustand:
         specifier: ^4.5.2
         version: 4.5.2(@types/react@18.3.3)(immer@10.0.3)(react@18.3.1)
@@ -20551,12 +20551,6 @@ packages:
       }
     engines: { node: ">= 10" }
 
-  zod@3.25.67:
-    resolution:
-      {
-        integrity: sha512-idA2YXwpCdqUSKRCACDE6ItZD9TZzy3OZMtpfLoh6oPR47lipysRrJfjzMqFxQ3uJuUPyUeWe1r9vLH33xO/Qw==,
-      }
-
   zod@3.25.74:
     resolution:
       {
@@ -35003,8 +34997,6 @@ snapshots:
       archiver-utils: 2.1.0
       compress-commons: 4.1.1
       readable-stream: 3.6.2
-
-  zod@3.25.67: {}
 
   zod@3.25.74: {}
 
