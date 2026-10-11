@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """SnailyCAD setup wizard: a step-by-step install page served on the server's IP.
 
-Started by scripts/installer/install.sh. Written for the python3 that every Ubuntu ships, with no
-dependencies, so that everything else (system tools, Node.js, pnpm, Docker, the CAD itself) can
-be installed from the page with a button.
+Started by scripts/installer/install.sh (Ubuntu) or scripts/installer/install.ps1 (Windows).
+Written for the python3 that every Ubuntu ships, with no dependencies, so that everything else
+(system tools, Node.js, pnpm, Docker, the CAD itself) can be installed from the page with a button.
+
+On Windows (os.name == "nt") only the standalone method exists. The differences live in the
+"platform" helpers and the win_* functions below: winget instead of apt, an NSSM service (or a
+scheduled task) instead of systemd, Windows Firewall rules instead of ufw, and the wizard runs the
+install/build itself instead of start.sh.
 
 Two install methods:
 - standalone: a private Node.js + pnpm in <install dir>/runtime, MySQL/MariaDB on the host, and
@@ -15,10 +20,12 @@ Every change made outside the install folder is written to installer/manifest.en
 made, so uninstall.sh can remove it again. Access needs the token install.sh printed
 (?token=..., then kept in a cookie).
 """
+import glob
 import hashlib
 import hmac
 import json
 import os
+import platform
 import re
 import secrets
 import shutil
@@ -29,16 +36,21 @@ import tarfile
 import threading
 import time
 import traceback
+import urllib.error
 import urllib.request
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlparse
 
+IS_WINDOWS = os.name == "nt"
 INSTALL_DIR = os.environ.get("SNAILY_INSTALL_DIR")
 if not INSTALL_DIR:
-    sys.exit("SNAILY_INSTALL_DIR is not set; start this through install.sh.")
+    sys.exit("SNAILY_INSTALL_DIR is not set; start this through install.sh (or install.ps1 on Windows).")
 APP_DIR = os.path.join(INSTALL_DIR, "app")
 NODE_DIR = os.path.join(INSTALL_DIR, "runtime", "node")
-NODE_BIN = os.path.join(NODE_DIR, "bin")
+# the Windows Node.js zip has node.exe, npm.cmd and the global packages' shims in its top folder
+NODE_BIN = NODE_DIR if IS_WINDOWS else os.path.join(NODE_DIR, "bin")
+LOGS_DIR = os.path.join(INSTALL_DIR, "logs")  # Windows: the CAD service's log
 INSTALLER_DIR = os.path.join(INSTALL_DIR, "installer")
 MANIFEST_PATH = os.path.join(INSTALLER_DIR, "manifest.env")
 TOKEN_PATH = os.path.join(INSTALLER_DIR, "token")
@@ -54,8 +66,14 @@ COOKIE = "snaily_wizard"
 # the wizard shuts itself down after this long, finished or not
 MAX_RUNTIME_SECONDS = 12 * 60 * 60
 
-with open(TOKEN_PATH) as f:
+with open(TOKEN_PATH, encoding="utf-8-sig") as f:
     TOKEN = f.read().strip()
+
+if IS_WINDOWS:
+    # stdout is a log file there, in the ANSI code page: never fail on a character it lacks
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None and hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
 
 SAFE_NAME = re.compile(r"^[A-Za-z0-9_]{1,32}$")
 HOSTNAME = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
@@ -70,7 +88,7 @@ lock = threading.Lock()
 
 def read_manifest():
     entries = []
-    with open(MANIFEST_PATH) as f:
+    with open(MANIFEST_PATH, encoding="utf-8-sig") as f:
         for line in f:
             match = re.match(r"^([A-Z_]+)=(.*)$", line.rstrip("\n"))
             if match:
@@ -86,22 +104,22 @@ def manifest_value(key):
 def add_to_manifest(key, value):
     if (key, str(value)) in read_manifest():
         return
-    with open(MANIFEST_PATH, "a") as f:
+    with open(MANIFEST_PATH, "a", encoding="utf-8") as f:
         f.write(f"{key}={value}\n")
 
 
 def set_in_manifest(key, value):
-    with open(MANIFEST_PATH) as f:
+    with open(MANIFEST_PATH, encoding="utf-8-sig") as f:
         kept = [line for line in f.read().split("\n") if not line.startswith(f"{key}=")]
     kept = [line for line in kept if line] + [f"{key}={value}"]
-    with open(MANIFEST_PATH, "w") as f:
+    with open(MANIFEST_PATH, "w", encoding="utf-8") as f:
         f.write("\n".join(kept) + "\n")
 
 
 def remove_from_manifest(key, value):
-    with open(MANIFEST_PATH) as f:
+    with open(MANIFEST_PATH, encoding="utf-8-sig") as f:
         kept = [line for line in f.read().split("\n") if line and line != f"{key}={value}"]
-    with open(MANIFEST_PATH, "w") as f:
+    with open(MANIFEST_PATH, "w", encoding="utf-8") as f:
         f.write("\n".join(kept) + "\n")
 
 
@@ -132,7 +150,7 @@ def say(text, level="info"):
 
 
 def raw_log(text):
-    with open(RAW_LOG_PATH, "a") as f:
+    with open(RAW_LOG_PATH, "a", encoding="utf-8", errors="replace") as f:
         f.write(text)
     os.chmod(RAW_LOG_PATH, 0o600)
 
@@ -144,20 +162,63 @@ class StepError(Exception):
     pass
 
 
+def windows_path():
+    """PATH as a new login would see it: programs installed by winget a moment ago are found
+    without restarting the wizard. Falls back to this process's PATH."""
+    entries = []
+    try:
+        import winreg
+
+        for root, key in ((winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
+                          (winreg.HKEY_CURRENT_USER, "Environment")):
+            try:
+                with winreg.OpenKey(root, key) as handle:
+                    value = winreg.QueryValueEx(handle, "Path")[0]
+                entries += winreg.ExpandEnvironmentStrings(value).split(";")
+            except OSError:
+                pass
+    except ImportError:
+        pass
+    entries += os.environ.get("PATH", "").split(";")
+    seen, result = set(), []
+    for entry in entries:
+        if entry and entry.lower() not in seen:
+            seen.add(entry.lower())
+            result.append(entry)
+    return ";".join(result)
+
+
 def env_with(extra=None):
     env = dict(os.environ)
-    env["PATH"] = f"{NODE_BIN}:{env.get('PATH', '/usr/bin:/bin')}"
+    if IS_WINDOWS:
+        env["PATH"] = f"{NODE_BIN};{windows_path()}"
+    else:
+        env["PATH"] = f"{NODE_BIN}:{env.get('PATH', '/usr/bin:/bin')}"
     env.update(extra or {})
     return env
 
 
-def run(cmd, env=None, timeout=600, cwd=None, on_line=None):
-    """Runs cmd; returns (ok, output). Output also goes to the raw install log."""
-    raw_log(f"\n$ {' '.join(cmd)}\n")
+def resolve(cmd, env):
+    """Windows: CreateProcess only searches for .exe files; find the full path (and extension)."""
+    if IS_WINDOWS and not os.path.isabs(cmd[0]):
+        found = shutil.which(cmd[0], path=env["PATH"])
+        if found:
+            return [found, *cmd[1:]]
+    return cmd
+
+
+def run(cmd, env=None, timeout=600, cwd=None, on_line=None, hide=()):
+    """Runs cmd; returns (ok, output). Output also goes to the raw install log. Strings in `hide`
+    (passwords on a command line) are masked in that log."""
+    shown = " ".join(cmd)
+    for secret in hide:
+        shown = shown.replace(secret, "••••")
+    raw_log(f"\n$ {shown}\n")
+    full_env = env_with(env)
     try:
         proc = subprocess.Popen(
-            cmd, cwd=cwd, env=env_with(env), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, errors="replace",
+            resolve(cmd, full_env), cwd=cwd, env=full_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, encoding="utf-8", errors="replace",
         )
     except FileNotFoundError:
         return False, f"{cmd[0]} not found"
@@ -184,11 +245,13 @@ def check(result, message):
     return output
 
 
-def quiet(cmd, timeout=20):
+def quiet(cmd, timeout=20, env=None):
+    full_env = env_with(env)
     try:
-        p = subprocess.run(cmd, env=env_with(), capture_output=True, text=True, timeout=timeout)
+        p = subprocess.run(resolve(cmd, full_env), env=full_env, capture_output=True, text=True, timeout=timeout,
+                           encoding="utf-8", errors="replace")
         return p.returncode == 0, p.stdout.strip()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         return False, ""
 
 
@@ -218,6 +281,14 @@ def first_free_port(start, skip=()):
 
 
 def server_ip():
+    if IS_WINDOWS:
+        # the address of the network card the default route uses (UDP connect sends nothing)
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.connect(("8.8.8.8", 53))
+                return s.getsockname()[0]
+        except OSError:
+            return "127.0.0.1"
     ok, out = quiet(["hostname", "-I"])
     for address in out.split():
         if re.match(r"^\d+(\.\d+){3}$", address):
@@ -253,6 +324,87 @@ def apt_install(packages, label):
     check(run(["apt-get", "install", *APT_OPTS, *missing], env=APT_ENV, timeout=1200), f"Could not install {label}")
 
 
+# --- windows helpers --------------------------------------------------------------------
+
+WINGET_OPTS = ["--exact", "--source", "winget", "--silent", "--disable-interactivity",
+               "--accept-package-agreements", "--accept-source-agreements"]
+# winget's "already installed" / "no newer version" results: nothing to do
+WINGET_ALREADY = ("0x8a15002b", "0x8a150061")
+
+
+def winget_install(package_id, label, scope="machine", override=None, hide=(), record=True):
+    """Installs a winget package (recorded in the manifest first, so uninstall.ps1 removes it)."""
+    if not has_command("winget"):
+        raise StepError("winget is missing. Install \"App Installer\" from the Microsoft Store "
+                        "(https://aka.ms/getwinget), then press Install again.")
+    if record:
+        add_to_manifest("WINGET_PACKAGE", package_id)
+    say(f"Installing {label} with winget ({package_id})...")
+    cmd = ["winget", "install", "--id", package_id, *WINGET_OPTS]
+    if scope:
+        cmd += ["--scope", scope]
+    if override:
+        cmd += ["--override", override]
+    ok, out = run(cmd, timeout=1800, hide=hide)
+    if not ok and not any(code in out.lower() for code in WINGET_ALREADY):
+        detail = next((l for l in reversed(out.strip().split("\n")) if l.strip()), "")
+        raise StepError(f"Could not install {label}: {detail[:200]}" if detail else f"Could not install {label}")
+
+
+def win_node():
+    return os.path.join(NODE_DIR, "node.exe")
+
+
+def win_cli(package, script):
+    """node.exe + a package's JS entry point: no .cmd shims (they need cmd.exe and its quoting)."""
+    return [win_node(), os.path.join(NODE_DIR, "node_modules", package, *script.split("/"))]
+
+
+def npm_cmd():
+    return win_cli("npm", "bin/npm-cli.js") if IS_WINDOWS else [os.path.join(NODE_BIN, "npm")]
+
+
+def pnpm_cmd():
+    return win_cli("pnpm", "bin/pnpm.cjs") if IS_WINDOWS else [os.path.join(NODE_BIN, "pnpm")]
+
+
+def http_answers(url, timeout=5):
+    """True when anything answers on url, error pages included (what `curl -s` exiting 0 means)."""
+    try:
+        urllib.request.urlopen(url, timeout=timeout).close()
+        return True
+    except urllib.error.HTTPError:
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def netsh_rule(name, port=None):
+    """Adds (port given) or deletes a Windows Firewall inbound rule. Names have no spaces."""
+    if port is None:
+        return run(["netsh", "advfirewall", "firewall", "delete", "rule", f"name={name}"])
+    return run(["netsh", "advfirewall", "firewall", "add", "rule", f"name={name}", "dir=in", "action=allow",
+                "protocol=TCP", f"localport={port}", "profile=any"])
+
+
+def windows_mysql_exe():
+    """mysql.exe of an installed MariaDB/MySQL (they don't add themselves to PATH)."""
+    found = shutil.which("mysql", path=env_with()["PATH"])
+    if found:
+        return found
+    roots = [os.environ.get("ProgramFiles", r"C:\Program Files"), os.environ.get("ProgramFiles(x86)", "")]
+    patterns = [r"MariaDB*\bin\mysql.exe", r"MySQL\MySQL Server*\bin\mysql.exe"]
+    candidates = sorted((path for root in roots if root for pattern in patterns
+                         for path in glob.glob(os.path.join(root, pattern))), reverse=True)
+    return candidates[0] if candidates else None
+
+
+def windows_db_server_present():
+    if not port_free(3306) or windows_mysql_exe():
+        return True
+    return any(quiet(["sc", "query", name])[0] for name in ("MariaDB", "MySQL", "MySQL80", "MySQL84"))
+
+
 # --- requirements -----------------------------------------------------------------------
 
 
@@ -261,15 +413,20 @@ def method():
 
 
 def node_version():
-    ok, out = quiet([os.path.join(NODE_BIN, "node"), "-v"])
+    ok, out = quiet([win_node() if IS_WINDOWS else os.path.join(NODE_BIN, "node"), "-v"])
     return out if ok else None
 
 
 def pnpm_version():
     if not node_version():
         return None
-    ok, out = quiet([os.path.join(NODE_BIN, "pnpm"), "-v"])
+    ok, out = quiet([*pnpm_cmd(), "-v"])
     return out if ok else None
+
+
+def git_version():
+    ok, out = quiet(["git", "--version"])
+    return out.replace("git version", "").strip() if ok and out else None
 
 
 def docker_version():
@@ -293,12 +450,16 @@ def source_version():
 
 
 def requirements():
-    tools_missing = [p for p in TOOL_PACKAGES if not package_installed(p)]
-    items = [{
-        "id": "tools", "title": "System tools", "detail": "git, curl, xz-utils, ca-certificates (from Ubuntu)",
-        "version": None if tools_missing else "installed", "needs": [],
-    }]
-    if method() == "docker":
+    if IS_WINDOWS:
+        items = [{"id": "tools", "title": "Git", "detail": "Git for Windows, installed with winget (Git.Git)",
+                  "version": git_version(), "needs": []}]
+    else:
+        tools_missing = [p for p in TOOL_PACKAGES if not package_installed(p)]
+        items = [{
+            "id": "tools", "title": "System tools", "detail": "git, curl, xz-utils, ca-certificates (from Ubuntu)",
+            "version": None if tools_missing else "installed", "needs": [],
+        }]
+    if method() == "docker" and not IS_WINDOWS:
         items += [
             {"id": "docker", "title": "Docker Engine", "detail": "docker.io from Ubuntu",
              "version": docker_version(), "needs": []},
@@ -326,22 +487,33 @@ def requirements():
 
 
 def install_tools():
+    if IS_WINDOWS:
+        if git_version():
+            return
+        winget_install("Git.Git", "Git")
+        if not git_version():
+            raise StepError("Git was installed but git.exe is not found. Restart the setup wizard (run the install line again).")
+        say(f"Git {git_version()} installed.")
+        return
     apt_install(TOOL_PACKAGES, "system tools")
 
 
 def install_node():
     base = f"https://nodejs.org/dist/latest-v{NODE_MAJOR}.x"
-    arch = {"x86_64": "x64", "aarch64": "arm64", "arm64": "arm64"}.get(os.uname().machine)
+    machine = platform.machine() if IS_WINDOWS else os.uname().machine
+    arch = {"x86_64": "x64", "amd64": "x64", "aarch64": "arm64", "arm64": "arm64"}.get(machine.lower())
     if not arch:
-        raise StepError(f"Unsupported CPU architecture: {os.uname().machine}")
+        raise StepError(f"Unsupported CPU architecture: {machine}")
     say(f"Looking up the latest Node.js {NODE_MAJOR}...")
     try:
         sums = urllib.request.urlopen(f"{base}/SHASUMS256.txt", timeout=30).read().decode()
     except OSError as error:
         raise StepError(f"Could not reach nodejs.org: {error}")
-    match = re.search(rf"^([0-9a-f]{{64}})\s+(node-v[\d.]+-linux-{arch}\.tar\.xz)$", sums, re.M)
+    # Windows: the zip (no installer, nothing registered with the system); Linux: the .tar.xz
+    kind, ext = ("win", "zip") if IS_WINDOWS else ("linux", "tar.xz")
+    match = re.search(rf"^([0-9a-f]{{64}})\s+(node-v[\d.]+-{kind}-{arch}\.{re.escape(ext)})$", sums, re.M)
     if not match:
-        raise StepError(f"No Node.js {NODE_MAJOR} download for linux-{arch}.")
+        raise StepError(f"No Node.js {NODE_MAJOR} download for {kind}-{arch}.")
     digest, filename = match.groups()
     target = os.path.join(INSTALL_DIR, "runtime", filename)
     os.makedirs(os.path.dirname(target), exist_ok=True)
@@ -358,19 +530,26 @@ def install_node():
     shutil.rmtree(NODE_DIR, ignore_errors=True)
     staging = NODE_DIR + ".tmp"
     shutil.rmtree(staging, ignore_errors=True)
-    with tarfile.open(target, "r:xz") as archive:
-        if hasattr(tarfile, "tar_filter"):
-            archive.extractall(staging, filter="tar")
-        else:
+    if IS_WINDOWS:
+        with zipfile.ZipFile(target) as archive:
             archive.extractall(staging)
-    os.rename(os.path.join(staging, filename[: -len(".tar.xz")]), NODE_DIR)
+    else:
+        with tarfile.open(target, "r:xz") as archive:
+            if hasattr(tarfile, "tar_filter"):
+                archive.extractall(staging, filter="tar")
+            else:
+                archive.extractall(staging)
+    os.rename(os.path.join(staging, filename[: -len(f".{ext}")]), NODE_DIR)
     os.rmdir(staging)
     os.remove(target)
     say(f"Node.js {node_version()} installed.")
 
 
 def install_pnpm():
-    check(run([os.path.join(NODE_BIN, "npm"), "install", "-g", "--no-fund", "--no-audit", f"pnpm@{PNPM_VERSION}"],
+    # Windows: --prefix keeps pnpm in the private Node.js folder (npm's default there is the
+    # user's %APPDATA%, which the CAD service running as SYSTEM can't see)
+    prefix = ["--prefix", NODE_DIR] if IS_WINDOWS else []
+    check(run([*npm_cmd(), "install", "-g", *prefix, "--no-fund", "--no-audit", f"pnpm@{PNPM_VERSION}"],
               timeout=600), "Could not install pnpm")
     say(f"pnpm {pnpm_version()} installed.")
 
@@ -395,7 +574,11 @@ def install_source():
     if os.path.isdir(REPO):
         source = "file://" + os.path.abspath(REPO)  # keeps --depth working for local paths
     say(f"Downloading SnailyCAD ({BRANCH})...")
-    check(run(["git", "clone", "-q", "--depth", "1", "--branch", BRANCH, source, APP_DIR], timeout=900),
+    # Windows: keep LF line endings whatever Git's global autocrlf says, and allow long paths
+    options = ["-c", "core.autocrlf=false", "-c", "core.longpaths=true"] if IS_WINDOWS else []
+    if IS_WINDOWS and os.path.isdir(REPO):
+        source = os.path.abspath(REPO)
+    check(run(["git", "clone", "-q", *options, "--depth", "1", "--branch", BRANCH, source, APP_DIR], timeout=900),
           "Could not download SnailyCAD")
     say(f"SnailyCAD downloaded: {source_version()}.")
 
@@ -444,7 +627,80 @@ def start_requirements(req_id):
 # --- system checks ----------------------------------------------------------------------
 
 
+DOCKER_ON_WINDOWS = ("Not available on Windows: Docker Desktop needs WSL 2 and several restarts. "
+                     "Use Standalone; it works the same for your users.")
+
+
+def windows_memory_mb():
+    """(RAM MB, page file MB) from GlobalMemoryStatusEx."""
+    import ctypes
+
+    class MemoryStatus(ctypes.Structure):
+        _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+
+    status = MemoryStatus()
+    status.dwLength = ctypes.sizeof(MemoryStatus)
+    if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+        return 0, 0
+    ram = status.ullTotalPhys // 1024 ** 2
+    return ram, max(0, status.ullTotalPageFile // 1024 ** 2 - ram)
+
+
+def windows_name():
+    release, version = platform.release(), platform.version()  # "10", "10.0.22631"
+    try:
+        build = int(version.split(".")[2])
+    except (IndexError, ValueError):
+        build = 0
+    name = "Windows 11" if release in ("10", "11") and build >= 22000 else f"Windows {release}"
+    edition = platform.win32_edition() if hasattr(platform, "win32_edition") else ""
+    return f"{name} {edition or ''} (build {build})".replace("  ", " "), build
+
+
+def windows_checks():
+    os_name, build = windows_name()
+    try:
+        mem, swap = windows_memory_mb()
+    except Exception:  # noqa: BLE001 - only informational
+        mem, swap = 0, 0
+    disk = round(shutil.disk_usage(INSTALL_DIR).free / 1024 ** 3, 1)
+    cpus = os.cpu_count() or 0
+    machine = platform.machine()
+    winget = has_command("winget")
+    client_port = first_free_port(3000)
+    api_port = first_free_port(8080, [client_port])
+    return {
+        "platform": "windows",
+        "os": os_name,
+        "ip": server_ip(),
+        "ports": {"client": client_port, "api": api_port},
+        "method": method(),
+        "methodPreset": manifest_value("METHOD_PRESET") == "1",
+        "methods": {"docker": DOCKER_ON_WINDOWS},
+        "items": [
+            {"label": "Operating system", "value": os_name, "ok": build >= 17763, "warnOnly": True,
+             "hint": "Windows 10 (1809 or newer) or Windows 11 is tested"},
+            {"label": "CPU", "value": f"{cpus} core(s), {machine}", "ok": machine.lower() in ("amd64", "x86_64"),
+             "hint": "a 64-bit (x64) processor is needed"},
+            {"label": "Memory", "value": f"{mem} MB RAM + {swap} MB page file", "ok": mem + swap >= 3800, "warnOnly": True,
+             "hint": "the build needs about 4 GB of RAM + page file"},
+            {"label": "Free disk space", "value": f"{disk} GB", "ok": disk >= 8, "hint": "at least 8 GB needed"},
+            {"label": "winget (App Installer)", "value": "available" if winget else "missing", "ok": winget,
+             "hint": "install App Installer from the Microsoft Store: https://aka.ms/getwinget"},
+        ],
+        "docker": None,
+        # no root-over-socket on Windows: an existing server is used as an "external" one
+        "db": {"local": False, "install": not windows_db_server_present()},
+    }
+
+
 def checks():
+    if IS_WINDOWS:
+        return windows_checks()
     release = ""
     if os.path.exists("/etc/os-release"):
         with open("/etc/os-release") as f:
@@ -467,6 +723,7 @@ def checks():
     client_port = first_free_port(3000)
     api_port = first_free_port(8080, [client_port])
     return {
+        "platform": "linux",
         "os": os_name,
         "ip": server_ip(),
         "ports": {"client": client_port, "api": api_port},
@@ -498,6 +755,16 @@ STANDALONE_STEPS = [
     ("build", "Build", "Compile the website and API (the longest step)"),
     ("start", "Start", "Run database migrations and start the CAD"),
 ]
+# Windows: no start.sh, so the wizard installs and builds before the service starts the CAD
+WINDOWS_STEPS = [
+    ("database", "Database", "Create the database and its user"),
+    ("config", "Settings", "Write the CAD's .env file"),
+    ("firewall", "Firewall", "Add Windows Firewall rules for the website and API ports"),
+    ("dependencies", "Dependencies", "Download the packages the CAD needs"),
+    ("build", "Build", "Compile the website and API (the longest step)"),
+    ("service", "Service", "Start the CAD as a Windows service"),
+    ("start", "Start", "Run database migrations and wait for the CAD to answer"),
+]
 DOCKER_STEPS = [
     ("config", "Settings", "Write the CAD's .env file"),
     ("firewall", "Firewall", "Open the website and API ports"),
@@ -511,6 +778,8 @@ JOB = {"started": False, "failed": None, "startedAt": None, "cadUrl": None, "ste
 
 
 def job_steps():
+    if IS_WINDOWS:
+        return WINDOWS_STEPS
     return DOCKER_STEPS if JOB["method"] == "docker" else STANDALONE_STEPS
 
 
@@ -535,7 +804,10 @@ def validate_settings(body):
         errors.append("Website and API need different ports.")
 
     mode = db.get("mode")
-    expected = ("container",) if method() == "docker" else ("local", "install", "external")
+    if IS_WINDOWS:
+        expected = ("install", "external")
+    else:
+        expected = ("container",) if method() == "docker" else ("local", "install", "external")
     if mode not in expected:
         errors.append("Choose a database option.")
     elif mode == "external":
@@ -561,16 +833,102 @@ def validate_settings(body):
 
 
 def socket_mysql(sql):
+    if IS_WINDOWS:
+        return windows_root_mysql(sql)
     return run(["mysql", "-uroot", "-N", "-B", "-e", sql], timeout=60)
 
 
 def external_mysql(db, sql):
-    return run(["mysql", "-h", db["host"], "-P", str(db["port"]), "-u", db["user"], "-N", "-B", "-e", sql],
+    if IS_WINDOWS and not windows_mysql_exe():
+        return node_mysql(db, sql)
+    client = windows_mysql_exe() if IS_WINDOWS else "mysql"
+    return run([client, "-h", db["host"], "-P", str(db["port"]), "-u", db["user"], "-N", "-B", "-e", sql],
                env={"MYSQL_PWD": db["password"]}, timeout=60)
 
 
+# windows database helpers ----------------------------------------------------------------
+
+MARIADB_SERVICE = "MariaDB"
+ROOT_PASSWORD_PATH = os.path.join(INSTALLER_DIR, "mariadb-root-password.txt")
+DB_CLIENT_DIR = os.path.join(INSTALLER_DIR, "dbclient")
+# a tiny mysql client for when no mysql.exe is installed (an external server on Windows):
+# prints rows tab-separated like `mysql -N -B`
+NODE_MYSQL_SCRIPT = """const mysql = require("mysql2/promise");
+(async () => {
+  const c = await mysql.createConnection({ host: process.env.DBQ_HOST, port: Number(process.env.DBQ_PORT),
+    user: process.env.DBQ_USER, password: process.env.MYSQL_PWD || "", multipleStatements: true, connectTimeout: 10000 });
+  const [rows] = await c.query(process.env.DBQ_SQL);
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (row && typeof row === "object" && !Array.isArray(row)) console.log(Object.values(row).join("\\t"));
+  }
+  await c.end();
+})().catch((e) => { console.error(e.message || String(e)); process.exit(1); });
+"""
+
+
+def node_mysql(db, sql):
+    if not os.path.isdir(os.path.join(DB_CLIENT_DIR, "node_modules", "mysql2")):
+        if not node_version():
+            return False, "Install the requirements first (Node.js is used to test the connection)."
+        os.makedirs(DB_CLIENT_DIR, exist_ok=True)
+        ok, out = run([*npm_cmd(), "install", "--prefix", DB_CLIENT_DIR, "--no-fund", "--no-audit", "mysql2@3"], timeout=300)
+        if not ok:
+            return False, out
+    script = os.path.join(DB_CLIENT_DIR, "query.cjs")
+    with open(script, "w", encoding="utf-8") as f:
+        f.write(NODE_MYSQL_SCRIPT)
+    return run([win_node(), script], cwd=DB_CLIENT_DIR, timeout=60,
+               env={"DBQ_HOST": db["host"], "DBQ_PORT": str(db["port"]), "DBQ_USER": db["user"],
+                    "MYSQL_PWD": db["password"], "DBQ_SQL": sql})
+
+
+def windows_root_password():
+    try:
+        with open(ROOT_PASSWORD_PATH, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+def windows_root_mysql(sql):
+    """root on the MariaDB this wizard installed (password in installer/mariadb-root-password.txt)."""
+    client = windows_mysql_exe()
+    if not client:
+        return False, "mysql.exe of MariaDB not found"
+    return run([client, "-h", "127.0.0.1", "-P", "3306", "-u", "root", "-N", "-B", "-e", sql],
+               env={"MYSQL_PWD": windows_root_password() or ""}, timeout=60)
+
+
+def windows_service_running(name):
+    ok, out = quiet(["sc", "query", name])
+    return ok and "RUNNING" in out
+
+
+def windows_install_mariadb():
+    """MariaDB.Server with winget. The MSI properties (see mariadb.com/kb, "Installing MariaDB MSI
+    Packages on Windows"): SERVICENAME makes it a Windows service (none without it), PASSWORD is
+    root's password, PORT the TCP port, UTF8 sets utf8 as the server's character set. Uninstalling
+    removes its data directory (CLEANUPDATA defaults to 1)."""
+    password = windows_root_password()
+    if not (password and manifest_value("WINGET_MARIADB") == "1" and windows_mysql_exe()):
+        password = random_hex(16)
+        with open(os.open(ROOT_PASSWORD_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w", encoding="utf-8") as f:
+            f.write(password)
+        add_to_manifest("WINGET_MARIADB", "1")
+        add_to_manifest("MARIADB_SERVICE", MARIADB_SERVICE)
+        winget_install("MariaDB.Server", "MariaDB", scope=None, record=False, hide=(password,),
+                       override=f"/qn /norestart SERVICENAME={MARIADB_SERVICE} PORT=3306 PASSWORD={password} UTF8=1")
+    deadline = time.time() + 120
+    while not windows_service_running(MARIADB_SERVICE):
+        if time.time() > deadline:
+            raise StepError(f"The {MARIADB_SERVICE} service did not start (see services.msc).")
+        run(["sc", "start", MARIADB_SERVICE])
+        time.sleep(3)
+    say(f"MariaDB installed and running (service {MARIADB_SERVICE}). Its root password is in {ROOT_PASSWORD_PATH}.")
+
+
 def test_external(db):
-    if not has_command("mysql"):
+    if not IS_WINDOWS and not has_command("mysql"):
         apt_install(["mariadb-client"], "the MySQL client")
     ok, out = external_mysql(db, "SELECT VERSION()")
     if not ok:
@@ -593,13 +951,16 @@ def step_database(settings):
         external_mysql(db, f"CREATE DATABASE IF NOT EXISTS `{db['name']}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
         return {"host": db["host"], "port": db["port"], "user": db["user"], "password": db["password"], "name": db["name"]}
 
-    if db["mode"] == "install":
+    if db["mode"] == "install" and IS_WINDOWS:
+        windows_install_mariadb()
+    elif db["mode"] == "install":
         add_to_manifest("APT_MARIADB", "1")
         apt_install(["mariadb-server"], "MariaDB")
         check(run(["systemctl", "enable", "--now", "mariadb"]), "Could not start MariaDB")
         say("MariaDB installed and running.")
 
-    check(socket_mysql("SELECT 1"), "Cannot log in to MySQL/MariaDB as root through its socket")
+    check(socket_mysql("SELECT 1"), "Cannot log in to MariaDB as root" if IS_WINDOWS
+          else "Cannot log in to MySQL/MariaDB as root through its socket")
     # created by an earlier attempt of this wizard: reuse it. Anything else is not ours to touch.
     ours = manifest_value("DB_NAME") == db["name"] and manifest_value("DB_USER") == db["user"]
     if not ours:
@@ -610,7 +971,7 @@ def step_database(settings):
             raise StepError(f"A user named {db['user']} already exists. Pick another name.")
     add_to_manifest("DB_NAME", db["name"])
     add_to_manifest("DB_USER", db["user"])
-    add_to_manifest("DB_ADMIN", "socket")
+    add_to_manifest("DB_ADMIN", "root" if IS_WINDOWS else "socket")
 
     password = random_hex(16)
     sql = "; ".join([
@@ -647,20 +1008,28 @@ def write_env(settings, database, extra=None):
         "NODE_ENV": "production",
         **(extra or {}),
     }
-    with open(os.path.join(APP_DIR, ".env.example")) as f:
+    with open(os.path.join(APP_DIR, ".env.example"), encoding="utf-8") as f:
         text = f.read()
     for key, value in values.items():
         line = f'{key}="{value}"'
         pattern = re.compile(rf"^{key}=.*$", re.M)
         text = pattern.sub(lambda _: line, text) if pattern.search(text) else f"{text.rstrip()}\n{line}\n"
     env_path = os.path.join(APP_DIR, ".env")
-    with open(os.open(env_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as f:
+    with open(os.open(env_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w", encoding="utf-8") as f:
         f.write(text)
     say(f"Settings written. Website: {client_url}  API: {api_url}")
     return client_url, text
 
 
 def step_firewall(settings):
+    if IS_WINDOWS:
+        for port in (settings["clientPort"], settings["apiPort"]):
+            rule = f"SnailyCAD-{NAME}-{port}"
+            add_to_manifest("WIN_FW_RULE", rule)
+            netsh_rule(rule)  # an earlier attempt's rule: no duplicates
+            check(netsh_rule(rule, port), f"Could not add a firewall rule for port {port}")
+        say(f"Windows Firewall: allowed ports {settings['clientPort']} and {settings['apiPort']}.")
+        return
     if not ufw_active():
         say("No active ufw firewall; nothing to open.")
         return
@@ -826,6 +1195,258 @@ def docker_install(settings, deploy_only=False):
     say("SnailyCAD is running.")
 
 
+# windows ----------------------------------------------------------------------------------
+
+NSSM_PATH = os.path.join(INSTALL_DIR, "runtime", "nssm.exe")
+PNPM_STORE = os.path.join(INSTALL_DIR, "runtime", "pnpm-store")
+CAD_LOG = os.path.join(LOGS_DIR, "cad.log")
+START_CMD = os.path.join(INSTALL_DIR, "runtime", "start-cad.cmd")
+TASK_PATH = "\\SnailyCAD\\"
+START_ALLOW = [
+    (re.compile(r"(\d+) migrations? found"), r"\g<0>"),
+    (re.compile(r"Applying migration `?([\w-]+)"), r"Applying migration \1"),
+    (re.compile(r"All migrations have been successfully applied|No pending migrations to apply"), r"\g<0>"),
+    (re.compile(r"Generated Prisma Client"), "Prisma client generated"),
+    (re.compile(r"(?:Ready in|started server on|Listening on|ready on).*", re.I), r"\g<0>"),
+    (re.compile(r"(Error|ERROR|error:).*"), r"\g<0>"),
+]
+
+
+def windows_heap_mb():
+    """The build's Node.js heap limit, as start.sh picks it."""
+    if os.environ.get("SNAILY_BUILD_HEAP_MB"):
+        return os.environ["SNAILY_BUILD_HEAP_MB"]
+    try:
+        mem = windows_memory_mb()[0]
+    except Exception:  # noqa: BLE001
+        mem = 0
+    return 2048 if mem == 0 else 1536 if mem < 3000 else 2048 if mem < 6000 else 4096
+
+
+def windows_build_env():
+    return {"NODE_OPTIONS": f"--max-old-space-size={windows_heap_mb()}", "NEXT_TELEMETRY_DISABLED": "1"}
+
+
+def windows_dependencies():
+    say("Installing the CAD's packages with pnpm (a few minutes)...")
+    check(run([*pnpm_cmd(), "install", "--prefer-offline", "--store-dir", PNPM_STORE], cwd=APP_DIR,
+              env=windows_build_env(), timeout=3600, on_line=build_line), "Could not install the dependencies")
+    say("Dependencies installed.")
+
+
+def windows_build():
+    check(run([win_node(), os.path.join("scripts", "copy-env.mjs"), "--client", "--api"], cwd=APP_DIR),
+          "Could not copy the settings to the website and API")
+    say("Building; this takes 10-25 minutes...")
+    check(run([*pnpm_cmd(), "run", "build"], cwd=APP_DIR, env=windows_build_env(), timeout=3 * 60 * 60,
+              on_line=build_line), "The build failed")
+    say("Build finished.")
+
+
+def find_nssm():
+    found = shutil.which("nssm", path=env_with()["PATH"])
+    if found:
+        return found
+    # winget's portable packages: a link in WinGet\Links, the files in WinGet\Packages
+    roots = [os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "WinGet"),
+             os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "WinGet")]
+    for root in roots:
+        for pattern in (os.path.join(root, "Links", "nssm.exe"),
+                        os.path.join(root, "Packages", "NSSM.NSSM*", "*", "win64", "nssm.exe"),
+                        os.path.join(root, "Packages", "NSSM.NSSM*", "win64", "nssm.exe")):
+            matches = glob.glob(pattern)
+            if matches:
+                return matches[0]
+    return None
+
+
+def ensure_nssm():
+    """nssm.exe copied into the install folder, so the service keeps working whatever happens to
+    winget's copy. None when it can't be had (the scheduled task is used then)."""
+    if os.path.isfile(NSSM_PATH):
+        return NSSM_PATH
+    source = find_nssm()
+    if not source:
+        try:
+            winget_install("NSSM.NSSM", "NSSM (runs the CAD as a Windows service)", scope=None)
+        except StepError as error:
+            say(f"{error} Using a scheduled task instead.", "error")
+            return None
+        source = find_nssm()
+    if not source:
+        say("NSSM was installed but nssm.exe was not found. Using a scheduled task instead.", "error")
+        return None
+    os.makedirs(os.path.dirname(NSSM_PATH), exist_ok=True)
+    shutil.copyfile(source, NSSM_PATH)
+    return NSSM_PATH
+
+
+def service_environment():
+    return {"PATH": f"{NODE_BIN};{windows_path()}", "SNAILYCAD_SERVICE_NAME": NAME, "UPDATE_BRANCH": BRANCH,
+            "NEXT_TELEMETRY_DISABLED": "1"}
+
+
+def nssm_commands(nssm, depends_on=None):
+    """The commands that make the CAD a Windows service with NSSM: `pnpm run start` in the app
+    folder as LocalSystem, started at boot (delayed, after the network and database), restarted
+    10 s after it stops, with its output in logs\\cad.log (rotated at 10 MB)."""
+    start = [*pnpm_cmd(), "run", "start"]
+    env = [f"{k}={v}" for k, v in service_environment().items()]
+    commands = [
+        [nssm, "install", NAME, start[0], *start[1:]],
+        [nssm, "set", NAME, "AppDirectory", APP_DIR],
+        [nssm, "set", NAME, "DisplayName", f"SnailyCAD ({NAME})"],
+        [nssm, "set", NAME, "Description", f"SnailyCAD in {INSTALL_DIR}, made by the setup wizard"],
+        [nssm, "set", NAME, "Start", "SERVICE_DELAYED_AUTO_START"],
+        [nssm, "set", NAME, "AppEnvironmentExtra", *env],
+        [nssm, "set", NAME, "AppStdout", CAD_LOG],
+        [nssm, "set", NAME, "AppStderr", CAD_LOG],
+        [nssm, "set", NAME, "AppRotateFiles", "1"],
+        [nssm, "set", NAME, "AppRotateOnline", "1"],
+        [nssm, "set", NAME, "AppRotateBytes", "10485760"],
+        [nssm, "set", NAME, "AppExit", "Default", "Restart"],
+        [nssm, "set", NAME, "AppRestartDelay", "10000"],
+        [nssm, "set", NAME, "AppKillProcessTree", "1"],
+    ]
+    if depends_on:
+        commands.append([nssm, "set", NAME, "DependOnService", depends_on])
+    commands.append([nssm, "start", NAME])
+    return commands
+
+
+def ps_quote(text):
+    return "'" + str(text).replace("'", "''") + "'"
+
+
+def write_start_cmd():
+    """runtime\\start-cad.cmd: what the scheduled task runs (tasks have no environment settings)."""
+    lines = ["@echo off", f'cd /d "{APP_DIR}"']
+    lines += [f'set "{k}={v}"' for k, v in service_environment().items()]
+    start = " ".join(f'"{part}"' for part in pnpm_cmd())
+    lines.append(f'{start} run start >> "{CAD_LOG}" 2>&1')
+    with open(START_CMD, "w", encoding="utf-8", newline="\r\n") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+def task_script():
+    """PowerShell that registers runtime\\start-cad.cmd as a task: SYSTEM, at startup, restarted
+    every minute if it fails, no time limit."""
+    action_args = f'/d /c "{START_CMD}"'
+    return "; ".join([
+        "$ErrorActionPreference = 'Stop'",
+        f"$a = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument {ps_quote(action_args)} -WorkingDirectory {ps_quote(APP_DIR)}",
+        "$t = New-ScheduledTaskTrigger -AtStartup",
+        "$p = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest",
+        "$s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable "
+        "-ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)",
+        f"Register-ScheduledTask -TaskName {ps_quote(NAME)} -TaskPath {ps_quote(TASK_PATH)} -Action $a -Trigger $t "
+        "-Principal $p -Settings $s -Force | Out-Null",
+        f"Start-ScheduledTask -TaskName {ps_quote(NAME)} -TaskPath {ps_quote(TASK_PATH)}",
+    ])
+
+
+def powershell(script, timeout=120):
+    return run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+               timeout=timeout)
+
+
+def windows_service():
+    """NSSM, because it makes a real Windows service: it runs at boot without anyone logged in,
+    shows up in services.msc, restarts the CAD whenever it stops, stops the whole process tree,
+    can wait for the MariaDB service, and writes and rotates the log. A scheduled task (the
+    fallback, when NSSM can't be downloaded) only restarts when the task fails to start and keeps
+    no log of its own."""
+    os.makedirs(LOGS_DIR, exist_ok=True)
+    add_to_manifest("CAD_SERVICE", NAME)
+    depends_on = MARIADB_SERVICE if manifest_value("WINGET_MARIADB") == "1" else None
+    nssm = ensure_nssm()
+    if nssm:
+        set_in_manifest("WIN_SERVICE", "nssm")
+        if quiet([nssm, "status", NAME])[0]:  # an earlier attempt
+            run([nssm, "stop", NAME], timeout=120)
+            run([nssm, "remove", NAME, "confirm"])
+        for cmd in nssm_commands(nssm, depends_on):
+            check(run(cmd, timeout=120), f"Could not set up the {NAME} service")
+        say(f"Windows service {NAME} started; logs in {CAD_LOG}.")
+        return
+    set_in_manifest("WIN_SERVICE", "task")
+    write_start_cmd()
+    check(powershell(task_script()), "Could not create the scheduled task")
+    say(f"Scheduled task {TASK_PATH}{NAME} started (runs as SYSTEM at startup); logs in {CAD_LOG}.")
+
+
+def windows_wait_started():
+    deadline = time.time() + 20 * 60
+    api_ok = client_ok = False
+    position = 0
+    last_line = ""
+    while time.time() < deadline:
+        try:
+            with open(CAD_LOG, encoding="utf-8", errors="replace") as f:
+                f.seek(position)
+                chunk = f.read()
+                position = f.tell()
+        except OSError:
+            chunk = ""
+        for line in ANSI.sub("", chunk).splitlines():
+            if line.strip():
+                last_line = line.strip()
+            for pattern, label in START_ALLOW:
+                found = pattern.search(line)
+                if found:
+                    say(found.expand(label)[:170], "error" if pattern.pattern.startswith("(Error") else "info")
+                    break
+        if not api_ok and http_answers(f"http://127.0.0.1:{JOB['settings']['apiPort']}/v1"):
+            api_ok = True
+            say("API is answering.")
+        if not client_ok and http_answers(f"http://127.0.0.1:{JOB['settings']['clientPort']}/auth/login"):
+            client_ok = True
+            say("Website is answering.")
+        if api_ok and client_ok:
+            return
+        time.sleep(5)
+    raise StepError(f"The CAD did not answer within 20 minutes. Last log line: {last_line[-200:] or 'none'} "
+                    f"(full log: {CAD_LOG})")
+
+
+def windows_install(settings, deploy_only=False):
+    def step(step_id, fn):
+        JOB["current"] = step_id
+        JOB["steps"][step_id] = "active"
+        save_state()
+        result = fn()
+        JOB["steps"][step_id] = "done"
+        save_state()
+        return result
+
+    if not deploy_only:
+        database = step("database", lambda: step_database(settings))
+        JOB["cadUrl"] = step("config", lambda: write_env(settings, database)[0])
+        step("firewall", lambda: step_firewall(settings))
+    # the database and .env exist from here on: a failure is retried with the same settings
+    JOB["retryable"] = True
+    step("dependencies", windows_dependencies)
+    step("build", windows_build)
+    step("service", windows_service)
+    step("start", windows_wait_started)
+    JOB["phase"] = "running"
+    say("SnailyCAD is running.")
+
+
+def run_windows_retry():
+    JOB.update(failed=None, phase=None)
+    for step_id in ("dependencies", "build", "service", "start"):
+        JOB["steps"][step_id] = "pending"
+    try:
+        say("Retrying: installing, building and starting the CAD again (finished parts are quick)...")
+        windows_install(JOB["settings"], deploy_only=True)
+    except Exception as error:  # noqa: BLE001
+        install_failed(error)
+    finally:
+        BUSY.pop("install", None)
+        save_state()
+
+
 def standalone_install(settings):
     def step(step_id, fn):
         JOB["current"] = step_id
@@ -860,7 +1481,7 @@ def load_state():
         return
     JOB.update(data)
     interrupted = [step_id for step_id, value in JOB["steps"].items() if value == "active"]
-    if interrupted and JOB.get("method") == "docker":
+    if interrupted and (JOB.get("method") == "docker" or IS_WINDOWS):
         for step_id in interrupted:
             JOB["steps"][step_id] = "failed"
         JOB["failed"] = "The setup wizard restarted during this step. Press Retry to continue."
@@ -890,7 +1511,10 @@ def run_install(settings):
                settings=settings, retryable=False)
     JOB["steps"] = {step_id: "pending" for step_id, _, _ in job_steps()}
     try:
-        (docker_install if JOB["method"] == "docker" else standalone_install)(settings)
+        if IS_WINDOWS:
+            windows_install(settings)
+        else:
+            (docker_install if JOB["method"] == "docker" else standalone_install)(settings)
     except Exception as error:  # noqa: BLE001
         install_failed(error)
     finally:
@@ -945,7 +1569,7 @@ def service_progress():
 
 def state():
     phase, service_lines = JOB.get("phase"), []
-    if JOB.get("method") != "docker" and JOB["steps"].get("service") == "done":
+    if not IS_WINDOWS and JOB.get("method") != "docker" and JOB["steps"].get("service") == "done":
         phase, service_lines = service_progress()
     return {
         "started": JOB["started"],
@@ -957,11 +1581,20 @@ def state():
         "lines": sorted(LINES + service_lines, key=lambda line: line["t"])[-100:],
         "busy": bool(BUSY),
         "cadUrl": JOB["cadUrl"],
-        "uninstall": f"sudo bash {INSTALL_DIR}/uninstall.sh",
+        "uninstall": (f'powershell -ExecutionPolicy Bypass -File "{os.path.join(INSTALL_DIR, "uninstall.ps1")}"'
+                      if IS_WINDOWS else f"sudo bash {INSTALL_DIR}/uninstall.sh"),
+        "platform": "windows" if IS_WINDOWS else "linux",
+        # where to look when the CAD fails to install or start
+        "logHint": (f"The full log is {CAD_LOG} (and {RAW_LOG_PATH} for the install steps)." if IS_WINDOWS
+                    else "The full log is start.log in the app folder."),
     }
 
 
 def retry():
+    if IS_WINDOWS:
+        BUSY["install"] = True
+        threading.Thread(target=run_windows_retry, daemon=True).start()
+        return
     if JOB.get("method") == "docker":
         BUSY["install"] = True
         threading.Thread(target=run_docker_retry, daemon=True).start()
@@ -972,6 +1605,11 @@ def retry():
 
 
 def finish():
+    wizard_rule = manifest_value("WIN_FW_WIZARD")
+    if IS_WINDOWS and wizard_rule:
+        netsh_rule(wizard_rule)
+        remove_from_manifest("WIN_FW_RULE", wizard_rule)
+        remove_from_manifest("WIN_FW_WIZARD", wizard_rule)
     if ("UFW_PORT", str(PORT)) in read_manifest():
         run(["ufw", "delete", "allow", f"{PORT}/tcp"])
         remove_from_manifest("UFW_PORT", PORT)
@@ -1035,7 +1673,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(401, LOCKED_PAGE, "text/html; charset=utf-8")
         try:
             if url.path == "/":
-                with open(PAGE_PATH) as f:
+                with open(PAGE_PATH, encoding="utf-8") as f:
                     return self.send(200, f.read(), "text/html; charset=utf-8")
             if url.path == "/api/checks":
                 return self.send(200, checks())
@@ -1076,6 +1714,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(409, {"error": "Wait for the running task to finish."})
             if body.get("method") not in ("standalone", "docker"):
                 return self.send(400, {"error": "Choose standalone or docker."})
+            if IS_WINDOWS and body["method"] == "docker":
+                return self.send(400, {"error": DOCKER_ON_WINDOWS})
             set_in_manifest("METHOD", body["method"])
             REQ_ERRORS.clear()
             return self.send(200, {"ok": True})

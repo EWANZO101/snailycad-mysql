@@ -625,11 +625,11 @@
         <h1>How should SnailyCAD run?</h1>
         <p class="lead">Both work the same for your users. Pick the one you'd rather manage.</p>
         <div class="options two">
-          <label class="option"
+          <label class="option" id="method-docker"
             ><input type="radio" name="method" value="docker" />
             <span
               ><b>Docker</b>
-              <small>The CAD and its own MariaDB run in containers.</small>
+              <small id="method-docker-text">The CAD and its own MariaDB run in containers.</small>
               <ul>
                 <li>Nothing but Docker on the server</li>
                 <li>Database included</li>
@@ -645,7 +645,7 @@
               <ul>
                 <li>Uses less memory</li>
                 <li>Can use a MySQL/MariaDB you already have</li>
-                <li>Built-in "Update CAD" button works</li>
+                <li id="method-update-button">Built-in "Update CAD" button works</li>
               </ul></span
             ></label
           >
@@ -916,7 +916,15 @@
         if (blocked)
           alertBox($("checks-error"), "error", "Fix the item marked ✕ before installing.");
 
-        const method = data.method || "docker";
+        // Windows: standalone only (the reason comes from the wizard)
+        const dockerReason = data.methods?.docker;
+        if (dockerReason) {
+          $("method-docker").classList.add("disabled");
+          $("method-docker").querySelector("input").disabled = true;
+          $("method-docker-text").textContent = dockerReason;
+        }
+        $("method-update-button").classList.toggle("hidden", data.platform === "windows");
+        const method = data.method || (dockerReason ? "standalone" : "docker");
         document.querySelector(`input[name=method][value=${method}]`).checked = true;
         $("address").value = data.ip;
         $("client-port").value = data.ports.client ?? 3000;
@@ -999,8 +1007,13 @@
           install: !docker && db.install,
           external: !docker,
         };
+        // Windows has no root-over-socket login: a server already on the PC is used as "another server"
+        const windows = state.checks?.platform === "windows";
         for (const [mode, enabled] of Object.entries(options)) {
-          $(`opt-${mode}`).classList.toggle("hidden", mode === "container" ? !docker : docker);
+          $(`opt-${mode}`).classList.toggle(
+            "hidden",
+            mode === "container" ? !docker : docker || (windows && mode === "local"),
+          );
           $(`opt-${mode}`).classList.toggle("disabled", !enabled);
           $(`opt-${mode}`).querySelector("input").disabled = !enabled;
         }
@@ -1124,13 +1137,22 @@
           external: `<code>${esc(s.db.name)}</code> on <code>${esc(s.db.host)}:${esc(s.db.port)}</code> as <code>${esc(s.db.user)}</code>`,
         }[s.db.mode];
         const docker = state.method === "docker";
+        const windows = state.checks?.platform === "windows";
+        const firewall = windows
+          ? `Adds Windows Firewall rules for ports ${s.clientPort} and ${s.apiPort}`
+          : `Opens ports ${s.clientPort} and ${s.apiPort} if ufw is active`;
+        const runsAs = docker
+          ? "Containers that restart on their own"
+          : windows
+            ? "A Windows service that starts on boot, even when nobody is logged in"
+            : "A system service that starts on boot";
         $("summary").innerHTML = `
       <dt>Method</dt><dd>${docker ? "Docker containers" : "Standalone (Node.js)"}</dd>
       <dt>Database</dt><dd>${dbText}</dd>
       <dt>CAD address</dt><dd><code>http://${esc(s.address)}:${s.clientPort}</code></dd>
       <dt>API address</dt><dd><code>http://${esc(s.address)}:${s.apiPort}/v1</code></dd>
-      <dt>Firewall</dt><dd>Opens ports ${s.clientPort} and ${s.apiPort} if ufw is active</dd>
-      <dt>Runs as</dt><dd>${docker ? "Containers that restart on their own" : "A system service that starts on boot"}</dd>`;
+      <dt>Firewall</dt><dd>${firewall}</dd>
+      <dt>Runs as</dt><dd>${runsAs}</dd>`;
       }
 
       $("install").addEventListener("click", async () => {
@@ -1184,7 +1206,7 @@
           "error",
           s.failed ||
             (s.phase === "failed"
-              ? "The CAD failed to install or start. The log above shows the last step; the full log is start.log in the app folder. Retry runs it again."
+              ? `The CAD failed to install or start. The log above shows the last step. ${s.logHint || "The full log is start.log in the app folder."} Retry runs it again.`
               : ""),
         );
 
