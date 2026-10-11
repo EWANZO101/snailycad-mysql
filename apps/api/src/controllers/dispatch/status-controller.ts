@@ -3,11 +3,7 @@ import {
   ShouldDoType,
   type MiscCadSettings,
   type cad,
-  type Officer,
-  type CombinedLeoUnit,
-  type EmsFdDeputy,
   WhitelistStatus,
-  DiscordWebhookType,
   Feature,
   type DivisionValue,
 } from "@prisma/client";
@@ -18,27 +14,18 @@ import { BadRequest, NotFound } from "@tsed/exceptions";
 import { BodyParams, Context, PathParams } from "@tsed/platform-params";
 import { ContentType, Description, Put } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
-import { sendDiscordWebhook, sendRawWebhook } from "lib/discord/webhooks";
 import { Socket } from "services/socket-service";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { validateSchema } from "lib/data/validate-schema";
-import { handleStartEndOfficerLog } from "lib/leo/handleStartEndOfficerLog";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { findUnit } from "lib/leo/findUnit";
 import { defaultPermissions, hasPermission } from "@snailycad/permissions";
-import { findNextAvailableIncremental } from "lib/leo/findNextAvailableIncremental";
 import type * as APITypes from "@snailycad/types/api";
-import { createWebhookData } from "lib/dispatch/webhooks";
-import { createCallEventOnStatusChange } from "lib/dispatch/createCallEventOnStatusChange";
+import { applyUnitStatus } from "lib/dispatch/apply-unit-status";
 import { ExtendedNotFound } from "~/exceptions/extended-not-found";
 import { isFeatureEnabled } from "lib/upsert-cad";
 import { handlePanicButtonPressed } from "lib/leo/send-panic-button-webhook";
-import {
-  leoProperties,
-  unitProperties,
-  combinedUnitProperties,
-  combinedEmsFdUnitProperties,
-} from "utils/leo/includes";
+import { leoProperties, unitProperties } from "utils/leo/includes";
 
 @Controller("/dispatch/status")
 @UseBeforeEach(IsAuth)
@@ -235,144 +222,17 @@ export class StatusController {
       });
     }
 
-    // reset all units for user
-    if (!isDispatch) {
-      if (unit.type === "leo") {
-        await prisma.officer.updateMany({
-          where: { userId: user.id },
-          data: { activeCallId: null, activeIncidentId: null, statusId: null },
-        });
-      } else if (unit.type === "ems-fd") {
-        await prisma.emsFdDeputy.updateMany({
-          where: { userId: user.id },
-          data: { statusId: null, activeCallId: null, activeIncidentId: null },
-        });
-      }
-    }
-
-    let updatedUnit: EmsFdDeputy | Officer | CombinedLeoUnit | null = null;
-    const shouldFindIncremental =
-      code.shouldDo === ShouldDoType.SET_ON_DUTY && !unit.unit.incremental;
-    const statusId = code.shouldDo === ShouldDoType.SET_OFF_DUTY ? null : code.id;
-
-    const incremental = shouldFindIncremental
-      ? await findNextAvailableIncremental({ type: unit.type })
-      : undefined;
-
-    if (unit.type === "leo") {
-      updatedUnit = await prisma.officer.update({
-        where: { id: unit.unit.id },
-        data: {
-          userDefinedCallsign,
-          activeVehicleId: activeEmergencyVehicleId,
-          statusId,
-          incremental,
-        },
-        include: leoProperties,
-      });
-    } else if (unit.type === "ems-fd") {
-      updatedUnit = await prisma.emsFdDeputy.update({
-        where: { id: unit.unit.id },
-        data: {
-          userDefinedCallsign,
-          activeVehicleId: activeEmergencyVehicleId,
-          statusId,
-          incremental,
-        },
-        include: unitProperties,
-      });
-    } else if (unit.type === "combined-leo") {
-      updatedUnit = await prisma.combinedLeoUnit.update({
-        where: { id: unit.unit.id },
-        data: {
-          userDefinedCallsign,
-          activeVehicleId: activeEmergencyVehicleId,
-          statusId,
-        },
-        include: combinedUnitProperties,
-      });
-    } else {
-      updatedUnit = await prisma.combinedEmsFdUnit.update({
-        where: { id: unit.unit.id },
-        data: {
-          userDefinedCallsign,
-          activeVehicleId: activeEmergencyVehicleId,
-          statusId,
-        },
-        include: combinedEmsFdUnitProperties,
-      });
-    }
-
-    if (updatedUnit?.activeCallId) {
-      createCallEventOnStatusChange({
-        unit: updatedUnit,
-        status: code,
-        socket: this.socket,
-      });
-    }
-
-    if (unit.type === "leo") {
-      await handleStartEndOfficerLog({
-        unit: unit.unit as Officer,
-        shouldDo: code.shouldDo,
-        socket: this.socket,
-        userId: user.id,
-        type: "leo",
-      });
-    } else if (unit.type === "ems-fd") {
-      await handleStartEndOfficerLog({
-        unit: unit.unit,
-        shouldDo: code.shouldDo,
-        socket: this.socket,
-        userId: user.id,
-        type: "ems-fd",
-      });
-    } else {
-      if (code.shouldDo === ShouldDoType.SET_OFF_DUTY) {
-        if (unit.type === "combined-ems-fd") {
-          await prisma.combinedEmsFdUnit
-            .delete({
-              where: { id: unit.unit.id },
-            })
-            .catch(() => null);
-        } else {
-          await prisma.combinedLeoUnit
-            .delete({
-              where: { id: unit.unit.id },
-            })
-            .catch(() => null);
-        }
-      }
-    }
-
-    if (code.shouldDo === ShouldDoType.SET_OFF_DUTY) {
-      this.socket.emitSetUnitOffDuty(unit.unit.id);
-
-      await prisma.dispatchChat.deleteMany({
-        where: { unitId: unit.unit.id },
-      });
-    }
-
-    if (unit.type === "leo" || unit.type === "combined-leo") {
-      await this.socket.emitUpdateOfficerStatus();
-    } else {
-      await this.socket.emitUpdateDeputyStatus();
-    }
-
-    this.socket.emitUpdateUnitStatus(updatedUnit);
-
-    try {
-      const data = await createWebhookData({
-        cad,
-        // @ts-expect-error unit.type mismatch. the types are correct.
-        unit: updatedUnit,
-        locale: user.locale,
-      });
-      await sendDiscordWebhook({ type: DiscordWebhookType.UNIT_STATUS, data });
-      await sendRawWebhook({ type: DiscordWebhookType.UNIT_STATUS, data: updatedUnit });
-    } catch (error) {
-      console.error("Could not send Discord webhook.", error);
-    }
+    const updatedUnit = await applyUnitStatus({
+      unit,
+      code,
+      isDispatch,
+      userId: user.id,
+      locale: user.locale,
+      userDefinedCallsign,
+      activeEmergencyVehicleId,
+      socket: this.socket,
+      cad,
+    });
 
     // @ts-expect-error unit.type mismatch. the types are correct.
     return updatedUnit;
