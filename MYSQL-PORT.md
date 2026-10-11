@@ -39,7 +39,8 @@ standalone, install each requirement with a button (system tools, Node.js + pnpm
 CAD), choose the database and ports, and follow the install live. Everything lives in
 `/opt/snailycad`, and `sudo bash /opt/snailycad/uninstall.sh` removes all of it again, including
 what the wizard added outside that folder. Options (`SNAILY_NAME`, `SNAILY_WIZARD_PORT`, …) are
-listed at the top of `scripts/installer/install.sh`.
+listed at the top of `scripts/installer/install.sh`. Full guide, including a manual Docker install:
+[docs/install-docker.md](docs/install-docker.md).
 
 ### By hand
 
