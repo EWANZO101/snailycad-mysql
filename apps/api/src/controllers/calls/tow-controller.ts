@@ -28,23 +28,15 @@ import { canManageInvariant } from "lib/auth/getSessionUser";
 import { Permissions, UsePermissions } from "middlewares/use-permissions";
 import { officerOrDeputyToUnit } from "lib/leo/officerOrDeputyToUnit";
 import { sendDiscordWebhook, sendRawWebhook } from "lib/discord/webhooks";
-import { sendTowTaxiCallWebhook } from "lib/discord/extra-webhooks";
 import type * as APITypes from "@snailycad/types/api";
 import { shouldCheckCitizenUserId } from "lib/citizen/has-citizen-access";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
 import { getTranslator } from "utils/get-translator";
 import { callInclude } from "~/utils/leo/includes";
+import { createTowCall, towIncludes } from "lib/calls/create-tow-taxi-call";
+import { notifyOpsPhoneTowTaxi } from "lib/ops-phone/back-channel";
 
-const CITIZEN_SELECTS = {
-  name: true,
-  surname: true,
-  id: true,
-};
-
-export const towIncludes = {
-  assignedUnit: { select: CITIZEN_SELECTS },
-  creator: { select: CITIZEN_SELECTS },
-};
+export { towIncludes };
 
 @Controller("/tow")
 @UseBeforeEach(IsAuth)
@@ -196,7 +188,8 @@ export class TowController {
       }
     }
 
-    const call = await prisma.towCall.create({
+    return createTowCall({
+      socket: this.socket,
       data: {
         creatorId: data.creatorId || null,
         description: data.description,
@@ -210,17 +203,7 @@ export class TowController {
         name: data.name ?? null,
         callCountyService: data.callCountyService,
       },
-      include: towIncludes,
     });
-
-    if (call.ended) {
-      this.socket.emitTowCallEnd(call);
-    } else {
-      this.socket.emitTowCall(call);
-      sendTowTaxiCallWebhook({ type: "tow", call });
-    }
-
-    return call;
   }
 
   @UseBefore(IsAuth)
@@ -265,6 +248,9 @@ export class TowController {
     });
 
     this.socket.emitUpdateTowCall(updated);
+    if (!call.assignedUnitId && updated.assignedUnitId) {
+      notifyOpsPhoneTowTaxi({ kind: "tow", callId: updated.id, event: "accepted" });
+    }
 
     return updated;
   }
@@ -291,6 +277,7 @@ export class TowController {
     });
 
     this.socket.emitTowCallEnd(updated);
+    notifyOpsPhoneTowTaxi({ kind: "tow", callId: updated.id, event: "closed" });
 
     return true;
   }

@@ -17,10 +17,10 @@ import { validateSchema } from "lib/data/validate-schema";
 import { Feature, type Prisma, type User } from "@prisma/client";
 import { canManageInvariant } from "lib/auth/getSessionUser";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
-import { towIncludes } from "./tow-controller";
+import { createTaxiCall, towIncludes } from "lib/calls/create-tow-taxi-call";
+import { notifyOpsPhoneTowTaxi } from "lib/ops-phone/back-channel";
 import type * as APITypes from "@snailycad/types/api";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
-import { sendTowTaxiCallWebhook } from "lib/discord/extra-webhooks";
 
 @Controller("/taxi")
 @UseBeforeEach(IsAuth)
@@ -86,7 +86,8 @@ export class TaxiController {
       canManageInvariant(citizen?.userId, user, new NotFound("notFound"));
     }
 
-    const call = await prisma.taxiCall.create({
+    return createTaxiCall({
+      socket: this.socket,
       data: {
         creatorId: data.creatorId || null,
         description: data.description,
@@ -95,13 +96,7 @@ export class TaxiController {
         postal: data.postal ? String(data.postal) : null,
         name: data.name ?? null,
       },
-      include: towIncludes,
     });
-
-    this.socket.emitCreateTaxiCall(call);
-    sendTowTaxiCallWebhook({ type: "taxi", call });
-
-    return call;
   }
 
   @UseBefore(IsAuth)
@@ -148,6 +143,9 @@ export class TaxiController {
     });
 
     this.socket.emitUpdateTaxiCall(updated);
+    if (!call.assignedUnitId && updated.assignedUnitId) {
+      notifyOpsPhoneTowTaxi({ kind: "taxi", callId: updated.id, event: "accepted" });
+    }
 
     return updated;
   }
@@ -174,6 +172,7 @@ export class TaxiController {
     });
 
     this.socket.emitDeleteTaxiCall(call);
+    notifyOpsPhoneTowTaxi({ kind: "taxi", callId: call.id, event: "closed" });
 
     return true;
   }

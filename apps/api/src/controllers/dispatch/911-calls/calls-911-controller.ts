@@ -18,16 +18,12 @@ import {
   type cad,
   type User,
   type MiscCadSettings,
-  type Call911,
-  DiscordWebhookType,
   ShouldDoType,
   type Prisma,
   WhitelistStatus,
   WhatPages,
 } from "@prisma/client";
-import { sendDiscordWebhook, sendRawWebhook } from "lib/discord/webhooks";
 import { sendCalls911EndedWebhook } from "lib/discord/extra-webhooks";
-import type { APIEmbed } from "discord-api-types/v10";
 import { manyToManyHelper } from "lib/data/many-to-many";
 import { Permissions, UsePermissions } from "middlewares/use-permissions";
 import { officerOrDeputyToUnit } from "lib/leo/officerOrDeputyToUnit";
@@ -41,14 +37,13 @@ import { incidentInclude } from "controllers/leo/incidents/IncidentController";
 import { incidentInclude as emsFdIncidentInclude } from "controllers/ems-fd/incidents/ems-fd-incidents-controller";
 import type { z } from "zod";
 import { getNextActive911CallId } from "lib/dispatch/911-calls/get-next-active-911-call";
+import { create911Call } from "lib/dispatch/911-calls/create-911-call";
+import { notifyOpsPhoneCall911 } from "lib/ops-phone/back-channel";
 import { Feature, IsFeatureEnabled } from "middlewares/is-enabled";
-import { getTranslator } from "utils/get-translator";
 import { HandleInactivity } from "middlewares/handle-inactivity";
 import { handleEndCall } from "lib/dispatch/911-calls/handle-end-911-call";
 import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
-import { isFeatureEnabled } from "lib/upsert-cad";
 import { _leoProperties, assignedUnitsInclude, callInclude } from "utils/leo/includes";
-import { slateDataToString, type Descendant } from "@snailycad/utils/editor";
 
 @Controller("/911-calls")
 @UseBeforeEach(IsAuth)
@@ -177,88 +172,14 @@ export class Calls911Controller {
     });
 
     const isFromDispatch = isFromDispatchHeader === "true" && hasDispatchPermissions;
-    const maxAssignmentsToCalls = cad.miscCadSettings.maxAssignmentsToCalls ?? Infinity;
 
-    const isCallApprovalEnabled = isFeatureEnabled({
-      defaultReturn: false,
-      feature: Feature.CALL_911_APPROVAL,
-      features: cad.features,
-    });
-    const activeDispatchers = await prisma.activeDispatchers.count();
-    const hasActiveDispatchers = activeDispatchers > 0;
-    const shouldCallBePending = isCallApprovalEnabled && hasActiveDispatchers && !isFromDispatch;
-
-    const callStatus = shouldCallBePending ? WhitelistStatus.PENDING : WhitelistStatus.ACCEPTED;
-
-    const call = await prisma.call911.create({
-      data: {
-        location: data.location ?? undefined,
-        postal: data.postal ?? undefined,
-        description: data.descriptionData ? null : data.description,
-        descriptionData: data.descriptionData ?? undefined,
-        name: data.name ?? undefined,
-        userId: user.id || undefined,
-        situationCodeId: data.situationCode ?? null,
-        viaDispatch: isFromDispatch,
-        typeId: data.type,
-        extraFields: data.extraFields || undefined,
-        status: callStatus,
-      },
-      include: callInclude,
-    });
-
-    if (data.gtaMapPosition) {
-      await prisma.gTAMapPosition.create({
-        data: {
-          x: data.gtaMapPosition.x,
-          y: data.gtaMapPosition.y,
-          z: data.gtaMapPosition.z,
-          heading: data.gtaMapPosition.heading,
-          Call911: { connect: { id: call.id } },
-        },
-      });
-    }
-
-    const unitIds = (data.assignedUnits ?? []) as z.infer<typeof ASSIGNED_UNIT>[];
-    await assignUnitsTo911Call({
-      call,
-      maxAssignmentsToCalls,
+    return create911Call({
+      data,
+      cad,
+      user,
+      isFromDispatch,
       socket: this.socket,
-      unitIds,
     });
-
-    await linkOrUnlinkCallDepartmentsAndDivisions({
-      departments: (data.departments ?? []) as string[],
-      divisions: (data.divisions ?? []) as string[],
-      call,
-    });
-
-    const updated = await prisma.call911.findUnique({
-      where: { id: call.id },
-      include: callInclude,
-    });
-
-    const normalizedCall = officerOrDeputyToUnit(updated);
-
-    await createAuditLogEntry({
-      action: {
-        type: AuditLogActionType.Call911Create,
-        new: normalizedCall,
-      },
-      executorId: user.id,
-      prisma,
-    });
-
-    try {
-      const data = await this.createWebhookData(normalizedCall, user.locale);
-      await sendDiscordWebhook({ type: DiscordWebhookType.CALL_911, data });
-      await sendRawWebhook({ type: DiscordWebhookType.CALL_911, data: normalizedCall });
-    } catch (error) {
-      console.error("Could not send Discord webhook.", error);
-    }
-
-    this.socket.emit911Call(normalizedCall);
-    return normalizedCall;
   }
 
   @Put("/:id")
@@ -411,6 +332,7 @@ export class Calls911Controller {
     for (const call of calls) {
       this.socket.emit911CallDelete(call);
     }
+    notifyOpsPhoneCall911({ callIds: ids, event: "closed" });
 
     await createAuditLogEntry({
       translationKey: "calls911Purged",
@@ -605,6 +527,7 @@ export class Calls911Controller {
           [types[type]]: unit.id,
         },
       });
+      notifyOpsPhoneCall911({ callIds: [callId], event: "accepted" });
     } else {
       if (!existing) {
         throw new BadRequest("notAssignedToCall");
@@ -715,32 +638,5 @@ export class Calls911Controller {
     this.socket.emitUpdate911Call(normalizedCall);
 
     return normalizedCall;
-  }
-
-  // creates the webhook structure that will get sent to Discord.
-  private async createWebhookData(
-    call: Call911,
-    locale?: string | null,
-  ): Promise<{ embeds: APIEmbed[] }> {
-    const t = await getTranslator({ type: "webhooks", locale, namespace: "Calls" });
-    const formattedDescription = slateDataToString(call.descriptionData as Descendant[] | null);
-
-    const caller = call.name || t("unknown");
-    const location = `${call.location} ${call.postal ? call.postal : ""}`;
-    const description = call.description || formattedDescription || t("couldNotRenderDescription");
-
-    return {
-      embeds: [
-        {
-          title: t("callCreated"),
-          description,
-          footer: { text: t("viewMoreInfo") },
-          fields: [
-            { name: t("location"), value: location, inline: true },
-            { name: t("caller"), value: caller, inline: true },
-          ],
-        },
-      ],
-    };
   }
 }

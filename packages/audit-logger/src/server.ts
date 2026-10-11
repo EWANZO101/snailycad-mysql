@@ -13,7 +13,7 @@ interface Options<Action extends AuditLogActions> {
   prisma: any;
 
   translationKey?: string | null;
-  executorId: string;
+  executorId: string | null;
   action: Action;
 }
 
