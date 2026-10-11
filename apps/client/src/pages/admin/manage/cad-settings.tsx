@@ -95,6 +95,11 @@ const Tabs = {
       (await import("components/admin/manage/cad-settings/misc-features/tones-tab")).TonesTab,
     { ssr: false },
   ),
+  RadioTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/radio-tab")).RadioTab,
+    { ssr: false },
+  ),
   BlacklistedWordsTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/general/blacklisted-words-tab"))
@@ -128,6 +133,7 @@ export default function CadSettings(props: Props) {
       <Tabs.BlacklistedWordsTab />
       <Tabs.CustomLocalesTab localeFolders={props.localeFolders ?? []} />
       <Tabs.TonesTab />
+      <Tabs.RadioTab />
     </CadSettingsLayout>
   );
 }
@@ -147,7 +153,7 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, res, req 
       session: user,
       messages: {
         ...(await getTranslations(
-          ["admin", "values", "common", "cad-settings"],
+          ["admin", "values", "common", "cad-settings", "radio"],
           user?.locale ?? locale,
         )),
       },

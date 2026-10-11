@@ -28,6 +28,8 @@ const EXTERNAL_TOKEN_SCHEMA = z.object({
   departments: z.array(z.string().trim().min(1).max(255)).max(20).optional(),
   /** may overhear radios nearby (positional audio) */
   proximity: z.boolean().default(false),
+  /** a player without a radio of their own: can only overhear nearby radios */
+  listenOnly: z.boolean().default(false),
 });
 
 const TONE_SCHEMA = z.object({
@@ -82,6 +84,7 @@ export class RadioController {
       uid: userId ?? undefined,
       dep: departments.map((d) => d.id),
       prox: data.proximity,
+      lo: data.listenOnly,
     });
   }
 

@@ -2,6 +2,7 @@
   "Management": {
     "CUSTOM_LOCALES": "Custom Locales",
     "TONE_PRESETS": "Tones",
+    "RADIO": "Radio",
     "management": "Gestion",
     "adminDashboard": "Tableau de bord administrateur",
     "permissions": "Géréer les permissions",

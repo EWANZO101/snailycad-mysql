@@ -4,6 +4,8 @@
  * on demand, so the built-in transport never downloads it.
  */
 
+import type * as LiveKit from "livekit-client";
+
 interface LiveKitRoom {
   connect(url: string, token: string, options?: { autoSubscribe?: boolean }): Promise<void>;
   disconnect(): Promise<void> | void;
@@ -26,7 +28,7 @@ interface ChannelRoom {
 
 export class LiveKitAudio {
   #rooms = new Map<string, ChannelRoom>();
-  #module: Promise<typeof import("livekit-client")> | null = null;
+  #module: Promise<typeof LiveKit> | null = null;
   #container: HTMLElement | null = null;
 
   #load() {
@@ -66,6 +68,11 @@ export class LiveKitAudio {
       entry.tracks.delete(track);
     });
     await room.connect(url, token, { autoSubscribe: true });
+    // joined again (or left) while connecting: this room was replaced, don't play it twice
+    if (this.#rooms.get(channel) !== entry) {
+      for (const track of entry.tracks) for (const element of track.detach()) element.remove();
+      await room.disconnect();
+    }
   }
 
   async leave(channel: string) {

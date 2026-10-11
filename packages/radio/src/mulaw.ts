@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/number-literal-case -- hex byte masks; prettier lowercases them */
 /**
  * G.711 mu-law: 16-bit PCM <-> 8-bit samples. Radio-grade audio at 16 kB/s that any language can
  * encode in a few lines (see docs/radio/integrations.md).

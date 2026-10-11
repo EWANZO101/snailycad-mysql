@@ -27,6 +27,7 @@ export enum SettingsTabs {
   Limits = "LIMITS",
   CustomLocales = "CUSTOM_LOCALES",
   TonePresets = "TONE_PRESETS",
+  Radio = "RADIO",
 
   /** integrations */
   LiveMap = "LIVE_MAP",
@@ -109,6 +110,7 @@ function CadSettingsSidebar() {
         SettingsTabs.Other,
         SettingsTabs.CustomLocales,
         SettingsTabs.TonePresets,
+        SettingsTabs.Radio,
       ],
     },
     {

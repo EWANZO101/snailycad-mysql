@@ -1,6 +1,7 @@
 {
   "Management": {
     "TONE_PRESETS": "Tones",
+    "RADIO": "Radio",
     "management": "Management",
     "adminDashboard": "Admin Dashboard",
     "MANAGE_CITIZENS": "Manage Citizens",

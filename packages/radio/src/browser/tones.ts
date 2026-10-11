@@ -66,5 +66,7 @@ export function playTone(
     time += seconds;
   }
   const total = time - context.currentTime;
-  return new Promise<void>((resolve) => setTimeout(resolve, total * 1000));
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, total * 1000);
+  });
 }
