@@ -100,6 +100,11 @@ Config.Audio = {
 -- small display with the channel and who is talking
 Config.Hud = true
 
+-- tell voice HUDs (esx_hud, qb-hud, ps-hud and others) when the player talks on the radio. Sends
+-- the same signals as pma-voice's radio: the "pma-voice:radioActive" event and the "radioActive"
+-- state bag, so their radio talking indicator lights up
+Config.HudEvents = true
+
 -- players can't use the radio while dead, cuffed or swimming (needs a framework / state bags)
 Config.Restrictions = {
   dead = true,

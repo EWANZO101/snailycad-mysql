@@ -87,6 +87,13 @@ script's radio is moved to the same channel number as the CAD radio (the channel
 position in the CAD, or `Config.VoiceSyncChannels`). Dispatchers in the browser only hear what goes
 through the SnailyCAD radio, so the regular mode is recommended.
 
+**Voice HUDs** (esx_hud, qb-hud, ps-hud and others) show radio talking: while a player talks on
+the radio, the resource sends the same signals as pma-voice's radio (the `pma-voice:radioActive`
+event and the `radioActive` state bag). Turn it off with `Config.HudEvents = false`.
+
+**Other radio scripts** such as rp-radio give players a second radio: remove them. The resource
+prints a warning in the F8 console and in `snailyradio_check` when rp-radio is running.
+
 ## For script developers
 
 Client exports (`exports["snailycad-radio"]:…`):

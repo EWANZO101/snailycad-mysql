@@ -166,5 +166,8 @@ RegisterCommand("snailyradio_check", function(source)
       print("  (no channels open to game servers: add some in the CAD, CAD Settings > Radio)")
     end
     if #result.channels > 0 then knownChannels = result.channels end
+    if GetResourceState("rp-radio") == "started" then
+      print("^3[snailycad-radio] rp-radio is running too, so players have two radios. Remove it from server.cfg.^0")
+    end
   end)
 end, true)

@@ -15,6 +15,9 @@ local SCRIPTS = {
   ["mumble-voip"] = "mumble-voip",
 }
 
+-- other radio scripts: running one next to this resource gives players two radios
+local OTHER_RADIOS = { "rp-radio" }
+
 local function started(resource)
   return GetResourceState(resource) == "started"
 end
@@ -37,6 +40,11 @@ end
 function Voice.init()
   Voice.name = detect()
   if Config.Debug then print(("[snailycad-radio] voice script: %s"):format(Voice.name)) end
+  for _, resource in ipairs(OTHER_RADIOS) do
+    if started(resource) then
+      print(("[snailycad-radio] %s is running too, so players have two radios. Remove it from server.cfg."):format(resource))
+    end
+  end
   if Config.VoiceSync or not Config.DisableVoiceScriptRadio then return end
 
   if Voice.name == "pma-voice" then
@@ -91,4 +99,11 @@ function Voice.syncChannel(channel, index)
     -- SaltyChat channels are names
     call(function() exports["saltychat"]:SetRadioChannel(tostring(channel.frequency or channel.name), true) end)
   end
+end
+
+--- Config.HudEvents: voice HUDs show radio talking the same way as for pma-voice's radio
+function Voice.setTalking(on)
+  if not Config.HudEvents then return end
+  TriggerEvent("pma-voice:radioActive", on)
+  LocalPlayer.state:set("radioActive", on, true)
 end

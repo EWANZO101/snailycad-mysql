@@ -153,6 +153,7 @@ RegisterNUICallback("transmit", function(data, cb)
   Radio.talking = data.on == true
   if Radio.talking then Prop.startTalking() else Prop.stopTalking() end
   syncState()
+  Voice.setTalking(Radio.talking)
   TriggerEvent("snailycad-radio:talking", Radio.talking, Radio.channel)
   reply(cb)
 end)
@@ -344,6 +345,7 @@ end)
 AddEventHandler("onResourceStop", function(resource)
   if resource ~= GetCurrentResourceName() then return end
   LocalPlayer.state:set("snailyRadio", nil, true)
+  if Radio.talking then Voice.setTalking(false) end
   if Radio.open then SetNuiFocus(false, false) end
 end)
 
