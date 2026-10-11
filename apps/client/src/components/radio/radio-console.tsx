@@ -61,6 +61,8 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
     : transmitInfo
       ? t("holdToTalk", { channel: transmitInfo.name, key: keyLabel(preferences.pttKey) })
       : t("pickChannel");
+  const pttText =
+    transmitInfo && !transmitting ? t("holdToTalkOn", { channel: transmitInfo.name }) : pttLabel;
 
   const header = (
     <header className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-gray-200 dark:border-quaternary">
@@ -228,7 +230,7 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
         <ul
           className={classNames(
             "flex flex-col gap-1",
-            variant === "page" && "md:grid md:grid-cols-2 md:gap-2",
+            variant === "page" && "md:grid md:grid-cols-2 md:gap-2 md:items-start",
           )}
         >
           {channels.map((channel) => (
@@ -253,6 +255,7 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
       disabled={!connected || !transmitChannel}
       transmitting={!!transmitting}
       label={pttLabel}
+      text={pttText}
       keyName={transmitInfo ? keyLabel(preferences.pttKey) : null}
     />
   );
@@ -489,10 +492,10 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
         </button>
 
         <div className="flex-1 min-w-0">
-          <p className="flex items-baseline gap-1.5 min-w-0">
+          <div className="flex items-baseline gap-1.5 min-w-0">
             <span
               className={classNames(
-                "font-medium truncate",
+                "text-sm font-medium truncate",
                 !joined && "text-neutral-600 dark:text-gray-400",
               )}
             >
@@ -503,12 +506,12 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
                 {channel.frequency}
               </span>
             ) : null}
-          </p>
+          </div>
           {isBusy ? (
-            <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 min-w-0">
+            <div className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 min-w-0">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
               <span className="truncate">{talking.join(", ")}</span>
-            </p>
+            </div>
           ) : null}
         </div>
 
@@ -637,6 +640,8 @@ function PushToTalkButton(props: {
   disabled: boolean;
   transmitting: boolean;
   label: string;
+  /** visible text, when it differs from the label */
+  text?: string;
   keyName: string | null;
   compact?: boolean;
 }) {
@@ -681,7 +686,7 @@ function PushToTalkButton(props: {
       />
       {props.compact ? null : (
         <>
-          <span className="truncate">{props.label}</span>
+          <span className="truncate">{props.text ?? props.label}</span>
           {props.keyName && !props.transmitting ? (
             <kbd className="ml-1 rounded border border-white/30 bg-white/15 px-1.5 py-px font-mono text-[11px] font-medium">
               {props.keyName}
