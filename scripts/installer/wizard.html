@@ -1,0 +1,1030 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="dark" />
+    <title>SnailyCAD Setup</title>
+    <style>
+      /* Flowbite dark palette, same as scripts/status-page */
+      :root {
+        --gray-900: #111827;
+        --gray-800: #1f2937;
+        --gray-700: #374151;
+        --gray-600: #4b5563;
+        --gray-400: #9ca3af;
+        --gray-300: #d1d5db;
+        --white: #ffffff;
+        --blue-700: #1a56db;
+        --blue-600: #1c64f2;
+        --blue-500: #3f83f8;
+        --blue-900: #233876;
+        --blue-300: #a4cafe;
+        --green-500: #0e9f6e;
+        --green-900: #014737;
+        --green-300: #84e1bc;
+        --yellow-300: #fac15d;
+        --yellow-900: #633112;
+        --red-600: #e02424;
+        --red-900: #771d1d;
+        --red-300: #f8b4b4;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        background: var(--gray-900);
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px 16px;
+        color: var(--white);
+        font:
+          16px/1.5 Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      .shell {
+        width: 100%;
+        max-width: 760px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        color: var(--gray-400);
+        font-size: 0.875rem;
+      }
+      .brand b {
+        color: var(--white);
+        font-size: 1rem;
+      }
+
+      /* horizontal stepper */
+      ol.steps {
+        list-style: none;
+        display: flex;
+        gap: 8px;
+        margin: 0 0 16px;
+        padding: 0;
+        counter-reset: s;
+      }
+      ol.steps li {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.8125rem;
+        color: var(--gray-400);
+        padding: 8px 10px;
+        border-radius: 0.5rem;
+        background: var(--gray-800);
+        border: 1px solid var(--gray-700);
+        min-width: 0;
+      }
+      ol.steps li span.n {
+        flex: none;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--gray-700);
+        font-weight: 700;
+        font-size: 0.75rem;
+      }
+      ol.steps li span.t {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      ol.steps li.active {
+        color: var(--white);
+        border-color: var(--blue-600);
+      }
+      ol.steps li.active span.n {
+        background: var(--blue-600);
+      }
+      ol.steps li.done {
+        color: var(--gray-300);
+      }
+      ol.steps li.done span.n {
+        background: var(--green-900);
+        color: var(--green-300);
+      }
+      @media (max-width: 620px) {
+        ol.steps li span.t {
+          display: none;
+        }
+        ol.steps li {
+          justify-content: center;
+        }
+      }
+
+      .card {
+        background: var(--gray-800);
+        border: 1px solid var(--gray-700);
+        border-radius: 0.5rem;
+        padding: 2rem;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.35);
+      }
+      @media (max-width: 480px) {
+        .card {
+          padding: 1.25rem;
+        }
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .lead {
+        margin: 0 0 1.5rem;
+        color: var(--gray-400);
+      }
+      .actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 1.75rem;
+        flex-wrap: wrap;
+      }
+      .actions .right {
+        margin-left: auto;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      button,
+      .btn {
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: 0.5rem;
+        padding: 10px 20px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .primary {
+        background: var(--blue-700);
+        color: var(--white);
+      }
+      .primary:hover {
+        background: var(--blue-600);
+      }
+      .secondary {
+        background: var(--gray-800);
+        color: var(--gray-300);
+        border-color: var(--gray-600);
+      }
+      .secondary:hover {
+        background: var(--gray-700);
+        color: var(--white);
+      }
+      .success {
+        background: var(--green-500);
+        color: var(--white);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      button:focus-visible,
+      .btn:focus-visible,
+      input:focus-visible {
+        outline: 2px solid var(--blue-500);
+        outline-offset: 2px;
+      }
+
+      ul.checks {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
+      ul.checks li {
+        display: grid;
+        grid-template-columns: 28px 1fr auto;
+        gap: 10px;
+        align-items: center;
+        background: var(--gray-900);
+        border: 1px solid var(--gray-700);
+        border-radius: 0.5rem;
+        padding: 10px 14px;
+      }
+      ul.checks .mark {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+      .mark.ok {
+        background: var(--green-900);
+        color: var(--green-300);
+      }
+      .mark.warn {
+        background: var(--yellow-900);
+        color: var(--yellow-300);
+      }
+      .mark.bad {
+        background: var(--red-900);
+        color: var(--red-300);
+      }
+      ul.checks .label {
+        font-size: 0.9rem;
+      }
+      ul.checks .hint {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--gray-400);
+      }
+      ul.checks .value {
+        font-size: 0.85rem;
+        color: var(--gray-300);
+        text-align: right;
+      }
+
+      .options {
+        display: grid;
+        gap: 10px;
+      }
+      label.option {
+        display: grid;
+        grid-template-columns: 20px 1fr;
+        gap: 12px;
+        padding: 14px 16px;
+        cursor: pointer;
+        background: var(--gray-900);
+        border: 1px solid var(--gray-700);
+        border-radius: 0.5rem;
+      }
+      label.option:has(input:checked) {
+        border-color: var(--blue-500);
+        background: rgb(28 100 242 / 0.08);
+      }
+      label.option.disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      label.option input {
+        margin: 3px 0 0;
+        accent-color: var(--blue-600);
+      }
+      label.option b {
+        display: block;
+        font-size: 0.95rem;
+      }
+      label.option small {
+        color: var(--gray-400);
+        font-size: 0.8125rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 16px;
+      }
+      .grid .full {
+        grid-column: 1 / -1;
+      }
+      @media (max-width: 520px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .field label {
+        display: block;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--gray-300);
+        margin-bottom: 6px;
+      }
+      .field input {
+        width: 100%;
+        font: inherit;
+        font-size: 0.9rem;
+        color: var(--white);
+        background: var(--gray-700);
+        border: 1px solid var(--gray-600);
+        border-radius: 0.5rem;
+        padding: 9px 12px;
+      }
+      .field .help {
+        font-size: 0.75rem;
+        color: var(--gray-400);
+        margin-top: 4px;
+      }
+
+      .alert {
+        margin-top: 16px;
+        padding: 12px 14px;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+      }
+      .alert.error {
+        background: var(--red-900);
+        color: var(--red-300);
+      }
+      .alert.ok {
+        background: var(--green-900);
+        color: var(--green-300);
+      }
+      .alert.info {
+        background: var(--blue-900);
+        color: var(--blue-300);
+      }
+      .alert code,
+      code {
+        font:
+          0.8125rem ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+      }
+
+      dl.summary {
+        margin: 0;
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 8px 18px;
+        font-size: 0.9rem;
+      }
+      dl.summary dt {
+        color: var(--gray-400);
+      }
+      dl.summary dd {
+        margin: 0;
+        word-break: break-word;
+      }
+
+      /* install progress */
+      .track {
+        width: 100%;
+        height: 0.625rem;
+        background: var(--gray-700);
+        border-radius: 9999px;
+        overflow: hidden;
+        margin: 6px 0 20px;
+      }
+      .fill {
+        height: 100%;
+        width: 0;
+        background: var(--blue-600);
+        border-radius: 9999px;
+        transition: width 0.9s ease;
+        background-image: linear-gradient(
+          45deg,
+          rgb(255 255 255 / 0.15) 25%,
+          transparent 25%,
+          transparent 50%,
+          rgb(255 255 255 / 0.15) 50%,
+          rgb(255 255 255 / 0.15) 75%,
+          transparent 75%
+        );
+        background-size: 1rem 1rem;
+        animation: stripes 1s linear infinite;
+      }
+      .fill.done {
+        background-color: var(--green-500);
+        animation: none;
+        background-image: none;
+      }
+      .fill.failed {
+        background-color: var(--red-600);
+        animation: none;
+      }
+      @keyframes stripes {
+        from {
+          background-position: 1rem 0;
+        }
+        to {
+          background-position: 0 0;
+        }
+      }
+      .progress-head {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.875rem;
+        color: var(--gray-300);
+      }
+
+      ol.stepper {
+        list-style: none;
+        margin: 0 0 0 14px;
+        padding: 0;
+        border-left: 1px solid var(--gray-700);
+      }
+      ol.stepper li {
+        position: relative;
+        padding: 0 0 16px 28px;
+        color: var(--gray-400);
+      }
+      ol.stepper li:last-child {
+        padding-bottom: 0;
+      }
+      ol.stepper .icon {
+        position: absolute;
+        left: -15px;
+        top: -2px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--gray-700);
+        box-shadow: 0 0 0 4px var(--gray-800);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      ol.stepper h3 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        line-height: 26px;
+      }
+      ol.stepper p {
+        margin: 0;
+        font-size: 0.8125rem;
+      }
+      ol.stepper li.done {
+        color: var(--white);
+      }
+      ol.stepper li.done .icon {
+        background: var(--green-900);
+        color: var(--green-300);
+      }
+      ol.stepper li.active {
+        color: var(--white);
+      }
+      ol.stepper li.active .icon {
+        background: var(--blue-900);
+        color: var(--blue-300);
+      }
+      ol.stepper li.active .icon::after {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 2px solid var(--blue-500);
+        border-top-color: transparent;
+        animation: spin 0.9s linear infinite;
+      }
+      ol.stepper li.failed {
+        color: var(--red-300);
+      }
+      ol.stepper li.failed .icon {
+        background: var(--red-900);
+        color: var(--red-300);
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .log {
+        margin-top: 20px;
+        background: var(--gray-900);
+        border: 1px solid var(--gray-700);
+        border-radius: 0.5rem;
+        height: 240px;
+        overflow-y: auto;
+        padding: 8px 0;
+        font:
+          12.5px/1.6 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+      }
+      .log div {
+        display: grid;
+        grid-template-columns: 64px 1fr;
+        gap: 8px;
+        padding: 1px 14px;
+        color: var(--gray-300);
+      }
+      .log div span:first-child {
+        color: var(--gray-600);
+      }
+      .log div.warn span:last-child {
+        color: var(--yellow-300);
+      }
+      .log div.error span:last-child {
+        color: var(--red-300);
+      }
+
+      .hidden {
+        display: none !important;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="brand"><b>SnailyCAD</b> setup wizard</div>
+      <ol class="steps" id="steps">
+        <li data-step="0"><span class="n">1</span><span class="t">Check server</span></li>
+        <li data-step="1"><span class="n">2</span><span class="t">Database</span></li>
+        <li data-step="2"><span class="n">3</span><span class="t">Website</span></li>
+        <li data-step="3"><span class="n">4</span><span class="t">Review</span></li>
+        <li data-step="4"><span class="n">5</span><span class="t">Install</span></li>
+      </ol>
+
+      <!-- 1. checks -->
+      <section class="card" data-page="0">
+        <h1>Welcome</h1>
+        <p class="lead">
+          This wizard installs SnailyCAD on this server. First, a quick look at the machine.
+        </p>
+        <ul class="checks" id="checks">
+          <li><span class="mark warn">…</span><span class="label">Checking…</span><span></span></li>
+        </ul>
+        <div class="alert error hidden" id="checks-error"></div>
+        <div class="actions">
+          <div class="right"><button class="primary" id="checks-next" disabled>Next</button></div>
+        </div>
+      </section>
+
+      <!-- 2. database -->
+      <section class="card hidden" data-page="1">
+        <h1>Database</h1>
+        <p class="lead">SnailyCAD stores its data in MySQL or MariaDB.</p>
+        <div class="options">
+          <label class="option" id="opt-local"
+            ><input type="radio" name="dbmode" value="local" />
+            <span
+              ><b>Use the MySQL/MariaDB server on this machine</b>
+              <small
+                >Creates a new database and user on it. Your other databases are not touched.</small
+              ></span
+            ></label
+          >
+          <label class="option" id="opt-install"
+            ><input type="radio" name="dbmode" value="install" />
+            <span
+              ><b>Install MariaDB for me</b>
+              <small
+                >Installs MariaDB on this server and creates the database. Removed again by the
+                uninstaller.</small
+              ></span
+            ></label
+          >
+          <label class="option" id="opt-external"
+            ><input type="radio" name="dbmode" value="external" />
+            <span
+              ><b>Connect to another database server</b>
+              <small
+                >You already have a MySQL 8 / MariaDB 10.6+ server and a user for the CAD.</small
+              ></span
+            ></label
+          >
+        </div>
+
+        <div class="grid" id="db-local-fields">
+          <div class="field">
+            <label for="db-name">Database name</label><input id="db-name" value="snailycad" />
+          </div>
+          <div class="field">
+            <label for="db-user">Database user</label><input id="db-user" value="snailycad" />
+            <div class="help">A random password is generated for it.</div>
+          </div>
+        </div>
+
+        <div class="grid hidden" id="db-external-fields">
+          <div class="field">
+            <label for="ext-host">Host</label><input id="ext-host" value="127.0.0.1" />
+          </div>
+          <div class="field">
+            <label for="ext-port">Port</label
+            ><input id="ext-port" value="3306" inputmode="numeric" />
+          </div>
+          <div class="field">
+            <label for="ext-user">User</label><input id="ext-user" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="ext-password">Password</label
+            ><input id="ext-password" type="password" autocomplete="new-password" />
+          </div>
+          <div class="field full">
+            <label for="ext-name">Database name</label><input id="ext-name" value="snailycad" />
+          </div>
+          <div class="full"><button class="secondary" id="db-test">Test connection</button></div>
+        </div>
+
+        <div class="alert hidden" id="db-alert"></div>
+        <div class="actions">
+          <button class="secondary" data-back>Back</button>
+          <div class="right"><button class="primary" id="db-next">Next</button></div>
+        </div>
+      </section>
+
+      <!-- 3. website -->
+      <section class="card hidden" data-page="2">
+        <h1>Website</h1>
+        <p class="lead">
+          Where people will open the CAD. The server's IP works right away; a domain needs its DNS
+          record pointing here.
+        </p>
+        <div class="grid">
+          <div class="field full">
+            <label for="address">IP address or domain</label><input id="address" />
+          </div>
+          <div class="field">
+            <label for="client-port">Website port</label
+            ><input id="client-port" inputmode="numeric" />
+          </div>
+          <div class="field">
+            <label for="api-port">API port</label><input id="api-port" inputmode="numeric" />
+          </div>
+        </div>
+        <div class="alert info" id="urls"></div>
+        <div class="alert error hidden" id="site-error"></div>
+        <div class="actions">
+          <button class="secondary" data-back>Back</button>
+          <div class="right"><button class="primary" id="site-next">Next</button></div>
+        </div>
+      </section>
+
+      <!-- 4. review -->
+      <section class="card hidden" data-page="3">
+        <h1>Ready to install</h1>
+        <p class="lead">
+          Check the settings. Installing takes about 10–20 minutes, most of it compiling.
+        </p>
+        <dl class="summary" id="summary"></dl>
+        <div class="alert error hidden" id="install-error"></div>
+        <div class="actions">
+          <button class="secondary" data-back>Back</button>
+          <div class="right"><button class="primary" id="install">Install SnailyCAD</button></div>
+        </div>
+      </section>
+
+      <!-- 5. progress -->
+      <section class="card hidden" data-page="4">
+        <h1 id="p-title">Installing SnailyCAD</h1>
+        <p class="lead" id="p-lead">
+          You can leave this page open; it updates on its own. Closing it does not stop the install.
+        </p>
+        <div class="progress-head">
+          <span id="p-step">Starting…</span><span id="p-time">0:00</span>
+        </div>
+        <div class="track"><div class="fill" id="p-fill"></div></div>
+        <ol class="stepper" id="p-steps"></ol>
+        <div class="log" id="p-log" aria-live="off"></div>
+        <div class="alert error hidden" id="p-error"></div>
+        <div class="alert ok hidden" id="p-done"></div>
+        <div class="actions">
+          <button class="secondary hidden" id="p-edit">Change settings</button>
+          <div class="right">
+            <button class="secondary hidden" id="p-retry">Retry</button>
+            <a class="btn success hidden" id="p-open" target="_blank" rel="noopener">Open my CAD</a>
+            <button class="primary hidden" id="p-finish">Close setup wizard</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const state = { page: 0, checks: null, dbTested: false, polling: null };
+
+      async function api(path, body) {
+        const options =
+          body === undefined
+            ? {}
+            : {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+              };
+        const response = await fetch(path, options);
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 401) location.reload();
+        return { status: response.status, ok: response.ok, data };
+      }
+
+      function show(page) {
+        state.page = page;
+        document
+          .querySelectorAll("[data-page]")
+          .forEach((el) => el.classList.toggle("hidden", Number(el.dataset.page) !== page));
+        document.querySelectorAll("#steps li").forEach((li) => {
+          const n = Number(li.dataset.step);
+          li.classList.toggle("active", n === page);
+          li.classList.toggle("done", n < page);
+          li.querySelector(".n").textContent = n < page ? "✓" : String(n + 1);
+        });
+        window.scrollTo({ top: 0 });
+      }
+      document
+        .querySelectorAll("[data-back]")
+        .forEach((b) => b.addEventListener("click", () => show(state.page - 1)));
+
+      function alertBox(el, kind, text) {
+        el.className = `alert ${kind}`;
+        el.textContent = text;
+        el.classList.toggle("hidden", !text);
+      }
+
+      function esc(text) {
+        return String(text).replace(
+          /[&<>"']/g,
+          (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+        );
+      }
+
+      // --- 1. checks
+      async function loadChecks() {
+        const { ok, data } = await api("/api/checks");
+        if (!ok)
+          return alertBox($("checks-error"), "error", data.error || "Could not check the server.");
+        state.checks = data;
+        $("checks").innerHTML = data.items
+          .map((item) => {
+            const kind = item.ok ? "ok" : item.warnOnly ? "warn" : "bad";
+            const mark = item.ok ? "✓" : item.warnOnly ? "!" : "✕";
+            const hint = !item.ok && item.hint ? `<span class="hint">${esc(item.hint)}</span>` : "";
+            return `<li><span class="mark ${kind}">${mark}</span><span class="label">${esc(item.label)}${hint}</span><span class="value">${esc(item.value)}</span></li>`;
+          })
+          .join("");
+        const blocked = data.items.some((item) => !item.ok && !item.warnOnly);
+        $("checks-next").disabled = blocked;
+        if (blocked)
+          alertBox($("checks-error"), "error", "Fix the item marked ✕ before installing.");
+
+        // database options
+        $("opt-local").classList.toggle("disabled", !data.db.local);
+        $("opt-local").querySelector("input").disabled = !data.db.local;
+        $("opt-install").classList.toggle("disabled", !data.db.install);
+        $("opt-install").querySelector("input").disabled = !data.db.install;
+        const preferred = data.db.local ? "local" : data.db.install ? "install" : "external";
+        document.querySelector(`input[name=dbmode][value=${preferred}]`).checked = true;
+        syncDbFields();
+
+        $("address").value = data.ip;
+        $("client-port").value = data.ports.client ?? 3000;
+        $("api-port").value = data.ports.api ?? 8080;
+        syncUrls();
+      }
+      $("checks-next").addEventListener("click", () => show(1));
+
+      // --- 2. database
+      const dbMode = () => document.querySelector("input[name=dbmode]:checked")?.value;
+      function syncDbFields() {
+        const external = dbMode() === "external";
+        $("db-local-fields").classList.toggle("hidden", external);
+        $("db-external-fields").classList.toggle("hidden", !external);
+        alertBox($("db-alert"), "error", "");
+      }
+      document
+        .querySelectorAll("input[name=dbmode]")
+        .forEach((r) => r.addEventListener("change", syncDbFields));
+      document.querySelectorAll("#db-external-fields input").forEach((i) =>
+        i.addEventListener("input", () => {
+          state.dbTested = false;
+        }),
+      );
+
+      function dbSettings() {
+        const mode = dbMode();
+        if (mode === "external") {
+          return {
+            mode,
+            host: $("ext-host").value.trim(),
+            port: Number($("ext-port").value),
+            user: $("ext-user").value,
+            password: $("ext-password").value,
+            name: $("ext-name").value.trim(),
+          };
+        }
+        return { mode, name: $("db-name").value.trim(), user: $("db-user").value.trim() };
+      }
+
+      async function testDb() {
+        $("db-test").disabled = true;
+        alertBox($("db-alert"), "info", "Connecting…");
+        const { data } = await api("/api/db-test", { db: dbSettings() });
+        $("db-test").disabled = false;
+        state.dbTested = !!data.ok;
+        alertBox($("db-alert"), data.ok ? "ok" : "error", data.message || "Could not connect.");
+        return state.dbTested;
+      }
+      $("db-test").addEventListener("click", testDb);
+
+      $("db-next").addEventListener("click", async () => {
+        const db = dbSettings();
+        if (!db.mode) return alertBox($("db-alert"), "error", "Choose a database option.");
+        const safe = /^[A-Za-z0-9_]{1,32}$/;
+        if (!safe.test(db.name))
+          return alertBox($("db-alert"), "error", "Database name: letters, numbers and _ only.");
+        if (db.mode !== "external" && !safe.test(db.user))
+          return alertBox($("db-alert"), "error", "Database user: letters, numbers and _ only.");
+        if (db.mode === "external" && !state.dbTested && !(await testDb())) return;
+        show(2);
+      });
+
+      // --- 3. website
+      function syncUrls() {
+        const a = $("address").value.trim() || "…";
+        $("urls").innerHTML =
+          `CAD: <code>http://${esc(a)}:${esc($("client-port").value)}</code><br>API: <code>http://${esc(a)}:${esc($("api-port").value)}/v1</code>`;
+      }
+      ["address", "client-port", "api-port"].forEach((id) =>
+        $(id).addEventListener("input", syncUrls),
+      );
+
+      $("site-next").addEventListener("click", async () => {
+        const client = Number($("client-port").value),
+          apiPort = Number($("api-port").value);
+        if (!/^[A-Za-z0-9.-]+$/.test($("address").value.trim()))
+          return alertBox($("site-error"), "error", "Enter a valid IP address or domain.");
+        if (client === apiPort)
+          return alertBox($("site-error"), "error", "The website and API need different ports.");
+        for (const [label, port] of [
+          ["Website", client],
+          ["API", apiPort],
+        ]) {
+          const { data } = await api("/api/port", { port });
+          if (!data.free)
+            return alertBox(
+              $("site-error"),
+              "error",
+              `${label} port ${port} is already in use or not allowed. Pick another one.`,
+            );
+        }
+        alertBox($("site-error"), "error", "");
+        renderSummary();
+        show(3);
+      });
+
+      // --- 4. review
+      function settings() {
+        return {
+          address: $("address").value.trim(),
+          clientPort: Number($("client-port").value),
+          apiPort: Number($("api-port").value),
+          db: dbSettings(),
+        };
+      }
+      function renderSummary() {
+        const s = settings();
+        const dbText = {
+          local: `New database <code>${esc(s.db.name)}</code> and user <code>${esc(s.db.user)}</code> on this server's MySQL/MariaDB`,
+          install: `Install MariaDB, then create database <code>${esc(s.db.name)}</code> and user <code>${esc(s.db.user)}</code>`,
+          external: `<code>${esc(s.db.name)}</code> on <code>${esc(s.db.host)}:${esc(s.db.port)}</code> as <code>${esc(s.db.user)}</code>`,
+        }[s.db.mode];
+        $("summary").innerHTML = `
+      <dt>Database</dt><dd>${dbText}</dd>
+      <dt>CAD address</dt><dd><code>http://${esc(s.address)}:${s.clientPort}</code></dd>
+      <dt>API address</dt><dd><code>http://${esc(s.address)}:${s.apiPort}/v1</code></dd>
+      <dt>Firewall</dt><dd>Opens ports ${s.clientPort} and ${s.apiPort} if ufw is active</dd>
+      <dt>Runs as</dt><dd>A system service that starts on boot</dd>`;
+      }
+
+      $("install").addEventListener("click", async () => {
+        $("install").disabled = true;
+        const { ok, data } = await api("/api/install", settings());
+        $("install").disabled = false;
+        if (!ok)
+          return alertBox(
+            $("install-error"),
+            "error",
+            data.error || "Could not start the install.",
+          );
+        alertBox($("install-error"), "error", "");
+        show(4);
+        poll();
+      });
+
+      // --- 5. progress
+      const icons = { done: "✓", failed: "✕", active: "", pending: "" };
+      function renderProgress(s) {
+        $("p-steps").innerHTML = s.steps
+          .map(
+            (step, i) => `
+      <li class="${step.state}"><span class="icon">${icons[step.state] || i + 1}</span>
+      <h3>${esc(step.title)}</h3><p>${esc(step.detail)}</p></li>`,
+          )
+          .join("");
+
+        const done = s.steps.filter((step) => step.state === "done").length;
+        const active = s.steps.some((step) => step.state === "active") ? 0.5 : 0;
+        const finished = s.phase === "running";
+        const failed = !!s.failed || s.phase === "failed";
+        const percent = finished ? 100 : Math.round(((done + active) / s.steps.length) * 100);
+        $("p-fill").style.width = `${Math.max(percent, 3)}%`;
+        $("p-fill").className = `fill${finished ? " done" : failed ? " failed" : ""}`;
+        const current = s.steps.find((step) => step.state === "active" || step.state === "failed");
+        $("p-step").textContent = finished ? "Done" : current ? current.title : "Starting…";
+        if (s.startedAt) {
+          const secs = Math.max(0, Math.floor(Date.now() / 1000) - s.startedAt);
+          $("p-time").textContent =
+            `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+        }
+
+        const log = $("p-log");
+        const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+        log.innerHTML =
+          s.lines
+            .map((line) => {
+              const time = new Date(line.t * 1000).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              });
+              return `<div class="${esc(line.level || "info")}"><span>${time}</span><span>${esc(line.text)}</span></div>`;
+            })
+            .join("") || `<div><span></span><span>Waiting for output…</span></div>`;
+        if (atBottom) log.scrollTop = log.scrollHeight;
+
+        // failed before the CAD service started: settings can be changed and the install tried again
+        const setupFailed = !!s.failed && !s.started;
+        $("p-edit").classList.toggle("hidden", !setupFailed);
+        $("p-retry").classList.toggle("hidden", !(s.phase === "failed"));
+        alertBox(
+          $("p-error"),
+          "error",
+          s.failed ||
+            (s.phase === "failed"
+              ? "The CAD failed to install or start. The log above shows the last step; the full log is in the app folder's start.log. Retry runs the CAD service again."
+              : ""),
+        );
+
+        if (finished) {
+          $("p-title").textContent = "SnailyCAD is installed";
+          $("p-lead").textContent = "The first account you register becomes the CAD's owner.";
+          $("p-open").href = s.cadUrl;
+          $("p-open").classList.remove("hidden");
+          $("p-finish").classList.remove("hidden");
+          $("p-done").innerHTML =
+            `Your CAD: <code>${esc(s.cadUrl)}</code><br>Remove everything again with: <code>${esc(s.uninstall)}</code>`;
+          $("p-done").classList.remove("hidden");
+        }
+        return finished || setupFailed;
+      }
+
+      async function poll() {
+        clearTimeout(state.polling);
+        const { ok, data } = await api("/api/state");
+        let stop = false;
+        if (ok) stop = renderProgress(data);
+        if (!stop) state.polling = setTimeout(poll, 2000);
+      }
+
+      $("p-edit").addEventListener("click", () => show(1));
+      $("p-retry").addEventListener("click", async () => {
+        $("p-retry").disabled = true;
+        const { ok, data } = await api("/api/retry", {});
+        $("p-retry").disabled = false;
+        if (!ok) alertBox($("p-error"), "error", data.error || "Retry failed.");
+        poll();
+      });
+      $("p-finish").addEventListener("click", async () => {
+        await api("/api/finish", {});
+        document.body.innerHTML = `<div class="card" style="max-width:520px;text-align:center"><h1>Setup wizard closed</h1>
+      <p class="lead" style="margin:0">Your CAD keeps running. You can close this tab.</p></div>`;
+      });
+
+      // resume where the install is (e.g. after a page reload)
+      (async () => {
+        const { ok, data } = await api("/api/state");
+        if (ok && (data.started || data.steps.some((step) => step.state !== "pending"))) {
+          await loadChecks();
+          show(4);
+          poll();
+        } else {
+          show(0);
+          loadChecks();
+        }
+      })();
+    </script>
+  </body>
+</html>

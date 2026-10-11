@@ -367,12 +367,6 @@ deploy_project() {
     export NEXT_TELEMETRY_DISABLED=1
     detect_resources
 
-    # Copy environment settings
-    log "Copying environment settings..."
-    if ! node scripts/copy-env.mjs --client --api; then
-        error_exit "Failed to copy environment settings."
-    fi
-
     # Git sync disabled so local edits survive restarts (backup: sh/start.sh.bak)
 #   # Git operations
 #   log "Stashing any local changes..."
@@ -384,8 +378,15 @@ deploy_project() {
 #   log "Pulling latest changes..."
 #   git reset --hard origin/main || error_exit "Failed to reset to latest commit."
 
-    # Install dependencies (only when the lockfile changed)
+    # Install dependencies (only when the lockfile changed). Before copy-env, which needs
+    # node_modules (dotenv) and so fails on a fresh clone.
     maybe_install
+
+    # Copy environment settings
+    log "Copying environment settings..."
+    if ! node scripts/copy-env.mjs --client --api; then
+        error_exit "Failed to copy environment settings."
+    fi
 
     # Build the project (only when sources changed)
     maybe_build
