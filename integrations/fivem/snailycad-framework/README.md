@@ -81,4 +81,4 @@ SNAILY_URL=http://127.0.0.1:8080/v1 SNAILY_TOKEN=... SNAILY_DISCORD=<CAD user's 
 
 - Vehicles that leave a garage stay in the CAD.
 - Duty sync and linked citizens need a CAD account with Discord or Steam.
-- Address, hair, eyes and weight stay empty: the frameworks don't have them.
+- Weight, address and ethnicity aren't in the frameworks: they come from `Config.Character`, else "Unknown" (and the CAD's default ethnicity). Hair and eye colour come from the saved skin.

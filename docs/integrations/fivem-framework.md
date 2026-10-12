@@ -16,7 +16,20 @@ The resource is in `integrations/fivem/snailycad-framework`.
 ### Characters → citizens
 
 - Synced fields: first name, last name, date of birth, gender, height (ESX) and phone number.
-- Other citizen fields (address, hair, eyes, weight) stay empty. Players can fill them in the CAD.
+- Every field the CAD needs is filled, so synced citizens can be edited and saved in the CAD:
+
+  | CAD field           | Comes from                                                                         |
+  | ------------------- | ---------------------------------------------------------------------------------- |
+  | Name, date of birth | the character                                                                      |
+  | Gender, height      | the character (height: ESX, or QBCore metadata)                                    |
+  | Phone number        | the framework, else ops-phone or lb-phone                                          |
+  | Hair and eye colour | the saved skin (skinchanger, fivem-appearance, illenium-appearance, qb-clothing)   |
+  | Weight, address     | `Config.Character.weight` / `.address`, else "Unknown"                             |
+  | Ethnicity           | `Config.Character.ethnicity` (a name in the CAD), else the CAD's default ethnicity |
+
+  Weight, address and ethnicity are only defaults: once someone changes them in the CAD, the sync
+  leaves them alone.
+
 - The CAD remembers which game character a citizen belongs to (ESX `users.identifier`, QBCore / Qbox `citizenid`). A rename in game updates the same citizen. It never makes a second one.
 - A player's citizen is linked to their CAD account. The CAD finds the account by the player's **Discord** or **Steam** account, like the radio. The player must have logged in to the CAD with Discord or Steam once (or linked them in Account settings).
 - If the player already made a citizen with the same name in the CAD, that citizen is linked. No duplicate is made.
@@ -172,5 +185,5 @@ Set `Config.Debug = true` to see every sync in the console.
 - Vehicles that leave a garage (sold to the dealer, deleted) are not removed from the CAD.
 - Only one off-duty / on-duty status pair is used: the first one that fits the unit's department.
 - Players need a CAD account linked by Discord or Steam for duty sync and for linked citizens.
-- Citizen fields the framework doesn't have (address, eyes, hair, weight) stay empty.
+- The game doesn't know weight, address or ethnicity: they are defaults ("Unknown" unless set in `Config.Character`).
 - ESX vehicles whose model the server and the player's game can't name are skipped (`unknownVehicleModel`) unless models may be created.
