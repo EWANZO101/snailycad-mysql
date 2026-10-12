@@ -118,6 +118,11 @@ const Tabs = {
         .FivemFrameworkTab,
     { ssr: false },
   ),
+  PhonesTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/phones-tab")).PhonesTab,
+    { ssr: false },
+  ),
   BlacklistedWordsTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/general/blacklisted-words-tab"))
@@ -147,8 +152,8 @@ export default function CadSettings(props: Props) {
       <Tabs.ApiTokenTab />
       <Tabs.OpsPhoneTab />
       <Tabs.ErlcTab />
-
       <Tabs.FivemFrameworkTab />
+      <Tabs.PhonesTab />
       <Tabs.DiscordRolesTab />
       <Tabs.DiscordWebhooksTab />
       <Tabs.RawWebhooksTab />

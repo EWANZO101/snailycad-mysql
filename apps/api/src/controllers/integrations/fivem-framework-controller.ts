@@ -21,6 +21,7 @@ import {
   FIVEM_DUTY_SCHEMA,
 } from "lib/fivem/schemas";
 import { syncFivemCharacter } from "lib/fivem/sync-character";
+import { phoneIdList, pickPhoneNumber } from "lib/fivem/phones";
 import { syncFivemVehicles, type VehicleSyncResult } from "lib/fivem/sync-vehicles";
 import { syncFivemDuty } from "lib/fivem/sync-duty";
 import { Socket } from "services/socket-service";
@@ -67,6 +68,11 @@ export class FivemFrameworkController {
     if (!cad) return { result: "skipped" as const, reason: "cadNotSetUp" };
 
     await recordFivemSync(settings.id, data);
+    data.character.phoneNumber = pickPhoneNumber({
+      phones: data.phones,
+      fallback: data.character.phoneNumber,
+      disabled: phoneIdList(settings.disabledPhones),
+    });
     const userId = await findLinkedUserId(data.identifiers ?? undefined);
     const citizen = await syncFivemCharacter({
       data,
@@ -135,6 +141,10 @@ export class FivemFrameworkController {
   ) {
     await this.authenticate(req, apiToken);
     const data = validateSchema(FIVEM_CHECK_SCHEMA, body ?? {});
+    if (data.phoneResources) {
+      const current = await getFivemFrameworkSettings();
+      await recordFivemSync(current.id, { phoneResources: data.phoneResources });
+    }
     const [settings, stats, cad] = await Promise.all([
       getFivemFrameworkSettings(),
       getFivemFrameworkStats(),
@@ -190,6 +200,7 @@ export class FivemFrameworkController {
         syncCitizens: settings.syncCitizens,
         syncVehicles: settings.syncVehicles,
         syncDuty: settings.syncDuty,
+        disabledPhones: phoneIdList(settings.disabledPhones),
       },
       stats: { ...stats, lastSyncAt: settings.lastSyncAt },
       cad: {

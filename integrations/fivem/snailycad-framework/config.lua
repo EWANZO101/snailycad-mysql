@@ -93,7 +93,8 @@ end
 Config.Character = {
   genders = { male = "Male", female = "Female" },
   dateFormat = "DD/MM/YYYY",
-  -- send the phone number: the framework's, else ops-phone's or lb-phone's
+  -- send the phone number: the framework's and every supported phone's; the CAD picks one
+  -- (CAD Settings > Phones)
   phone = true,
   height = true,
   -- hair and eye colour from the saved skin (skinchanger, fivem-appearance, illenium-appearance,

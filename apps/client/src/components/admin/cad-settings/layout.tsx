@@ -35,6 +35,7 @@ export enum SettingsTabs {
   OpsPhone = "OPS_PHONE",
   Erlc = "ERLC",
   FivemFramework = "FIVEM_FRAMEWORK",
+  Phones = "PHONES",
 
   /** permissions */
   DefaultPermissions = "DEFAULT_PERMISSIONS",
@@ -129,6 +130,7 @@ function CadSettingsSidebar() {
         SettingsTabs.Erlc,
 
         SettingsTabs.FivemFramework,
+        SettingsTabs.Phones,
       ],
     },
     {
