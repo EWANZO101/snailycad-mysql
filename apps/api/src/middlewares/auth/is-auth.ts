@@ -1,6 +1,6 @@
 import process from "node:process";
 import { type Feature, type CadFeature, type cad, Prisma } from "@prisma/client";
-import { API_TOKEN_HEADER } from "@snailycad/config";
+import { API_TOKEN_HEADER, PLAYER_HEADER } from "@snailycad/config";
 import { Context, Middleware, Req, type MiddlewareMethods, Res } from "@tsed/common";
 import { Unauthorized } from "@tsed/exceptions";
 import { prisma } from "lib/data/prisma";
@@ -10,7 +10,11 @@ import { hasPermission, Permissions } from "@snailycad/permissions";
 import { setErrorMap } from "zod";
 import { getErrorMap } from "../../utils/zod-error-map";
 import { createFeaturesObject, overwriteFeatures } from "../is-enabled";
-import { getUserFromSession, setGlobalUserFromCADAPIToken } from "./utils/get-user";
+import {
+  getUserFromLinkedPlayer,
+  getUserFromSession,
+  setGlobalUserFromCADAPIToken,
+} from "./utils/get-user";
 import { type CadFeatureOptions } from "@snailycad/types";
 
 @Middleware()
@@ -30,7 +34,15 @@ export class IsAuth implements MiddlewareMethods {
         apiTokenHeader: globalCADApiToken,
       });
 
-      ctx.set("user", fakeUser);
+      const playerHeader = req.headers[PLAYER_HEADER];
+      if (playerHeader) {
+        // a game script acting for one of its players: that player's CAD user, permissions and all
+        user = await getUserFromLinkedPlayer(String(playerHeader), req);
+        ctx.set("user", user);
+        ctx.set("sessionUserId", user.id);
+      } else {
+        ctx.set("user", fakeUser);
+      }
     } else {
       user = await getUserFromSession({ res, req });
       ctx.set("user", user);

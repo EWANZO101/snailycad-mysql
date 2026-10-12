@@ -2,7 +2,9 @@ import { WhitelistStatus } from "@prisma/client";
 import { allPermissions } from "@snailycad/permissions";
 import type { Req, Res } from "@tsed/common";
 import { BadRequest, Unauthorized } from "@tsed/exceptions";
-import { getSessionUser } from "lib/auth/getSessionUser";
+import { getSessionUser, userProperties } from "lib/auth/getSessionUser";
+import { validateUserData } from "lib/auth/validateUser";
+import { findLinkedUserId } from "lib/radio/access";
 import { prisma } from "lib/data/prisma";
 import { isRouteDisabled } from "./utils";
 
@@ -55,5 +57,30 @@ export async function getUserFromSession(
     user.twoFactorEnabled = true;
   }
 
+  return user;
+}
+
+/**
+ * The CAD user linked to a game player (PLAYER_HEADER, with a valid CAD API token): by Discord
+ * or Steam id, e.g. "discord:123,steam:110000100000000". Banned / not-whitelisted users are refused
+ * like any other login.
+ */
+export async function getUserFromLinkedPlayer(header: string, req: Req) {
+  const identifiers: { discordId?: string; steamId?: string } = {};
+  for (const part of header.split(",")) {
+    const [kind, ...rest] = part.trim().split(":");
+    const value = rest.join(":").trim();
+    if (!/^[\w]{1,64}$/.test(value)) continue;
+    if (kind === "discord") identifiers.discordId = value;
+    if (kind === "steam") identifiers.steamId = value;
+  }
+
+  const userId = await findLinkedUserId(identifiers);
+  if (!userId) {
+    throw new Unauthorized("playerNotLinked");
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: userProperties });
+  validateUserData(user, req, false);
   return user;
 }
