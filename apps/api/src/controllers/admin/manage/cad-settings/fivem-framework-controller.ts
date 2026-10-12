@@ -8,12 +8,14 @@ import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { getFivemFrameworkSettings, getFivemFrameworkStats } from "lib/fivem/settings";
 import { describeFivemPhones, isFivemPhoneId } from "lib/fivem/phones";
+import { REMOVED_VEHICLES_MODES } from "lib/fivem/remove-vehicles";
 
 const FIVEM_FRAMEWORK_SETTINGS_SCHEMA = z.object({
   enabled: z.boolean().optional(),
   syncCitizens: z.boolean().optional(),
   syncVehicles: z.boolean().optional(),
   syncDuty: z.boolean().optional(),
+  removedVehicles: z.enum(REMOVED_VEHICLES_MODES).optional(),
   disabledPhones: z
     .array(z.string().max(64))
     .max(50)

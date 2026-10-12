@@ -3,7 +3,7 @@
 Connects ESX Legacy, QBCore or Qbox to SnailyCAD (MySQL / MariaDB edition).
 
 - **Characters → citizens.** A character that loads becomes a CAD citizen: name, date of birth, gender, height and phone number. Renames update the same citizen.
-- **Garage → registered vehicles.** Owned vehicles (plate, model, colour) are registered to that citizen.
+- **Garage → registered vehicles.** Owned vehicles (plate, model, colour) are registered to that citizen. Bought, sold, transferred and deleted vehicles follow within seconds, from any garage or dealership script.
 - **Duty → unit status.** Police and EMS players going on or off duty set their CAD officer or EMS-FD deputy on or off duty. Dispatch sees it live.
 
 Players are linked to their CAD account by Discord or Steam, like the SnailyCAD radio.
@@ -79,6 +79,5 @@ SNAILY_URL=http://127.0.0.1:8080/v1 SNAILY_TOKEN=... SNAILY_DISCORD=<CAD user's 
 
 ## Limits
 
-- Vehicles that leave a garage stay in the CAD.
 - Duty sync and linked citizens need a CAD account with Discord or Steam.
 - Weight, address and ethnicity aren't in the frameworks: they come from `Config.Character`, else "Unknown" (and the CAD's default ethnicity). Hair and eye colour come from the saved skin.

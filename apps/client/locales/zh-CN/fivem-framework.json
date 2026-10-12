@@ -28,6 +28,11 @@
     "phoneFeatureCalls": "911 / tow / taxi calls",
     "phoneDetected": "Running on your server",
     "phonesOrder": "When several phones have a number, the first one switched on in this list wins. Switching a phone off only stops its number being used; nothing changes in game.",
-    "phonesNotReported": "Your game server hasn't reported its phones yet. Update the snailycad-framework resource and restart it (or run snailyframework_check) to see which are running."
+    "phonesNotReported": "Your game server hasn't reported its phones yet. Update the snailycad-framework resource and restart it (or run snailyframework_check) to see which are running.",
+    "removedVehicles": "Vehicles gone from the game",
+    "removedVehiclesDescription": "When a synced vehicle is sold, deleted or otherwise leaves a garage in game (the resource notices within seconds).",
+    "removedVehiclesDelete": "Remove them from the CAD",
+    "removedVehiclesUnlink": "Keep them without an owner (their records stay)",
+    "removedVehiclesKeep": "Keep them with their owner"
   }
 }

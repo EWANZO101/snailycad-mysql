@@ -2,7 +2,7 @@ import * as React from "react";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { useTranslations } from "use-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, FullDate, Loader, SwitchField } from "@snailycad/ui";
+import { Button, FullDate, Loader, SelectField, SwitchField } from "@snailycad/ui";
 import { getAPIUrl } from "@snailycad/utils/api-url";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
 import useFetch from "lib/useFetch";
@@ -13,6 +13,7 @@ interface FivemFrameworkData {
   syncCitizens: boolean;
   syncVehicles: boolean;
   syncDuty: boolean;
+  removedVehicles: "delete" | "unlink" | "keep";
   lastSyncAt: string | null;
   lastServerName: string | null;
   lastFramework: string | null;
@@ -25,7 +26,10 @@ interface FivemFrameworkData {
   };
 }
 
-type Switches = Pick<FivemFrameworkData, "enabled" | "syncCitizens" | "syncVehicles" | "syncDuty">;
+type Switches = Pick<
+  FivemFrameworkData,
+  "enabled" | "syncCitizens" | "syncVehicles" | "syncDuty" | "removedVehicles"
+>;
 
 const QUERY_KEY = ["admin", "fivem-framework"];
 const BASE_PATH = "/admin/manage/cad-settings/fivem-framework";
@@ -55,6 +59,7 @@ export function FivemFrameworkTab() {
       syncCitizens: data.syncCitizens,
       syncVehicles: data.syncVehicles,
       syncDuty: data.syncDuty,
+      removedVehicles: data.removedVehicles,
     });
   }, [data]);
 
@@ -139,6 +144,20 @@ export function FivemFrameworkTab() {
             >
               {t("syncVehicles")}
             </SwitchField>
+            <SelectField
+              isDisabled={!form.enabled || !form.syncVehicles}
+              label={t("removedVehicles")}
+              description={t("removedVehiclesDescription")}
+              selectedKey={form.removedVehicles}
+              onSelectionChange={(value) =>
+                update({ removedVehicles: (value ?? "delete") as Switches["removedVehicles"] })
+              }
+              options={[
+                { value: "delete", label: t("removedVehiclesDelete") },
+                { value: "unlink", label: t("removedVehiclesUnlink") },
+                { value: "keep", label: t("removedVehiclesKeep") },
+              ]}
+            />
             <SwitchField
               isDisabled={!form.enabled}
               isSelected={form.syncDuty}

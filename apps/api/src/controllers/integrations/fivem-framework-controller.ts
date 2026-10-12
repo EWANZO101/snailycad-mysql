@@ -19,7 +19,14 @@ import {
   FIVEM_CHARACTER_SYNC_SCHEMA,
   FIVEM_CHECK_SCHEMA,
   FIVEM_DUTY_SCHEMA,
+  FIVEM_KNOWN_CHARACTERS_SCHEMA,
+  FIVEM_VEHICLES_SYNC_SCHEMA,
 } from "lib/fivem/schemas";
+import {
+  removeGoneFivemVehicles,
+  toRemovedVehiclesMode,
+  type RemovedVehiclesResult,
+} from "lib/fivem/remove-vehicles";
 import { syncFivemCharacter } from "lib/fivem/sync-character";
 import { phoneIdList, pickPhoneNumber } from "lib/fivem/phones";
 import { syncFivemVehicles, type VehicleSyncResult } from "lib/fivem/sync-vehicles";
@@ -94,7 +101,101 @@ export class FivemFrameworkController {
       });
     }
 
-    return { ...citizen, linked: !!userId, vehicles };
+    let removed: RemovedVehiclesResult | null = null;
+    if (data.plates && settings.syncVehicles && citizen.result !== "skipped") {
+      removed = await removeGoneFivemVehicles({
+        framework: data.framework,
+        characterId: data.characterId,
+        presentPlates: data.plates,
+        mode: toRemovedVehiclesMode(settings.removedVehicles),
+      });
+    }
+
+    return { ...citizen, linked: !!userId, vehicles, removed };
+  }
+
+  @Post("/vehicles")
+  @Description(
+    "Garages that changed in game (bought, sold, transferred, deleted): adds, moves and removes the characters' CAD vehicles (CAD API token)",
+  )
+  async syncVehicles(
+    @Req() req: Req,
+    @HeaderParams(API_TOKEN_HEADER) apiToken: string | undefined,
+    @BodyParams() body: unknown,
+  ) {
+    await this.authenticate(req, apiToken);
+    const data = validateSchema(FIVEM_VEHICLES_SYNC_SCHEMA, body);
+    const settings = await getFivemFrameworkSettings();
+    if (!settings.enabled || !settings.syncVehicles) return { result: "disabled" as const };
+
+    const cad = await getCadWithFeatures();
+    if (!cad) return { result: "skipped" as const, reason: "cadNotSetUp" };
+    await recordFivemSync(settings.id, data);
+
+    const links = await prisma.fivemCharacter.findMany({
+      where: {
+        framework: data.framework,
+        characterId: { in: data.characters.map((character) => character.characterId) },
+      },
+      select: { characterId: true, citizenId: true, citizen: { select: { userId: true } } },
+    });
+    const linkByCharacter = new Map(links.map((link) => [link.characterId, link]));
+
+    // adds and transfers first, so a vehicle that moved to another character is moved, not removed
+    const characters: Record<
+      string,
+      { vehicles?: VehicleSyncResult; removed?: RemovedVehiclesResult; skipped?: string }
+    > = {};
+    for (const character of data.characters) {
+      const link = linkByCharacter.get(character.characterId);
+      if (!link) {
+        characters[character.characterId] = { skipped: "characterNotSynced" };
+        continue;
+      }
+      characters[character.characterId] = {
+        vehicles: await syncFivemVehicles({
+          vehicles: character.vehicles,
+          framework: data.framework,
+          characterId: character.characterId,
+          citizenId: link.citizenId,
+          userId: link.citizen.userId,
+          cad,
+          createVehicleModels: data.createVehicleModels,
+        }),
+      };
+    }
+
+    const mode = toRemovedVehiclesMode(settings.removedVehicles);
+    for (const character of data.characters) {
+      const entry = characters[character.characterId];
+      if (!entry || entry.skipped) continue;
+      entry.removed = await removeGoneFivemVehicles({
+        framework: data.framework,
+        characterId: character.characterId,
+        presentPlates: character.plates,
+        mode,
+      });
+    }
+
+    return { result: "synced" as const, characters };
+  }
+
+  @Post("/characters/known")
+  @Description(
+    "The game characters the CAD has synced, so the vehicle watcher can catch up on them (CAD API token)",
+  )
+  async knownCharacters(
+    @Req() req: Req,
+    @HeaderParams(API_TOKEN_HEADER) apiToken: string | undefined,
+    @BodyParams() body: unknown,
+  ) {
+    await this.authenticate(req, apiToken);
+    const data = validateSchema(FIVEM_KNOWN_CHARACTERS_SCHEMA, body);
+    const rows = await prisma.fivemCharacter.findMany({
+      where: { framework: data.framework },
+      select: { characterId: true },
+    });
+    return { characterIds: rows.map((row) => row.characterId) };
   }
 
   @Post("/duty")
