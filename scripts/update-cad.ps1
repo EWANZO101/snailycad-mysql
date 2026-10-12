@@ -8,16 +8,14 @@
 # updated by the CAD itself when it starts (prisma migrate deploy).
 #
 # usage (as administrator):
-#   powershell -ExecutionPolicy Bypass -File C:\SnailyCAD\app\scripts\update-cad.ps1 [-Interactive] [-Force]
+#   powershell -ExecutionPolicy Bypass -File C:\SnailyCAD\app\scripts\update-cad.ps1 [-Interactive]
 #
 #   -Interactive  show the log in this window and open the CAD when done (what the .bat uses)
-#   -Force        build even when there's nothing new to pull
 #   -TaskName     the one-off scheduled task the CAD started this from; removed when done
 #
 # Written for Windows PowerShell 5.1: no PowerShell 7-only syntax.
 param(
     [switch]$Interactive,
-    [switch]$Force,
     [string]$TaskName = ''
 )
 $ErrorActionPreference = 'Continue'
@@ -218,6 +216,8 @@ Stop-Cad
 Start-StatusPage
 
 $before = Get-GitOutput @('rev-parse', 'HEAD')
+# rewritten by the CAD itself (website port, image domains): put back, not stashed
+Invoke-Git @('checkout', '--', 'apps/client/package.json', 'apps/client/next.config.mjs') | Out-Null
 if (Get-GitOutput @('status', '--porcelain', '--untracked-files=no')) {
     Write-Log 'Saving local changes with git stash.'
     if ((Invoke-Git @('stash', 'push', '-m', ('pre-update-' + (Get-Date -Format 'yyyy-MM-dd-HHmmss')))) -ne 0) {
@@ -232,9 +232,7 @@ if ((Invoke-Git @('pull', '--ff-only', 'origin', $branch)) -ne 0) {
 $after = Get-GitOutput @('rev-parse', 'HEAD')
 Write-Log "Now at $($after.Substring(0, [Math]::Min(9, $after.Length)))."
 
-if ($before -eq $after -and -not $Force -and (Test-Path -LiteralPath (Join-Path $appDir 'apps\client\.next'))) {
-    Finish $true 'Already up to date; the CAD was restarted.'
-}
+if ($before -eq $after) { Write-Log 'Nothing new to pull; rebuilding anyway.' }
 
 Set-Status 'installing' 900
 Write-Log 'Installing packages with pnpm.'

@@ -124,7 +124,7 @@ export function UpdateCadCard() {
                   {data.mode === "local"
                     ? "Applies the latest version built on this server."
                     : isUpToDate
-                      ? "This CAD is up to date."
+                      ? "This CAD is up to date. Rebuild now rebuilds and restarts it anyway."
                       : data.behindBy
                         ? `${data.behindBy} new change${data.behindBy === 1 ? "" : "s"} available.`
                         : "Installs the latest version of SnailyCAD."}
@@ -194,7 +194,9 @@ export function UpdateCadCard() {
                 ? "Stopping the CAD…"
                 : data.mode === "local"
                   ? "Apply latest build"
-                  : "Update now"}
+                  : isUpToDate
+                    ? "Rebuild now"
+                    : "Update now"}
             </Button>
           ) : (
             <p className="text-sm text-neutral-600 dark:text-gray-400 md:max-w-xs">

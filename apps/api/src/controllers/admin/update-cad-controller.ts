@@ -18,6 +18,9 @@ const execFileAsync = promisify(execFile);
 
 type UpdateMode = "git" | "docker" | "local";
 
+/** rewritten by the CAD itself on start / build: not local changes, and reset before updating */
+const GENERATED_FILES = ["apps/client/package.json", "apps/client/next.config.mjs"];
+
 const DOCS_URLS: Record<UpdateMode, string> = {
   git: "https://docs.snailycad.org/docs/installations/updating/methods/standalone",
   docker: "https://docs.snailycad.org/docs/installations/updating/methods/docker",
@@ -97,9 +100,10 @@ export class UpdateCadController {
 
     try {
       branch = await git(["rev-parse", "--abbrev-ref", "HEAD"]);
+      // the website port and image domains the CAD writes itself don't count
       localChanges = (await git(["status", "--porcelain", "--untracked-files=no"]))
         .split("\n")
-        .filter(Boolean).length;
+        .filter((line) => line && !GENERATED_FILES.some((file) => line.endsWith(file))).length;
 
       if (mode !== "local") {
         await git(["fetch", "--quiet", "origin", process.env.UPDATE_BRANCH || "main"], 20_000);

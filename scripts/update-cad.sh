@@ -64,9 +64,14 @@ fi
 
 log "Update started (mode: $UPDATE_MODE)."
 
+# rewritten by the CAD itself (copy-env sets the website port, the build the image domains): put
+# back, not stashed. start.sh writes them again.
+GENERATED_FILES=(apps/client/package.json apps/client/next.config.mjs)
+
 pull_latest() {
     command -v git >/dev/null 2>&1 || fail "git is not installed."
 
+    git checkout -- "${GENERATED_FILES[@]}" 2>/dev/null || true
     if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
         log "Saving local changes with git stash."
         git stash push -m "pre-update-$(date +%F-%H%M%S)" >> "$LOG_FILE" 2>&1 || fail "Could not stash local changes."
@@ -117,5 +122,9 @@ if [[ "$(service_dir "$SERVICE_NAME")" != "$PROJECT_DIR" ]]; then
     fail "Service $SERVICE_NAME doesn't run $PROJECT_DIR. Set SNAILYCAD_SERVICE_NAME to this CAD's service."
 fi
 
-log "Restarting $SERVICE_NAME (installs, builds and starts when needed)."
+# the button means "update and rebuild": without this, start.sh skips the build when nothing new
+# was pulled and the CAD only restarts
+rm -f "$PROJECT_DIR/.snaily-cache/build.sha256"
+
+log "Restarting $SERVICE_NAME (installs, builds and starts)."
 systemctl restart "$SERVICE_NAME" || fail "Could not restart $SERVICE_NAME."
