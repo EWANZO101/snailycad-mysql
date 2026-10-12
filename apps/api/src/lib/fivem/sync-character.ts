@@ -65,6 +65,77 @@ function filled(value: string | null | undefined) {
   return value && value.length >= 2 ? value : undefined;
 }
 
+const LICENSE_FIELDS = {
+  drivers: "driversLicenseId",
+  weapon: "weaponLicenseId",
+  pilot: "pilotLicenseId",
+  water: "waterLicenseId",
+  hunting: "huntingLicenseId",
+  fishing: "fishingLicenseId",
+} as const;
+
+type LicenseField = (typeof LICENSE_FIELDS)[keyof typeof LICENSE_FIELDS];
+type CharacterInput = CharacterSyncInput["character"];
+
+/** a licence status value (Admin > Values > License) by name, e.g. "Valid" */
+async function findLicenseValueId(name: string | null | undefined) {
+  if (!name) return null;
+  const value = await prisma.value.findFirst({
+    where: {
+      type: ValueType.LICENSE,
+      value: name,
+      isDisabled: false,
+      OR: [{ licenseType: null }, { licenseType: "LICENSE" }],
+    },
+    select: { id: true },
+  });
+  return value?.id ?? null;
+}
+
+/**
+ * The game decides whether a character holds a licence: held -> the "valid" value, not held ->
+ * the "none" value (or empty). A status set in the CAD (Suspended, Revoked, ...) stays.
+ */
+async function licenseChanges(
+  character: CharacterInput,
+  current: Partial<Record<LicenseField, string | null | undefined>>,
+) {
+  const held = character.licenses;
+  const update: Partial<Record<LicenseField, string | null>> = {};
+  if (!held) return update;
+
+  const validId = await findLicenseValueId(character.licenseValues?.valid ?? "Valid");
+  const noneId = await findLicenseValueId(character.licenseValues?.none ?? "None");
+
+  for (const [kind, field] of Object.entries(LICENSE_FIELDS) as [
+    keyof typeof LICENSE_FIELDS,
+    LicenseField,
+  ][]) {
+    const has = held[kind];
+    if (typeof has !== "boolean") continue;
+    const value = current[field] ?? null;
+
+    if (has) {
+      if (validId && (value === null || value === noneId)) update[field] = validId;
+    } else if (value !== null && value === validId) {
+      update[field] = noneId;
+    } else if (value === null && noneId) {
+      update[field] = noneId;
+    }
+  }
+  return update;
+}
+
+/** driver's licence category values (Admin > Values) with these names */
+async function findLicenseCategoryIds(names: string[] | null | undefined) {
+  if (!names?.length) return [];
+  const categories = await prisma.driversLicenseCategoryValue.findMany({
+    where: { value: { value: { in: names }, isDisabled: false } },
+    select: { id: true },
+  });
+  return categories.map((category) => category.id);
+}
+
 async function isBlacklisted(...words: string[]) {
   const found = await prisma.blacklistedWord.findFirst({
     where: { OR: words.map((word) => ({ word: { contains: word } })) },
@@ -139,6 +210,18 @@ export async function syncFivemCharacter(options: Options): Promise<CharacterSyn
       const ethnicityId = await findEthnicityId(character.ethnicity);
       if (ethnicityId) update.ethnicityId = ethnicityId;
     }
+    Object.assign(update, await licenseChanges(character, citizen));
+    const categoryIds = await findLicenseCategoryIds(character.licenseCategories);
+    if (categoryIds.length > 0) {
+      const current = await prisma.citizen.findUnique({
+        where: { id: citizen.id },
+        select: { dlCategory: { select: { id: true } } },
+      });
+      const have = new Set(current?.dlCategory.map((category) => category.id));
+      const missing = categoryIds.filter((id) => !have.has(id));
+      if (missing.length > 0) update.dlCategory = { connect: missing.map((id) => ({ id })) };
+    }
+
     // the player linked their CAD account after the citizen was created without one
     const linksUser = !citizen.userId && !!userId;
     if (linksUser) update.userId = userId;
@@ -242,9 +325,14 @@ export async function syncFivemCharacter(options: Options): Promise<CharacterSyn
     },
   });
 
+  const licenses = await licenseChanges(character, citizenData);
+  const categoryIds = await findLicenseCategoryIds(character.licenseCategories);
+
   const citizen = await prisma.citizen.create({
     data: {
       ...citizenData,
+      ...licenses,
+      dlCategory: categoryIds.length ? { connect: categoryIds.map((id) => ({ id })) } : undefined,
       userId,
       fivemCharacters: {
         create: { framework: data.framework, characterId: data.characterId },

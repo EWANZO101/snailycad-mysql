@@ -66,6 +66,29 @@ export const FIVEM_CHARACTER_SYNC_SCHEMA = z.object({
     address: z.string().trim().max(255).nullish(),
     /** the ethnicity's name in the CAD (Admin > Values > Ethnicity) */
     ethnicity: z.string().trim().max(255).nullish(),
+    /** held (true) or not (false) per CAD licence; licences the server doesn't have are left out */
+    licenses: emptyArrayAsObject(
+      z
+        .object({
+          drivers: z.boolean(),
+          weapon: z.boolean(),
+          pilot: z.boolean(),
+          water: z.boolean(),
+          hunting: z.boolean(),
+          fishing: z.boolean(),
+        })
+        .partial()
+        .nullish(),
+    ),
+    /** driver's licence category names in the CAD to add */
+    licenseCategories: z.array(z.string().trim().max(255)).max(20).nullish(),
+    /** the CAD licence value names for "has the licence" and "doesn't" */
+    licenseValues: z
+      .object({
+        valid: z.string().trim().max(255).nullish(),
+        none: z.string().trim().max(255).nullish(),
+      })
+      .nullish(),
   }),
   /** the character's garage. Leave out to not touch vehicles. */
   vehicles: z.array(FIVEM_VEHICLE_SCHEMA).max(200).nullish(),

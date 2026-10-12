@@ -157,6 +157,40 @@ local function addDefaults(character, data, options)
 end
 
 --[[
+  Licences. held / known: { [game licence type] = true } (ESX user_licenses.type, QBCore / Qbox
+  metadata.licences keys). options = Config.Licenses: { map = { drivers = { "drive", ... }, ... },
+  categories = { drive = "Class C", ... } }.
+  Returns { drivers = true/false, ... } for the CAD licences this server has a game licence for
+  (nil when none), and the driver's licence category names of the held licences.
+]]
+function Mapping.licences(held, known, options)
+  held, known, options = held or {}, known or {}, options or {}
+  local result, any = {}, false
+  for kind, types in pairs(options.map or {}) do
+    local isKnown, has = false, false
+    for _, licenceType in ipairs(types) do
+      if known[licenceType] then isKnown = true end
+      if held[licenceType] then has = true end
+    end
+    if isKnown then
+      result[kind] = has
+      any = true
+    end
+  end
+
+  local categories, seen = {}, {}
+  for licenceType in pairs(held) do
+    local name = options.categories and options.categories[licenceType]
+    if name and not seen[name] then
+      seen[name] = true
+      categories[#categories + 1] = name
+    end
+  end
+  table.sort(categories)
+  return any and result or nil, categories
+end
+
+--[[
   ESX: data = {
     identifier,            -- xPlayer.identifier (char1:license..., the stable character id)
     firstName, lastName,   -- xPlayer.get("firstName") / get("lastName"), or users.firstname
