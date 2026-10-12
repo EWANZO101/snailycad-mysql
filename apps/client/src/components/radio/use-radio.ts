@@ -11,6 +11,8 @@ export interface RadioPreferences {
   microphoneDeviceId: string | null;
   minimized: boolean;
   position: "bottom-left" | "bottom-right";
+  /** where the dock was dragged to (left / top in px); null = the `position` corner */
+  dockPosition: { x: number; y: number } | null;
 }
 
 const STORAGE_KEY = "snailycad.radio";
@@ -24,6 +26,7 @@ export const DEFAULT_RADIO_PREFERENCES: RadioPreferences = {
   microphoneDeviceId: null,
   minimized: false,
   position: "bottom-right",
+  dockPosition: null,
 };
 
 function readStored(): RadioPreferences {

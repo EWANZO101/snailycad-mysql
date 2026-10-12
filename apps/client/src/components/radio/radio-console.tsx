@@ -32,6 +32,7 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
   const t = useTranslations("Radio");
   const hub = useRadioHub();
   const [isEditing, setIsEditing] = React.useState(false);
+  const dock = useDockDrag(hub, variant === "dock");
 
   if (!hub || hub.role === "off") return null;
   const { view, preferences } = hub;
@@ -65,7 +66,15 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
     transmitInfo && !transmitting ? t("holdToTalkOn", { channel: transmitInfo.name }) : pttLabel;
 
   const header = (
-    <header className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-gray-200 dark:border-quaternary">
+    <header
+      {...(isDock ? dock.handlers : {})}
+      title={isDock ? t("dragHint") : undefined}
+      className={classNames(
+        "flex items-center justify-between gap-2 px-3 py-2.5 border-b border-gray-200 dark:border-quaternary",
+        isDock && "select-none touch-none",
+        isDock && (dock.dragging ? "cursor-grabbing" : "cursor-grab"),
+      )}
+    >
       <div className="flex items-center gap-2.5 min-w-0">
         <span
           className={classNames(
@@ -300,12 +309,16 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
 
   return (
     <aside
+      ref={dock.ref}
       aria-label={t("radio")}
+      style={dock.position ? { left: dock.position.x, top: dock.position.y } : undefined}
       className={classNames(
-        "fixed z-40 bottom-4 w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl overflow-hidden",
+        "fixed z-40 w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl overflow-hidden",
         "bg-white/95 dark:bg-tertiary/95 backdrop-blur border shadow-2xl shadow-black/20 transition-colors",
         transmitting ? "border-red-500/70" : "border-gray-200 dark:border-quaternary",
-        preferences.position === "bottom-right" ? "right-4" : "left-4",
+        dock.dragging && "shadow-black/40 ring-2 ring-blue-500/40",
+        !dock.position && "bottom-4",
+        !dock.position && (preferences.position === "bottom-right" ? "right-4" : "left-4"),
       )}
     >
       {header}
@@ -326,6 +339,100 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
       )}
     </aside>
   );
+}
+
+/** space kept between the dragged dock and the window edges */
+const DOCK_EDGE = 8;
+
+/**
+ * Drag the dock by its title bar. The spot is saved in the radio preferences (so every CAD tab
+ * shows it there) and kept inside the window when it's resized or the dock grows. Double-click
+ * the title bar to put it back in its corner.
+ */
+function useDockDrag(hub: RadioHub | null, enabled: boolean) {
+  const ref = React.useRef<HTMLElement>(null);
+  const start = React.useRef<{ pointerX: number; pointerY: number; x: number; y: number } | null>(
+    null,
+  );
+  const [dragPosition, setDragPosition] = React.useState<{ x: number; y: number } | null>(null);
+  const [, rerender] = React.useReducer((n: number) => n + 1, 0);
+  const saved = hub?.preferences.dockPosition ?? null;
+
+  // re-clamp when the window or the dock changes size (expand, minimize, settings open)
+  React.useEffect(() => {
+    const element = ref.current;
+    if (!enabled || !element) return;
+    const handle = () => rerender();
+    window.addEventListener("resize", handle);
+    const observer = new ResizeObserver(handle);
+    observer.observe(element);
+    return () => {
+      window.removeEventListener("resize", handle);
+      observer.disconnect();
+    };
+  }, [enabled]);
+
+  function clamp(position: { x: number; y: number }) {
+    const width = ref.current?.offsetWidth ?? 352;
+    const height = ref.current?.offsetHeight ?? 120;
+    return {
+      x: Math.round(
+        Math.min(
+          Math.max(DOCK_EDGE, position.x),
+          Math.max(DOCK_EDGE, window.innerWidth - width - DOCK_EDGE),
+        ),
+      ),
+      y: Math.round(
+        Math.min(
+          Math.max(DOCK_EDGE, position.y),
+          Math.max(DOCK_EDGE, window.innerHeight - height - DOCK_EDGE),
+        ),
+      ),
+    };
+  }
+
+  function onPointerDown(event: React.PointerEvent<HTMLElement>) {
+    if (!enabled || event.button !== 0 || !ref.current) return;
+    // the title bar's buttons keep working
+    if ((event.target as HTMLElement).closest("button, a, input, select")) return;
+    const rect = ref.current.getBoundingClientRect();
+    start.current = { pointerX: event.clientX, pointerY: event.clientY, x: rect.left, y: rect.top };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+
+  function onPointerMove(event: React.PointerEvent<HTMLElement>) {
+    const from = start.current;
+    if (!from) return;
+    const dx = event.clientX - from.pointerX;
+    const dy = event.clientY - from.pointerY;
+    // a small wobble on click isn't a drag
+    if (!dragPosition && Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
+    setDragPosition(clamp({ x: from.x + dx, y: from.y + dy }));
+  }
+
+  function onPointerUp() {
+    if (!start.current) return;
+    start.current = null;
+    if (dragPosition) hub?.updatePreferences({ dockPosition: dragPosition });
+    setDragPosition(null);
+  }
+
+  return {
+    ref,
+    dragging: !!dragPosition,
+    position: dragPosition ?? (saved && typeof window !== "undefined" ? clamp(saved) : null),
+    handlers: {
+      onPointerDown,
+      onPointerMove,
+      onPointerUp,
+      onPointerCancel: onPointerUp,
+      onDoubleClick: (event: React.MouseEvent<HTMLElement>) => {
+        if ((event.target as HTMLElement).closest("button, a, input, select")) return;
+        hub?.updatePreferences({ dockPosition: null });
+      },
+    },
+  };
 }
 
 function activeTalkers(view: RadioView | null) {
@@ -796,21 +903,29 @@ function RadioSettings({ hub, onClose }: { hub: RadioHub; onClose(): void }) {
             <span>{t("position")}</span>
             <select
               className={selectClassName}
-              value={preferences.position}
-              onChange={(event) =>
+              value={preferences.dockPosition ? "custom" : preferences.position}
+              onChange={(event) => {
+                if (event.target.value === "custom") return;
                 hub.updatePreferences({
                   position: event.target.value as typeof preferences.position,
-                })
-              }
+                  dockPosition: null,
+                });
+              }}
             >
               <option value="bottom-left">{t("bottomLeft")}</option>
               <option value="bottom-right">{t("bottomRight")}</option>
+              {preferences.dockPosition ? (
+                <option value="custom">{t("positionCustom")}</option>
+              ) : null}
             </select>
           </label>
         )}
         <p className="text-xs text-neutral-500 dark:text-gray-400 border-t border-gray-200 dark:border-quaternary pt-2.5">
           {t("anyPageNote")}
         </p>
+        {hub.isPopout ? null : (
+          <p className="text-xs text-neutral-500 dark:text-gray-400">{t("dragHint")}</p>
+        )}
         <p className="text-xs text-neutral-500 dark:text-gray-400">{t("httpsNote")}</p>
       </div>
     </div>
