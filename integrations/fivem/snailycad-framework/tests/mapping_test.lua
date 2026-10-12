@@ -362,5 +362,29 @@ eq(#Framework.getVehicles("ABC12345"), 2, "Qbox vehicles")
 running = { qbx_core = true }
 eq(Framework.getVehicles("ABC12345"), nil, "no oxmysql -> nil")
 
+-- --- appearance (hair / eye colour) and CAD defaults ---------------------------------------------
+
+local looks = Mapping.appearance('{"hair_color_1":0,"eye_color":3}')
+eq(looks.hairColor, "Black", "skinchanger hair colour (JSON text)")
+eq(looks.eyeColor, "Ocean Blue", "skinchanger eye colour")
+looks = Mapping.appearance({ hair = { style = 4, color = 10 }, eyeColor = 6 })
+eq(looks.hairColor, "Blonde", "illenium / fivem-appearance hair colour")
+eq(looks.eyeColor, "Hazel", "illenium / fivem-appearance eye colour")
+looks = Mapping.appearance({ hair = { item = 2, texture = 18 }, eye_color = { item = 0 } })
+eq(looks.hairColor, "Red", "qb-clothing hair colour")
+eq(looks.eyeColor, "Green", "qb-clothing eye colour")
+eq(Mapping.appearance("not json").hairColor, nil, "bad skin -> nothing")
+eq(Mapping.appearance({ hair_color_1 = 99 }).hairColor, nil, "unknown palette index -> nothing")
+
+local _, withLooks = Mapping.esxCharacter({
+  identifier = "char1:x", firstName = "Ben", lastName = "Jja", dateOfBirth = "01/01/1999", sex = "m",
+  height = 175, skin = '{"hair_color_1":5,"eye_color":5}',
+}, { dateFormat = "DD/MM/YYYY", address = "Los Santos", weight = " 80 " })
+eq(withLooks.hairColor, "Light Brown", "ESX character gets the hair colour")
+eq(withLooks.eyeColor, "Dark Brown", "ESX character gets the eye colour")
+eq(withLooks.address, "Los Santos", "address from Config.Character")
+eq(withLooks.weight, "80", "weight from Config.Character, trimmed")
+eq(withLooks.ethnicity, nil, "no ethnicity configured -> nil (the CAD picks)")
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then os.exit(1) end

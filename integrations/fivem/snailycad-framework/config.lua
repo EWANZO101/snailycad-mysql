@@ -93,8 +93,17 @@ end
 Config.Character = {
   genders = { male = "Male", female = "Female" },
   dateFormat = "DD/MM/YYYY",
-  phone = true, -- send the phone number when the framework has one
+  -- send the phone number: the framework's, else ops-phone's or lb-phone's
+  phone = true,
   height = true,
+  -- hair and eye colour from the saved skin (skinchanger, fivem-appearance, illenium-appearance,
+  -- qb-clothing)
+  appearance = true,
+  -- the game doesn't know these; the CAD needs them to save a citizen. nil = the CAD's default
+  -- ("Unknown", and the CAD's first ethnicity). Players / admins can change them in the CAD.
+  weight = nil,     -- e.g. "80"
+  address = nil,    -- e.g. "Los Santos"
+  ethnicity = nil,  -- the name of an ethnicity in the CAD (Admin > Values > Ethnicity)
 }
 
 -- the server name shown in CAD Settings (default: sv_projectName, else sv_hostname)

@@ -59,6 +59,13 @@ export const FIVEM_CHARACTER_SYNC_SCHEMA = z.object({
     height: z.string().trim().max(255).nullish(),
     weight: z.string().trim().max(255).nullish(),
     phoneNumber: z.string().trim().max(64).nullish(),
+    /** from the saved skin, e.g. "Dark Brown" */
+    hairColor: z.string().trim().max(255).nullish(),
+    eyeColor: z.string().trim().max(255).nullish(),
+    /** Config.Character defaults on the game server */
+    address: z.string().trim().max(255).nullish(),
+    /** the ethnicity's name in the CAD (Admin > Values > Ethnicity) */
+    ethnicity: z.string().trim().max(255).nullish(),
   }),
   /** the character's garage. Leave out to not touch vehicles. */
   vehicles: z.array(FIVEM_VEHICLE_SCHEMA).max(200).nullish(),
