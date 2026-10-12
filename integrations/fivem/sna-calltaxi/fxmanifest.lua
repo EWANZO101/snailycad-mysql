@@ -5,7 +5,7 @@ node_version "22"
 name "sna-calltaxi"
 description "/sn-calltaxi: request a taxi through SnailyCAD"
 author "Casper Iversen, SnailyCAD community"
-version "0.15.1"
+version "0.15.2"
 repository "https://github.com/EWANZO101/snailycad-mysql/tree/main/integrations/fivem"
 
 dependency "chat"

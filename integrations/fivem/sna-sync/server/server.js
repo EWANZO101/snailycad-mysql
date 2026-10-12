@@ -8109,12 +8109,19 @@ function normaliseUrl(raw) {
     return "";
   return url.endsWith("/v1") ? url : `${url}/v1`;
 }
+var CONNECTION_CONVARS = [
+  ["snailycad_url", "snailycad_api_key"],
+  // the same CAD as the snailycad-framework / snailycad-radio resources, in their order
+  ["snailycad_framework_api_url", "snailycad_framework_api_token"],
+  ["snailycad_radio_api_url", "snailycad_radio_api_token"]
+];
 function getConnection() {
-  let url = normaliseUrl(convar("snailycad_url"));
-  let token = convar("snailycad_api_key");
-  url ||= normaliseUrl(convar("snailycad_framework_api_url"));
-  token ||= convar("snailycad_framework_api_token");
-  return { url, token };
+  for (const [urlConvar, tokenConvar] of CONNECTION_CONVARS) {
+    const url = normaliseUrl(convar(urlConvar));
+    if (url)
+      return { url, token: convar(tokenConvar) };
+  }
+  return { url: "", token: "" };
 }
 function parseEdition(value) {
   const v = value.toLowerCase();

@@ -41,8 +41,10 @@ The built files are in the repository, so you don't need Node.js.
 Requirements: a FiveM server artifact with Node.js 22 (`node_version "22"`, recent artifacts),
 and the `chat` resource for the commands.
 
-If the server already runs `snailycad-framework`, `snailycad_url` and `snailycad_api_key` can be
-left out: the resources use `snailycad_framework_api_url` and `snailycad_framework_api_token`.
+If the server already runs `snailycad-framework` or `snailycad-radio`, `snailycad_url` and
+`snailycad_api_key` can be left out: the resources use `snailycad_framework_api_url` /
+`_api_token`, else `snailycad_radio_api_url` / `_api_token` (the first address that is set, with
+its token).
 
 ## Editions: how players are signed in
 

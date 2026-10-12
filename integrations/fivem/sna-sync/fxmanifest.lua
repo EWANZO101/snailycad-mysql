@@ -5,7 +5,7 @@ node_version "22"
 name "sna-sync"
 description "Sync SnailyCAD with FiveM: unit status, 911 calls, panic button, live alerts"
 author "Casper Iversen, SnailyCAD community"
-version "0.15.1"
+version "0.15.2"
 repository "https://github.com/EWANZO101/snailycad-mysql/tree/main/integrations/fivem"
 
 dependency "chat"

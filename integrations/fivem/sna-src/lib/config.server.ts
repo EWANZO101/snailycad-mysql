@@ -2,7 +2,8 @@
  * Where the CAD is, with which token, and which SnailyCAD edition it runs.
  *
  *   snailycad_url / snailycad_api_key                    every edition
- *   snailycad_framework_api_url / _api_token             fallback when the two above are empty
+ *   snailycad_framework_api_url / _api_token             else these (snailycad-framework's)
+ *   snailycad_radio_api_url / _api_token                 else these (snailycad-radio's)
  *   snailycad_edition "auto" | "original" | "snailycad-mysql"
  *   <resource>_edition (e.g. sna_sync_edition)           overrides snailycad_edition per resource
  *
@@ -34,15 +35,20 @@ export function normaliseUrl(raw: string) {
   return url.endsWith("/v1") ? url : `${url}/v1`;
 }
 
+const CONNECTION_CONVARS = [
+  ["snailycad_url", "snailycad_api_key"],
+  // the same CAD as the snailycad-framework / snailycad-radio resources, in their order
+  ["snailycad_framework_api_url", "snailycad_framework_api_token"],
+  ["snailycad_radio_api_url", "snailycad_radio_api_token"],
+] as const;
+
+/** the first address that is set, with the token set next to it */
 export function getConnection() {
-  let url = normaliseUrl(convar("snailycad_url"));
-  let token = convar("snailycad_api_key");
-
-  // the snailycad-framework resource's settings, when the same CAD is used for both
-  url ||= normaliseUrl(convar("snailycad_framework_api_url"));
-  token ||= convar("snailycad_framework_api_token");
-
-  return { url, token };
+  for (const [urlConvar, tokenConvar] of CONNECTION_CONVARS) {
+    const url = normaliseUrl(convar(urlConvar));
+    if (url) return { url, token: convar(tokenConvar) };
+  }
+  return { url: "", token: "" };
 }
 
 function parseEdition(value: string): EditionSetting | null {
