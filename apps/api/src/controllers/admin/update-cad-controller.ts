@@ -204,9 +204,10 @@ export class UpdateCadController {
           "--collect",
           `--setenv=UPDATE_MODE=${mode}`,
           `--setenv=PROJECT_DIR=${getProjectRoot()}`,
-          ...(process.env.UPDATE_BRANCH
-            ? [`--setenv=UPDATE_BRANCH=${process.env.UPDATE_BRANCH}`]
-            : []),
+          // systemd-run starts a fresh unit: pass on what update-cad.sh needs from this service
+          ...["UPDATE_BRANCH", "SNAILYCAD_SERVICE_NAME", "SNAILY_STATUS_DIR", "PORT_CLIENT"]
+            .filter((key) => process.env[key])
+            .map((key) => `--setenv=${key}=${process.env[key]}`),
           "/bin/bash",
           script,
         ]

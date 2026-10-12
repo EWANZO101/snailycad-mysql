@@ -15,7 +15,7 @@
 set -u
 
 PROJECT_DIR="${PROJECT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
-SERVICE_NAME="${SNAILYCAD_SERVICE_NAME:-start-snaily-cadv4}"
+SERVICE_NAME="${SNAILYCAD_SERVICE_NAME:-}"
 if [[ -n "${SNAILY_STATUS_DIR:-}" ]]; then
     STATUS_DIR="$SNAILY_STATUS_DIR"
 else
@@ -93,6 +93,23 @@ if [[ "$UPDATE_MODE" == "git" ]]; then
     pull_latest
 else
     log "Local mode: applying the latest local build."
+fi
+
+# the service that runs this CAD: the one named in SNAILYCAD_SERVICE_NAME, or else the one whose
+# working directory is this project. Never restart a service that runs another folder (a server can
+# host several CADs).
+service_dir() { systemctl show -p WorkingDirectory --value "$1" 2>/dev/null; }
+if [[ -z "$SERVICE_NAME" ]]; then
+    for unit in $(systemctl list-units --type=service --all --no-legend --plain 2>/dev/null | awk '{print $1}'); do
+        if [[ "$(service_dir "$unit")" == "$PROJECT_DIR" ]]; then
+            SERVICE_NAME="${unit%.service}"
+            break
+        fi
+    done
+    [[ -n "$SERVICE_NAME" ]] || SERVICE_NAME="start-snaily-cadv4"
+fi
+if [[ "$(service_dir "$SERVICE_NAME")" != "$PROJECT_DIR" ]]; then
+    fail "Service $SERVICE_NAME doesn't run $PROJECT_DIR. Set SNAILYCAD_SERVICE_NAME to this CAD's service."
 fi
 
 log "Restarting $SERVICE_NAME (installs, builds and starts when needed)."
