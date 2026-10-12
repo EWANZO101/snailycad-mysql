@@ -230,6 +230,8 @@ export class UpdateCadController {
       }
     });
 
-    return { started: true, startedAt, mode };
+    // the progress page only exists once the CAD has stopped (the status server takes its port).
+    // Docker keeps the old containers running while it builds, so there it's opened at once.
+    return { started: true, startedAt, mode, waitForStop: mode !== "docker" };
   }
 }

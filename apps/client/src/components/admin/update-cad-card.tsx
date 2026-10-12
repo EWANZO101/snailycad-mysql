@@ -79,7 +79,7 @@ export function UpdateCadCard() {
       return;
     }
 
-    // Windows: the updater stops the CAD first, then serves the progress page on this port
+    // the updater stops the CAD first, then serves the progress page on this port
     setIsStarting(true);
     const deadline = Date.now() + 90_000;
     while (Date.now() < deadline) {
