@@ -6,7 +6,7 @@
  * game server holds one connection and nothing about the CAD reaches the client.
  */
 import { io, type Socket } from "socket.io-client";
-import { getConnection, getEdition, log, warn } from "../../lib/config.server";
+import { getConnection, log, warn } from "../../lib/config.server";
 import { ClientEvents, SnCommands, type NotificationData } from "../../lib/events";
 import { getPlayerUser, isOnDuty } from "../../lib/player.server";
 
@@ -47,7 +47,7 @@ let socket: Socket | null = null;
 let socketUrl = "";
 
 async function connect() {
-  const { url } = getConnection(await getEdition());
+  const { url } = getConnection();
   const base = url.replace(/\/v1$/, "");
   if (!base || base === socketUrl) return;
 

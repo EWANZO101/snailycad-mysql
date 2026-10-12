@@ -2,7 +2,7 @@
  * Where the CAD is, with which token, and which SnailyCAD edition it runs.
  *
  *   snailycad_url / snailycad_api_key                    every edition
- *   snailycad_framework_api_url / _api_token             fallback, snailycad-mysql edition only
+ *   snailycad_framework_api_url / _api_token             fallback when the two above are empty
  *   snailycad_edition "auto" | "original" | "snailycad-mysql"
  *   <resource>_edition (e.g. sna_sync_edition)           overrides snailycad_edition per resource
  *
@@ -34,14 +34,13 @@ export function normaliseUrl(raw: string) {
   return url.endsWith("/v1") ? url : `${url}/v1`;
 }
 
-export function getConnection(edition: Edition) {
+export function getConnection() {
   let url = normaliseUrl(convar("snailycad_url"));
   let token = convar("snailycad_api_key");
 
-  if (edition === "snailycad-mysql") {
-    url ||= normaliseUrl(convar("snailycad_framework_api_url"));
-    token ||= convar("snailycad_framework_api_token");
-  }
+  // the snailycad-framework resource's settings, when the same CAD is used for both
+  url ||= normaliseUrl(convar("snailycad_framework_api_url"));
+  token ||= convar("snailycad_framework_api_token");
 
   return { url, token };
 }
@@ -76,7 +75,7 @@ const RETRY_AFTER_MS = 60_000;
  * 404 => original. Anything else (wrong token, CAD down) => original for now, retried after a minute.
  */
 async function detectEdition(): Promise<Edition> {
-  const { url, token } = getConnection("snailycad-mysql");
+  const { url, token } = getConnection();
   if (!url) return "original";
   if (Date.now() - lastFailedAt < RETRY_AFTER_MS) return "original";
 
@@ -89,7 +88,7 @@ async function detectEdition(): Promise<Edition> {
     });
     await response.body?.cancel().catch(() => null);
 
-    if (response.status === 200) return (detected = "snailycad-mysql");
+    if (response.status === 200) return (detected = await probePlayerHeader(url, token));
     if (response.status === 404) return (detected = "original");
 
     lastFailedAt = Date.now();
@@ -106,6 +105,30 @@ async function detectEdition(): Promise<Edition> {
       }); using "original" for now.`,
     );
   }
+  return "original";
+}
+
+/**
+ * snailycad-mysql CADs older than the snaily-cad-player header have /integrations/fivem/check
+ * but can't sign players in by Discord / Steam. Ask for a player that can't exist: only a CAD
+ * with the header answers "playerNotLinked". Older ones still take personal API tokens.
+ */
+async function probePlayerHeader(url: string, token: string): Promise<Edition> {
+  try {
+    const response = await fetch(`${url}/user`, {
+      method: "POST",
+      headers: { "snaily-cad-api-token": token, "snaily-cad-player": "discord:0" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
+    if (response.status === 401 && body?.message === "playerNotLinked") return "snailycad-mysql";
+  } catch {
+    // treated as an older CAD below
+  }
+
+  log(
+    "this CAD can't sign players in by Discord / Steam yet (update the CAD for that), so the original edition is used: players sign in with /sn-auth and a personal API token.",
+  );
   return "original";
 }
 

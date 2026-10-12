@@ -68,6 +68,11 @@ set sna_sync_edition "original"         # only for one resource: <resource>_edit
 the original SnailyCAD doesn't (404). If the CAD can't be reached, the resources use `original` for
 the moment and ask again a minute later.
 
+A snailycad-mysql CAD from before 12 October 2026 answers the check but can't sign players in by
+Discord / Steam yet. `auto` notices that (it asks the CAD for a player that can't exist) and uses
+`original`, with a line in the server console. Update the CAD to switch to Discord / Steam sign-in;
+restart the `sna-*` resources afterwards.
+
 ### snailycad-mysql: linking accounts
 
 A player must have signed in to the CAD with Discord or Steam once, or linked one of them under

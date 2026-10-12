@@ -88,7 +88,7 @@ function warnOnce(key: string, message: string) {
 
 export async function cadRequest<T>(options: CadRequestOptions): Promise<CadResult<T>> {
   const edition = await getEdition();
-  const { url, token } = getConnection(edition);
+  const { url, token } = getConnection();
   const auth = options.auth ?? { type: "api" };
   const fail = (status: number, errorMessage: string): CadResult<T> => ({
     ok: false,
@@ -101,9 +101,7 @@ export async function cadRequest<T>(options: CadRequestOptions): Promise<CadResu
   if (!url) {
     warnOnce(
       "url",
-      edition === "snailycad-mysql"
-        ? "no CAD address: set snailycad_url (or snailycad_framework_api_url) in server.cfg, e.g. set snailycad_url https://cad-api.example.com/v1"
-        : "no CAD address: set snailycad_url in server.cfg, e.g. set snailycad_url https://cad-api.example.com/v1",
+      "no CAD address: set snailycad_url in server.cfg, e.g. set snailycad_url https://cad-api.example.com/v1",
     );
     return fail(0, "notConfigured");
   }

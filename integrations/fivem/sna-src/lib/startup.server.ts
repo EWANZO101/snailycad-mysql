@@ -3,7 +3,7 @@
  * sna-* resources in the snailycad-mysql repo (one console line if that fails).
  */
 import { cadRequest } from "./cad.server";
-import { describeEdition, getConnection, getEdition, log, warn } from "./config.server";
+import { describeEdition, getConnection, log, warn } from "./config.server";
 
 const VERSION_URL =
   "https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/main/integrations/fivem/sna-src/version.json";
@@ -21,7 +21,7 @@ async function startupChecks() {
 }
 
 async function verifyCad() {
-  const { url } = getConnection(await getEdition());
+  const { url } = getConnection();
   if (!url) return; // cadRequest already explained what is missing
 
   const { ok, data } = await cadRequest<string>({

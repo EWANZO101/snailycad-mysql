@@ -19,13 +19,11 @@ function normaliseUrl(raw) {
     return "";
   return url.endsWith("/v1") ? url : `${url}/v1`;
 }
-function getConnection(edition) {
+function getConnection() {
   let url = normaliseUrl(convar("snailycad_url"));
   let token = convar("snailycad_api_key");
-  if (edition === "snailycad-mysql") {
-    url ||= normaliseUrl(convar("snailycad_framework_api_url"));
-    token ||= convar("snailycad_framework_api_token");
-  }
+  url ||= normaliseUrl(convar("snailycad_framework_api_url"));
+  token ||= convar("snailycad_framework_api_token");
   return { url, token };
 }
 function parseEdition(value) {
@@ -54,7 +52,7 @@ var detecting = null;
 var lastFailedAt = 0;
 var RETRY_AFTER_MS = 6e4;
 async function detectEdition() {
-  const { url, token } = getConnection("snailycad-mysql");
+  const { url, token } = getConnection();
   if (!url)
     return "original";
   if (Date.now() - lastFailedAt < RETRY_AFTER_MS)
@@ -68,7 +66,7 @@ async function detectEdition() {
     });
     await response.body?.cancel().catch(() => null);
     if (response.status === 200)
-      return detected = "snailycad-mysql";
+      return detected = await probePlayerHeader(url, token);
     if (response.status === 404)
       return detected = "original";
     lastFailedAt = Date.now();
@@ -81,6 +79,23 @@ async function detectEdition() {
       `could not detect the SnailyCAD edition (${error instanceof Error ? error.message : String(error)}); using "original" for now.`
     );
   }
+  return "original";
+}
+async function probePlayerHeader(url, token) {
+  try {
+    const response = await fetch(`${url}/user`, {
+      method: "POST",
+      headers: { "snaily-cad-api-token": token, "snaily-cad-player": "discord:0" },
+      signal: AbortSignal.timeout(1e4)
+    });
+    const body = await response.json().catch(() => null);
+    if (response.status === 401 && body?.message === "playerNotLinked")
+      return "snailycad-mysql";
+  } catch {
+  }
+  log(
+    "this CAD can't sign players in by Discord / Steam yet (update the CAD for that), so the original edition is used: players sign in with /sn-auth and a personal API token."
+  );
   return "original";
 }
 async function getEdition() {
@@ -112,7 +127,7 @@ function warnOnce(key, message) {
 }
 async function cadRequest(options) {
   const edition = await getEdition();
-  const { url, token } = getConnection(edition);
+  const { url, token } = getConnection();
   const auth = options.auth ?? { type: "api" };
   const fail = (status, errorMessage) => ({
     ok: false,
@@ -124,7 +139,7 @@ async function cadRequest(options) {
   if (!url) {
     warnOnce(
       "url",
-      edition === "snailycad-mysql" ? "no CAD address: set snailycad_url (or snailycad_framework_api_url) in server.cfg, e.g. set snailycad_url https://cad-api.example.com/v1" : "no CAD address: set snailycad_url in server.cfg, e.g. set snailycad_url https://cad-api.example.com/v1"
+      "no CAD address: set snailycad_url in server.cfg, e.g. set snailycad_url https://cad-api.example.com/v1"
     );
     return fail(0, "notConfigured");
   }
@@ -222,7 +237,7 @@ async function startupChecks() {
   await checkForUpdate();
 }
 async function verifyCad() {
-  const { url } = getConnection(await getEdition());
+  const { url } = getConnection();
   if (!url)
     return;
   const { ok, data } = await cadRequest({
