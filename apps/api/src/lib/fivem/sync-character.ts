@@ -36,6 +36,35 @@ async function findGenderId(gender: string | null | undefined) {
   return value?.id;
 }
 
+/**
+ * The CAD needs these to save a citizen (its citizen form requires them), but games rarely know
+ * them: what the game server doesn't send is "Unknown", so the citizen can still be edited and
+ * saved in the CAD.
+ */
+const UNKNOWN = "Unknown";
+
+/** the ethnicity with this name, else the CAD's default (or first) ethnicity */
+async function findEthnicityId(name: string | null | undefined) {
+  if (name) {
+    const value = await prisma.value.findFirst({
+      where: { type: ValueType.ETHNICITY, value: name, isDisabled: false },
+      select: { id: true },
+    });
+    if (value) return value.id;
+  }
+  const fallback = await prisma.value.findFirst({
+    where: { type: ValueType.ETHNICITY, isDisabled: false },
+    orderBy: [{ isDefault: "desc" }, { position: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  return fallback?.id;
+}
+
+/** a usable value for a field the CAD requires (2+ characters), else undefined */
+function filled(value: string | null | undefined) {
+  return value && value.length >= 2 ? value : undefined;
+}
+
 async function isBlacklisted(...words: string[]) {
   const found = await prisma.blacklistedWord.findFirst({
     where: { OR: words.map((word) => ({ word: { contains: word } })) },
@@ -92,9 +121,23 @@ export async function syncFivemCharacter(options: Options): Promise<CharacterSyn
     const genderId = await findGenderId(character.gender);
     if (genderId && genderId !== citizen.genderId) update.genderId = genderId;
     if (character.height && character.height !== citizen.height) update.height = character.height;
-    if (character.weight && character.weight !== citizen.weight) update.weight = character.weight;
     if (character.phoneNumber && character.phoneNumber !== citizen.phoneNumber) {
       update.phoneNumber = character.phoneNumber;
+    }
+    // the look comes from the game
+    const hairColor = filled(character.hairColor);
+    if (hairColor && hairColor !== citizen.hairColor) update.hairColor = hairColor;
+    const eyeColor = filled(character.eyeColor);
+    if (eyeColor && eyeColor !== citizen.eyeColor) update.eyeColor = eyeColor;
+    // weight, address and ethnicity are only defaults: they never overwrite what was set in the CAD
+    if (!filled(citizen.weight)) update.weight = filled(character.weight) ?? UNKNOWN;
+    if (!filled(citizen.address)) update.address = filled(character.address) ?? UNKNOWN;
+    if (!filled(citizen.hairColor) && !update.hairColor) update.hairColor = UNKNOWN;
+    if (!filled(citizen.eyeColor) && !update.eyeColor) update.eyeColor = UNKNOWN;
+    if (!filled(citizen.height) && !update.height) update.height = UNKNOWN;
+    if (!citizen.ethnicityId) {
+      const ethnicityId = await findEthnicityId(character.ethnicity);
+      if (ethnicityId) update.ethnicityId = ethnicityId;
     }
     // the player linked their CAD account after the citizen was created without one
     const linksUser = !citizen.userId && !!userId;
@@ -189,12 +232,12 @@ export async function syncFivemCharacter(options: Options): Promise<CharacterSyn
       surname: character.lastName,
       dateOfBirth,
       gender: await findGenderId(character.gender),
-      ethnicity: undefined,
-      height: character.height ?? "",
-      weight: character.weight ?? "",
-      hairColor: "",
-      eyeColor: "",
-      address: "",
+      ethnicity: await findEthnicityId(character.ethnicity),
+      height: filled(character.height) ?? UNKNOWN,
+      weight: filled(character.weight) ?? UNKNOWN,
+      hairColor: filled(character.hairColor) ?? UNKNOWN,
+      eyeColor: filled(character.eyeColor) ?? UNKNOWN,
+      address: filled(character.address) ?? UNKNOWN,
       phoneNumber: character.phoneNumber ?? null,
     },
   });

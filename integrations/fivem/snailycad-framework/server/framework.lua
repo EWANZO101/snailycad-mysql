@@ -143,7 +143,39 @@ local function characterOptions()
     dateFormat = Config.Character.dateFormat,
     phone = Config.Character.phone,
     height = Config.Character.height,
+    weight = Config.Character.weight,
+    address = Config.Character.address,
+    ethnicity = Config.Character.ethnicity,
   }
+end
+
+--- the phone number from a phone script, when the framework has none (ops-phone, lb-phone)
+local PHONE_EXPORTS = {
+  { resource = "opslabs-phone", get = function(source) return exports["opslabs-phone"]:GetPhoneNumber(source) end },
+  { resource = "lb-phone", get = function(source) return exports["lb-phone"]:GetEquippedPhoneNumber(source) end },
+}
+
+local function phoneFromPhoneScript(source)
+  for _, phone in ipairs(PHONE_EXPORTS) do
+    if started(phone.resource) then
+      local ok, number = pcall(phone.get, source)
+      if ok and number and number ~= "" then return tostring(number) end
+    end
+  end
+  return nil
+end
+
+--- the saved skin (JSON) for hair and eye colour: ESX users.skin, QBCore / Qbox playerskins
+local function savedSkin(identifier)
+  if not identifier then return nil end
+  if Framework.name == "esx" then
+    if not columns("users").skin then return nil end
+    local rows = query("SELECT skin FROM users WHERE identifier = ?", { identifier })
+    return rows and rows[1] and rows[1].skin or nil
+  end
+  if not columns("playerskins").skin then return nil end
+  local rows = query("SELECT skin FROM playerskins WHERE citizenid = ? ORDER BY active DESC LIMIT 1", { identifier })
+  return rows and rows[1] and rows[1].skin or nil
 end
 
 --- the character's id and CAD data, or nil (not loaded / no identity yet)
@@ -167,10 +199,21 @@ function Framework.getCharacter(source, override)
       local rows = query("SELECT phone_number FROM users WHERE identifier = ?", { data.identifier })
       data.phoneNumber = rows and rows[1] and rows[1].phone_number or nil
     end
-    return Mapping.esxCharacter(data, characterOptions())
+    if Config.Character.appearance ~= false then data.skin = savedSkin(data.identifier) end
+    local characterId, character = Mapping.esxCharacter(data, characterOptions())
+    if character and not character.phoneNumber and Config.Character.phone ~= false then
+      character.phoneNumber = phoneFromPhoneScript(source)
+    end
+    return characterId, character
   end
 
-  return Mapping.qbCharacter(player.PlayerData, characterOptions())
+  local playerData = player.PlayerData
+  local skin = Config.Character.appearance ~= false and playerData and savedSkin(playerData.citizenid) or nil
+  local characterId, character = Mapping.qbCharacter(playerData, characterOptions(), skin)
+  if character and not character.phoneNumber and Config.Character.phone ~= false then
+    character.phoneNumber = phoneFromPhoneScript(source)
+  end
+  return characterId, character
 end
 
 -- --- vehicles ------------------------------------------------------------------------------------

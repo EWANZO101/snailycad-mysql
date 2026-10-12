@@ -87,6 +87,75 @@ local function phone(value)
   return trim(value)
 end
 
+-- GTA hair colour palette (0-63) -> a plain colour name, close enough for a CAD record
+Mapping.HAIR_COLOURS = {
+  [0] = "Black", "Dark Brown", "Dark Brown", "Brown", "Brown", "Light Brown", "Light Brown",
+  "Light Brown", "Dark Blonde", "Dark Blonde", "Blonde", "Blonde", "Light Blonde", "Light Blonde",
+  "Platinum Blonde", "Platinum Blonde", "Strawberry Blonde", "Auburn", "Red", "Red", "Dark Red",
+  "Dark Red", "Copper", "Copper", "Brown", "Brown", "Grey", "Grey", "Light Grey", "White",
+  "Purple", "Purple", "Purple", "Pink", "Pink", "Pink", "Teal", "Teal", "Blue", "Green", "Green",
+  "Green", "Lime", "Lime", "Yellow", "Yellow", "Orange", "Orange", "Orange", "Red", "Red",
+  "Dark Red", "Dark Red", "Red", "Dark Red", "Brown", "Dark Blonde", "Dark Brown", "Dark Brown",
+  "Light Brown", "Blonde", "Black", "Blonde", "Blonde",
+}
+
+-- GTA eye colours (0-31), as the character creator names them
+Mapping.EYE_COLOURS = {
+  [0] = "Green", "Emerald", "Light Blue", "Ocean Blue", "Light Brown", "Dark Brown", "Hazel",
+  "Dark Gray", "Light Gray", "Pink", "Yellow", "Purple", "Blackout", "Shades of Gray",
+  "Tequila Sunrise", "Atomic", "Warp", "ECola", "Space Ranger", "Ying Yang", "Bullseye", "Lizard",
+  "Dragon", "Extra Terrestrial", "Goat", "Smiley", "Possessed", "Demon", "Infected", "Alien",
+  "Undead", "Zombie",
+}
+
+local function paletteName(palette, value)
+  local index = math.tointeger(tonumber(value))
+  if not index then return nil end
+  return palette[index]
+end
+
+--[[
+  Hair and eye colour from a saved skin, whatever the clothing script:
+    skinchanger (ESX):              { hair_color_1 = n, eye_color = n }
+    fivem-appearance / illenium:    { hair = { color = n }, eyeColor = n }
+    qb-clothing:                    { hair = { texture = n }, eye_color = { item = n } }
+  skin: a table or its JSON text. Returns { hairColor, eyeColor } (either may be nil).
+]]
+function Mapping.appearance(skin)
+  if type(skin) == "string" then
+    local ok, decoded = pcall(json.decode, skin)
+    skin = ok and decoded or nil
+  end
+  if type(skin) ~= "table" then return {} end
+
+  local hair, eye
+  if skin.hair_color_1 ~= nil then hair = skin.hair_color_1 end
+  if type(skin.hair) == "table" then
+    if skin.hair.color ~= nil then hair = skin.hair.color
+    elseif skin.hair.texture ~= nil then hair = skin.hair.texture end
+  end
+  if skin.eyeColor ~= nil then eye = skin.eyeColor end
+  if skin.eye_color ~= nil then
+    eye = type(skin.eye_color) == "table" and skin.eye_color.item or skin.eye_color
+  end
+
+  return {
+    hairColor = paletteName(Mapping.HAIR_COLOURS, hair),
+    eyeColor = paletteName(Mapping.EYE_COLOURS, eye),
+  }
+end
+
+-- what the game doesn't know (weight, address, ethnicity): Config.Character defaults
+local function addDefaults(character, data, options)
+  local looks = Mapping.appearance(data.skin)
+  character.hairColor = looks.hairColor
+  character.eyeColor = looks.eyeColor
+  character.weight = trim(options.weight)
+  character.address = trim(options.address)
+  character.ethnicity = trim(options.ethnicity)
+  return character
+end
+
 --[[
   ESX: data = {
     identifier,            -- xPlayer.identifier (char1:license..., the stable character id)
@@ -99,35 +168,35 @@ function Mapping.esxCharacter(data, options)
   options = options or {}
   local firstName, lastName = trim(data.firstName), trim(data.lastName)
   if not data.identifier or not firstName or not lastName then return nil end
-  return data.identifier, {
+  return data.identifier, addDefaults({
     firstName = firstName,
     lastName = lastName,
     dateOfBirth = Mapping.parseDate(data.dateOfBirth, options.dateFormat),
     gender = Mapping.gender(data.sex, options.genders),
     height = options.height ~= false and Mapping.height(data.height) or nil,
     phoneNumber = options.phone ~= false and phone(data.phoneNumber) or nil,
-  }
+  }, data, options)
 end
 
 --[[
   QBCore / Qbox: PlayerData = { citizenid, charinfo = { firstname, lastname, birthdate, gender,
   phone }, metadata = { height? } }
 ]]
-function Mapping.qbCharacter(playerData, options)
+function Mapping.qbCharacter(playerData, options, skin)
   options = options or {}
   if type(playerData) ~= "table" or not playerData.citizenid then return nil end
   local info = playerData.charinfo or {}
   local firstName, lastName = trim(info.firstname), trim(info.lastname)
   if not firstName or not lastName then return nil end
   local metadata = playerData.metadata or {}
-  return playerData.citizenid, {
+  return playerData.citizenid, addDefaults({
     firstName = firstName,
     lastName = lastName,
     dateOfBirth = Mapping.parseDate(info.birthdate, "YYYY/MM/DD"),
     gender = Mapping.gender(info.gender, options.genders),
     height = options.height ~= false and Mapping.height(info.height or metadata.height) or nil,
     phoneNumber = options.phone ~= false and phone(info.phone) or nil,
-  }
+  }, { skin = skin }, options)
 end
 
 --- a paint index or a custom { r, g, b } -> a colour name
