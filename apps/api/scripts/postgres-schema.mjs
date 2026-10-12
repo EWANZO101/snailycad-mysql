@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * The CAD runs on MySQL / MariaDB or PostgreSQL. prisma/schema.prisma (MySQL) is the one you edit;
  * this writes the PostgreSQL twin, prisma/postgresql/schema.prisma, from it. The only differences:
@@ -12,6 +11,7 @@
  * After changing schema.prisma, also add the PostgreSQL migration:
  *   pnpm prisma:migrate-postgres <name>   (see scripts/prisma.mjs)
  */
+/* eslint-disable quotes -- the strings are Prisma schema text, full of double quotes */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,8 +43,9 @@ export function toPostgresSchema(schema) {
     );
   }
 
-  const header =
-    "// GENERATED from ../schema.prisma by scripts/postgres-schema.mjs: don't edit, edit that one.\n";
+  // keep the source's line endings (a Windows checkout has CRLF)
+  const eol = schema.includes("\r\n") ? "\r\n" : "\n";
+  const header = `// GENERATED from ../schema.prisma by scripts/postgres-schema.mjs: don't edit, edit that one.${eol}`;
   return header + out;
 }
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Runs the Prisma CLI with the schema for this CAD's database: prisma/schema.prisma for MySQL /
  * MariaDB, prisma/postgresql/schema.prisma for PostgreSQL. Which one comes from DB_PROVIDER
