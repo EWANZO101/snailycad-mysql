@@ -105,13 +105,6 @@ const Tabs = {
       (await import("components/admin/manage/cad-settings/misc-features/erlc-tab")).ErlcTab,
     { ssr: false },
   ),
-  OpsPhoneTab: dynamic(
-    async () =>
-      (await import("components/admin/manage/cad-settings/misc-features/ops-phone-tab"))
-        .OpsPhoneTab,
-    { ssr: false },
-  ),
-
   FivemFrameworkTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/misc-features/fivem-framework-tab"))
@@ -150,7 +143,6 @@ export default function CadSettings(props: Props) {
       <Tabs.DefaultPermissionsTab />
       <Tabs.LiveMapTab />
       <Tabs.ApiTokenTab />
-      <Tabs.OpsPhoneTab />
       <Tabs.ErlcTab />
       <Tabs.FivemFrameworkTab />
       <Tabs.PhonesTab />

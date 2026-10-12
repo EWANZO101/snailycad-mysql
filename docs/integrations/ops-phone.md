@@ -34,7 +34,7 @@ Texts are optional. Turn off "Text the caller" to only update the request status
 
 ### 1. In the CAD
 
-1. Go to **Admin > CAD Settings > Integrations > ops-phone**.
+1. Go to **Admin > CAD Settings > Integrations > Phones**, then **Set up** next to **OPS Phone**.
 2. Turn on **Enable ops-phone**.
 3. Set **Phone API URL** to `http://<fivem-server>:30120/opslabs-phone/api/v1`. The CAD's API server must be able to reach it. If the CAD runs on the same machine, use `http://127.0.0.1:30120/opslabs-phone/api/v1`.
 4. Paste the **API key**. It's the value of `opslabs_phone_api_key` in server.cfg. The CAD never shows it again; it only shows that a key is saved.

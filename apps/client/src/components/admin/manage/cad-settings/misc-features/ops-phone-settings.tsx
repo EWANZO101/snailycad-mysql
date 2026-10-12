@@ -1,10 +1,8 @@
 import * as React from "react";
-import { TabsContent } from "@radix-ui/react-tabs";
 import { useTranslations } from "use-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Loader, SelectField, SwitchField, TextField } from "@snailycad/ui";
 import { getAPIUrl } from "@snailycad/utils/api-url";
-import { SettingsTabs } from "components/admin/cad-settings/layout";
 import useFetch from "lib/useFetch";
 
 type Target = "CALL_911_LEO" | "CALL_911_EMS_FD" | "TOW" | "TAXI" | "IGNORE";
@@ -31,7 +29,8 @@ const QUERY_KEY = ["admin", "ops-phone"];
 const BASE_PATH = "/admin/manage/cad-settings/ops-phone";
 
 /** ops-phone (OpsLab Systems FiveM phone): Services app requests become CAD calls */
-export function OpsPhoneTab() {
+/** OPS Phone's settings, shown in CAD Settings > Integrations > Phones under OPS Phone */
+export function OpsPhoneSettings() {
   const t = useTranslations("OpsPhone");
   const common = useTranslations("Common");
   const { execute, state } = useFetch();
@@ -167,11 +166,8 @@ export function OpsPhoneTab() {
   const targetOptions = TARGETS.map((target) => ({ value: target, label: t(`target_${target}`) }));
 
   return (
-    <TabsContent value={SettingsTabs.OpsPhone} className="mt-3">
-      <header className="mb-4">
-        <h2 className="text-2xl font-semibold">{t("opsPhone")}</h2>
-        <p className="mt-1 text-neutral-600 dark:text-gray-400">{t("intro")}</p>
-      </header>
+    <div>
+      <p className="mb-4 text-sm text-neutral-600 dark:text-gray-400">{t("intro")}</p>
 
       {settings.isPending ? <Loader /> : null}
 
@@ -350,7 +346,7 @@ export function OpsPhoneTab() {
           </footer>
         </>
       ) : null}
-    </TabsContent>
+    </div>
   );
 }
 

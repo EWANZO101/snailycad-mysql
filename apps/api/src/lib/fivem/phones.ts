@@ -12,6 +12,8 @@ export interface FivemPhone {
   /** what the CAD does with it */
   features: ("phoneNumber" | "calls")[];
   description: string;
+  /** how to set it up, shown under "Set up" in CAD Settings > Phones */
+  setup: string[];
 }
 
 export const FIVEM_PHONES: FivemPhone[] = [
@@ -21,6 +23,11 @@ export const FIVEM_PHONES: FivemPhone[] = [
     features: ["phoneNumber"],
     description:
       "ESX's users.phone_number or QBCore / Qbox's charinfo.phone. Phones that keep their number there, like qb-phone and Renewed's qb-phone, work through this.",
+    setup: [
+      "Nothing to install: ESX keeps the number in users.phone_number, QBCore / Qbox in charinfo.phone.",
+      "qb-phone and Renewed's qb-phone store their number there, so they work through this.",
+      "Turn it off to prefer a phone script's number over the framework's.",
+    ],
   },
   {
     id: "opslabs-phone",
@@ -28,72 +35,132 @@ export const FIVEM_PHONES: FivemPhone[] = [
     features: ["phoneNumber", "calls"],
     description:
       "Full integration: 911, tow and taxi calls from the phone become CAD calls, with status texts back. Set it up in the OPS Phone tab.",
+    setup: [],
   },
   {
     id: "lb-phone",
     name: "LB Phone",
     features: ["phoneNumber"],
     description: "The number of the phone the player has equipped.",
+    setup: [
+      "Install LB Phone (resource name lb-phone) and start it before snailycad-framework.",
+      "The number of the phone the player has equipped is used.",
+      "The snailycad-framework resource must be installed and set up (see the FiveM framework tab).",
+      "The number reaches the citizen when the character loads and on every resync. Run snailyframework_check in the server console: the phone must be listed under “phone numbers from”.",
+    ],
   },
   {
     id: "qs-smartphone",
     name: "Quasar Smartphone",
     features: ["phoneNumber"],
     description: "The number of the player's active phone / SIM.",
+    setup: [
+      "Install Quasar Smartphone (resource name qs-smartphone) and start it before snailycad-framework.",
+      "The number of the player's active phone / SIM is used.",
+      "The snailycad-framework resource must be installed and set up (see the FiveM framework tab).",
+      "The number reaches the citizen when the character loads and on every resync. Run snailyframework_check in the server console: the phone must be listed under “phone numbers from”.",
+    ],
   },
   {
     id: "gksphone",
     name: "GKSPhone",
     features: ["phoneNumber"],
     description: "GKSPhone v2: the player's phone number.",
+    setup: [
+      "Install GKSPhone v2 (resource name gksphone) and start it before snailycad-framework.",
+      "The snailycad-framework resource must be installed and set up (see the FiveM framework tab).",
+      "The number reaches the citizen when the character loads and on every resync. Run snailyframework_check in the server console: the phone must be listed under “phone numbers from”.",
+    ],
   },
   {
     id: "npwd",
     name: "NPWD",
     features: ["phoneNumber"],
     description: "New Phone Who Dis (Project Error): the player's phone number.",
+    setup: [
+      "Install NPWD (resource name npwd) and start it before snailycad-framework.",
+      "The snailycad-framework resource must be installed and set up (see the FiveM framework tab).",
+      "The number reaches the citizen when the character loads and on every resync. Run snailyframework_check in the server console: the phone must be listed under “phone numbers from”.",
+    ],
   },
   {
     id: "yseries",
     name: "YSeries (YPhone / YFlip)",
     features: ["phoneNumber"],
     description: "The player's number from YPhone or YFlip.",
+    setup: [
+      "Install YSeries (resource name yseries; YPhone and YFlip) and start it before snailycad-framework.",
+      "The snailycad-framework resource must be installed and set up (see the FiveM framework tab).",
+      "The number reaches the citizen when the character loads and on every resync. Run snailyframework_check in the server console: the phone must be listed under “phone numbers from”.",
+    ],
   },
   {
     id: "roadphone",
     name: "RoadPhone",
     features: ["phoneNumber"],
     description: "RoadPhone Pro, or the older RoadPhone (looked up by the character's identifier).",
+    setup: [
+      "Install RoadPhone (resource name roadphone) and start it before snailycad-framework.",
+      "RoadPhone Pro and the older RoadPhone both work.",
+      "The snailycad-framework resource must be installed and set up (see the FiveM framework tab).",
+      "The number reaches the citizen when the character loads and on every resync. Run snailyframework_check in the server console: the phone must be listed under “phone numbers from”.",
+    ],
   },
   {
     id: "okokPhone",
     name: "okokPhone",
     features: ["phoneNumber"],
     description: "The player's phone number.",
+    setup: [
+      "Install okokPhone (resource name okokPhone, capital P) and start it before snailycad-framework.",
+      "The snailycad-framework resource must be installed and set up (see the FiveM framework tab).",
+      "The number reaches the citizen when the character loads and on every resync. Run snailyframework_check in the server console: the phone must be listed under “phone numbers from”.",
+    ],
   },
   {
     id: "high-phone",
     name: "High Phone",
     features: ["phoneNumber"],
     description: "High Scripts' phone (the current high-phone, not the old high_phone).",
+    setup: [
+      "Install High Phone (resource name high-phone, with a hyphen) and start it before snailycad-framework. The old high_phone isn't supported.",
+      "The snailycad-framework resource must be installed and set up (see the FiveM framework tab).",
+      "The number reaches the citizen when the character loads and on every resync. Run snailyframework_check in the server console: the phone must be listed under “phone numbers from”.",
+    ],
   },
   {
     id: "17mov_Phone",
     name: "17mov Phone",
     features: ["phoneNumber"],
     description: "The player's active number.",
+    setup: [
+      "Install 17mov Phone (resource name 17mov_Phone) and start it before snailycad-framework.",
+      "The snailycad-framework resource must be installed and set up (see the FiveM framework tab).",
+      "The number reaches the citizen when the character loads and on every resync. Run snailyframework_check in the server console: the phone must be listed under “phone numbers from”.",
+    ],
   },
   {
     id: "codem-phone",
     name: "CodeM mPhone",
     features: ["phoneNumber"],
     description: "mPhone 2.5: the player's phone number.",
+    setup: [
+      "Install CodeM mPhone 2.5 (resource name codem-phone) and start it before snailycad-framework.",
+      "The snailycad-framework resource must be installed and set up (see the FiveM framework tab).",
+      "The number reaches the citizen when the character loads and on every resync. Run snailyframework_check in the server console: the phone must be listed under “phone numbers from”.",
+    ],
   },
   {
     id: "z-phone",
     name: "Z-Phone",
     features: ["phoneNumber"],
     description: "Read from its zp_users table (it has no exports).",
+    setup: [
+      "Install Z-Phone (resource name z-phone) and start it before snailycad-framework.",
+      "It has no exports: the number is read from its zp_users table, so oxmysql must be running.",
+      "The snailycad-framework resource must be installed and set up (see the FiveM framework tab).",
+      "The number reaches the citizen when the character loads and on every resync. Run snailyframework_check in the server console: the phone must be listed under “phone numbers from”.",
+    ],
   },
 ];
 

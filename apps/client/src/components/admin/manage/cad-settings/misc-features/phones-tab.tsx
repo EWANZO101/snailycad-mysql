@@ -5,12 +5,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Loader, SwitchField } from "@snailycad/ui";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
 import useFetch from "lib/useFetch";
+import { OpsPhoneSettings } from "./ops-phone-settings";
 
 interface FivemPhone {
   id: string;
   name: string;
   features: ("phoneNumber" | "calls")[];
   description: string;
+  setup: string[];
   enabled: boolean;
   detected: boolean | null;
 }
@@ -32,6 +34,7 @@ export function PhonesTab() {
   const { execute, state } = useFetch();
   const queryClient = useQueryClient();
   const [enabled, setEnabled] = React.useState<Record<string, boolean> | null>(null);
+  const [openSetup, setOpenSetup] = React.useState<string | null>(null);
 
   const settings = useQuery({
     queryKey: QUERY_KEY,
@@ -109,7 +112,28 @@ export function PhonesTab() {
                       {t("phoneDetected")}
                     </span>
                   ) : null}
+                  <button
+                    type="button"
+                    className="underline text-blue-600 dark:text-blue-400"
+                    aria-expanded={openSetup === phone.id}
+                    onClick={() => setOpenSetup((prev) => (prev === phone.id ? null : phone.id))}
+                  >
+                    {openSetup === phone.id ? t("phoneSetupHide") : t("phoneSetup")}
+                  </button>
                 </div>
+                {openSetup === phone.id ? (
+                  <div className="ml-12 mt-1 rounded-lg border border-gray-200 dark:border-quaternary p-3">
+                    {phone.id === "opslabs-phone" ? (
+                      <OpsPhoneSettings />
+                    ) : (
+                      <ol className="list-decimal ml-5 text-sm flex flex-col gap-1">
+                        {phone.setup.map((step) => (
+                          <li key={step}>{step}</li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                ) : null}
               </div>
             ))}
           </section>
