@@ -39,6 +39,8 @@
     "position": "Position",
     "bottomLeft": "Bottom left",
     "bottomRight": "Bottom right",
+    "positionCustom": "Where you dragged it",
+    "dragHint": "Drag the radio by its title bar to move it. Double-click the title bar to put it back in its corner.",
     "httpsNote": "Talking needs the CAD to be opened over HTTPS (or on localhost): browsers only give microphone access to secure pages. Listening works everywhere.",
     "popOut": "Pop out the radio into its own window",
     "inPopout": "in the pop-out window",
