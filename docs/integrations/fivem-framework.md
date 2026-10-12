@@ -22,7 +22,7 @@ The resource is in `integrations/fivem/snailycad-framework`.
   | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
   | Name, date of birth         | the character                                                                                                                                                |
   | Gender, height              | the character (height: ESX, or QBCore metadata)                                                                                                              |
-  | Phone number                | the framework, else ops-phone or lb-phone                                                                                                                    |
+  | Phone number                | the framework, else a supported phone; see [Phones](#phones)                                                                                                 |
   | Hair and eye colour         | the saved skin (skinchanger, fivem-appearance, illenium-appearance, qb-clothing)                                                                             |
   | Weight, address             | `Config.Character.weight` / `.address`, else "Unknown"                                                                                                       |
   | Ethnicity                   | `Config.Character.ethnicity` (a name in the CAD), else the CAD's default ethnicity                                                                           |
@@ -136,6 +136,33 @@ It also has switches: the whole sync, citizens, vehicles and duty. A switch turn
 | `Config.Character`     |                                  | `genders`, `dateFormat` (ESX), `phone`, `height`      |
 | `Config.ServerName`    | sv_projectName                   | the name shown in CAD Settings                        |
 | `Config.Debug`         | `false`                          | print every sync in the console                       |
+
+## Phones
+
+The resource reads a character's phone number from the framework (ESX `users.phone_number`, QBCore
+/ Qbox `charinfo.phone`) and from every supported phone script that's running, and sends them all.
+The CAD saves the first one, in this order, that's switched on in **CAD Settings > Integrations >
+Phones**. That tab also shows which phones your game server reported running.
+
+| Phone                    | Resource        | How                                                                              |
+| ------------------------ | --------------- | -------------------------------------------------------------------------------- |
+| Framework number         | -               | ESX `users.phone_number`, QBCore `charinfo.phone` (qb-phone, Renewed's qb-phone) |
+| OPS Phone                | `opslabs-phone` | `GetPhoneNumber`; also 911 / tow / taxi calls ([ops-phone](ops-phone.md))        |
+| LB Phone                 | `lb-phone`      | `GetEquippedPhoneNumber`                                                         |
+| Quasar Smartphone        | `qs-smartphone` | `GetCurrentPhoneNumber`                                                          |
+| GKSPhone v2              | `gksphone`      | `GetPhoneBySource`                                                               |
+| NPWD                     | `npwd`          | `getPlayerData().phoneNumber`                                                    |
+| YSeries (YPhone / YFlip) | `yseries`       | `GetPhoneNumberBySourceId`                                                       |
+| RoadPhone (Pro or older) | `roadphone`     | `GetPhoneNumberBySource`, else `getNumberFromIdentifier`                         |
+| okokPhone                | `okokPhone`     | `getPhoneNumberFromSource`                                                       |
+| High Phone               | `high-phone`    | `getPlayerPhoneNumber`                                                           |
+| 17mov Phone              | `17mov_Phone`   | `GetNumberFromPlayer`                                                            |
+| CodeM mPhone 2.5         | `codem-phone`   | `GetPhoneNumberBySource`                                                         |
+| Z-Phone                  | `z-phone`       | the `zp_users` table                                                             |
+
+Switching a phone off in the CAD only stops its number being used; nothing changes in game. Turn
+phone numbers off completely with `Config.Character.phone = false`. Run `snailyframework_check` to
+see which phones the resource found.
 
 ## Commands and exports
 

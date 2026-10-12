@@ -35,6 +35,7 @@ export enum SettingsTabs {
   APIToken = "API_TOKEN",
   OpsPhone = "OPS_PHONE",
   FivemFramework = "FIVEM_FRAMEWORK",
+  Phones = "PHONES",
 
   /** permissions */
   DefaultPermissions = "DEFAULT_PERMISSIONS",
@@ -128,6 +129,7 @@ function CadSettingsSidebar() {
         SettingsTabs.APIToken,
         SettingsTabs.OpsPhone,
         SettingsTabs.FivemFramework,
+        SettingsTabs.Phones,
       ],
     },
     {

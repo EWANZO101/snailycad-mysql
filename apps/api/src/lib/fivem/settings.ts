@@ -18,6 +18,7 @@ export interface FivemServerInfo {
   framework?: string | null;
   serverName?: string | null;
   version?: string | null;
+  phoneResources?: string[] | null;
 }
 
 /** remembers when a game server last synced (shown in CAD Settings) */
@@ -30,6 +31,7 @@ export async function recordFivemSync(settingsId: string, info: FivemServerInfo)
         lastFramework: info.framework ?? undefined,
         lastServerName: info.serverName ? info.serverName.slice(0, 255) : undefined,
         lastVersion: info.version ? info.version.slice(0, 32) : undefined,
+        detectedPhones: info.phoneResources ?? undefined,
       },
     })
     .catch(() => null);

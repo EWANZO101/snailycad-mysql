@@ -25,6 +25,7 @@ local function serverInfo(body)
   body.framework = Framework.name
   body.serverName = Api.serverName()
   body.version = Api.version
+  body.phoneResources = Framework.phoneResources()
   return body
 end
 
@@ -103,7 +104,7 @@ function Sync.player(source, options)
   current.syncing = true
 
   local ok, result, err = pcall(function()
-    local characterId, character = Framework.getCharacter(source, options.override)
+    local characterId, character, phones = Framework.getCharacter(source, options.override)
     if not characterId then return nil, "no character loaded" end
     current.characterId = characterId
     current.identifiers = Framework.getIdentifiers(source)
@@ -125,6 +126,7 @@ function Sync.player(source, options)
       identifiers = Api.identifiers(current.identifiers),
       unlinked = Config.Unlinked == "create" and "create" or "skip",
       character = character,
+      phones = phones,
       vehicles = vehicles,
       createVehicleModels = Config.Vehicles.createModels == true,
     })

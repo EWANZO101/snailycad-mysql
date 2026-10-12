@@ -112,6 +112,11 @@ const Tabs = {
         .FivemFrameworkTab,
     { ssr: false },
   ),
+  PhonesTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/phones-tab")).PhonesTab,
+    { ssr: false },
+  ),
   ImportPostgresTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/misc-features/import-postgres-tab"))
@@ -147,6 +152,7 @@ export default function CadSettings(props: Props) {
       <Tabs.ApiTokenTab />
       <Tabs.OpsPhoneTab />
       <Tabs.FivemFrameworkTab />
+      <Tabs.PhonesTab />
       <Tabs.DiscordRolesTab />
       <Tabs.DiscordWebhooksTab />
       <Tabs.RawWebhooksTab />

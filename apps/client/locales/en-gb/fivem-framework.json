@@ -20,6 +20,14 @@
     "syncDuty": "Duty",
     "syncDutyDescription": "Set units on and off duty when players go on or off duty in game.",
     "setup": "Setup",
-    "setupInfo": "Turn on the CAD API token (API Token tab). Install the snailycad-framework resource on your FiveM server, then run this in the server console with your token. See the docs: Integrations, FiveM framework."
+    "setupInfo": "Turn on the CAD API token (API Token tab). Install the snailycad-framework resource on your FiveM server, then run this in the server console with your token. See the docs: Integrations, FiveM framework.",
+    "phonesTitle": "Phones",
+    "phonesIntro": "In-game phones the snailycad-framework resource reads a character's phone number from. It reads every phone that's running; the CAD saves the number from the first one switched on here.",
+    "phonesSyncOff": "The FiveM framework sync is switched off, so no phone numbers are synced. Turn it on in the FiveM framework tab.",
+    "phoneFeatureNumber": "Phone number on citizen",
+    "phoneFeatureCalls": "911 / tow / taxi calls",
+    "phoneDetected": "Running on your server",
+    "phonesOrder": "When several phones have a number, the first one switched on in this list wins. Switching a phone off only stops its number being used; nothing changes in game.",
+    "phonesNotReported": "Your game server hasn't reported its phones yet. Update the snailycad-framework resource and restart it (or run snailyframework_check) to see which are running."
   }
 }

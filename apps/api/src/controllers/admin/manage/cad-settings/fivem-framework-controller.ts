@@ -7,12 +7,18 @@ import { validateSchema } from "lib/data/validate-schema";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { getFivemFrameworkSettings, getFivemFrameworkStats } from "lib/fivem/settings";
+import { describeFivemPhones, isFivemPhoneId } from "lib/fivem/phones";
 
 const FIVEM_FRAMEWORK_SETTINGS_SCHEMA = z.object({
   enabled: z.boolean().optional(),
   syncCitizens: z.boolean().optional(),
   syncVehicles: z.boolean().optional(),
   syncDuty: z.boolean().optional(),
+  disabledPhones: z
+    .array(z.string().max(64))
+    .max(50)
+    .transform((ids) => [...new Set(ids.filter(isFivemPhoneId))])
+    .optional(),
 });
 
 async function getSettingsWithStats() {
@@ -20,7 +26,7 @@ async function getSettingsWithStats() {
     getFivemFrameworkSettings(),
     getFivemFrameworkStats(),
   ]);
-  return { ...settings, stats };
+  return { ...settings, stats, phones: describeFivemPhones(settings) };
 }
 
 @Controller("/admin/manage/cad-settings/fivem-framework")
@@ -36,7 +42,9 @@ export class FivemFrameworkAdminController {
 
   @Put("/")
   @UsePermissions({ permissions: [Permissions.ManageCADSettings] })
-  @Description("Turn parts of the FiveM framework sync on or off")
+  @Description(
+    "Turn parts of the FiveM framework sync, and which phones' numbers are used, on or off",
+  )
   async updateSettings(@BodyParams() body: unknown) {
     const data = validateSchema(FIVEM_FRAMEWORK_SETTINGS_SCHEMA, body);
     const settings = await getFivemFrameworkSettings();

@@ -1930,6 +1930,9 @@ model FivemFrameworkSettings {
   lastServerName String?   @db.VarChar(255)
   lastFramework  String?   @db.VarChar(16)
   lastVersion    String?   @db.VarChar(32)
+  // phone ids (lib/fivem/phones.ts) whose numbers are ignored, and the phones the game server last reported running
+  disabledPhones Json?
+  detectedPhones Json?
 }
 
 enum RadioTransport {

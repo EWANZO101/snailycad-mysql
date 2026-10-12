@@ -149,20 +149,91 @@ local function characterOptions()
   }
 end
 
---- the phone number from a phone script, when the framework has none (ops-phone, lb-phone)
+--[[
+  Phone scripts the phone number can come from. The resource sends the number from every one that's
+  running, and the CAD keeps the first one switched on in CAD Settings > Phones (the framework's
+  own number first). `resource` must match the ids in apps/api/src/lib/fivem/phones.ts.
+]]
 local PHONE_EXPORTS = {
+  -- get(source, characterId): characterId is the ESX identifier or the QBCore / Qbox citizenid.
+  -- Checked against each phone's docs: a phone not listed here (e.g. qb-phone) uses the
+  -- framework's number, which the CAD reads first anyway.
   { resource = "opslabs-phone", get = function(source) return exports["opslabs-phone"]:GetPhoneNumber(source) end },
   { resource = "lb-phone", get = function(source) return exports["lb-phone"]:GetEquippedPhoneNumber(source) end },
+  { resource = "qs-smartphone", get = function(source) return exports["qs-smartphone"]:GetCurrentPhoneNumber(source) end },
+  { resource = "gksphone", get = function(source) return exports["gksphone"]:GetPhoneBySource(source) end },
+  {
+    resource = "npwd",
+    get = function(source)
+      local player = exports.npwd:getPlayerData({ source = source })
+      return player and player.phoneNumber or nil
+    end,
+  },
+  { resource = "yseries", get = function(source) return exports.yseries:GetPhoneNumberBySourceId(source) end },
+  {
+    -- RoadPhone Pro has GetPhoneNumberBySource; the older RoadPhone only the identifier lookup
+    resource = "roadphone",
+    get = function(source, characterId)
+      local ok, number = pcall(function() return exports["roadphone"]:GetPhoneNumberBySource(source) end)
+      if ok and number then return number end
+      if characterId then return exports["roadphone"]:getNumberFromIdentifier(characterId) end
+      return nil
+    end,
+  },
+  { resource = "okokPhone", get = function(source) return exports["okokPhone"]:getPhoneNumberFromSource(source) end },
+  { resource = "high-phone", get = function(source) return exports["high-phone"]:getPlayerPhoneNumber(source) end },
+  { resource = "17mov_Phone", get = function(source) return exports["17mov_Phone"]:GetNumberFromPlayer(source) end },
+  { resource = "codem-phone", get = function(source) return exports["codem-phone"]:GetPhoneNumberBySource(source) end },
+  {
+    -- no exports: its zp_users table, keyed by citizenid (the ESX identifier on ESX)
+    resource = "z-phone",
+    get = function(_, characterId)
+      if not characterId or not columns("zp_users").phone_number then return nil end
+      local rows = query("SELECT phone_number FROM zp_users WHERE citizenid = ? LIMIT 1", { characterId })
+      return rows and rows[1] and rows[1].phone_number or nil
+    end,
+  },
 }
 
-local function phoneFromPhoneScript(source)
+--- "framework" and every phone script that's running (shown in CAD Settings > Phones)
+function Framework.phoneResources()
+  local list = {}
+  if Config.Character.phone == false then return list end
+  list[#list + 1] = "framework"
+  for _, phone in ipairs(PHONE_EXPORTS) do
+    if started(phone.resource) then list[#list + 1] = phone.resource end
+  end
+  return list
+end
+
+--- { framework = "...", ["lb-phone"] = "..." }: the character's number from each source that has one
+local function phoneNumbers(source, characterId, frameworkNumber)
+  local numbers = {}
+  if frameworkNumber and frameworkNumber ~= "" then numbers.framework = tostring(frameworkNumber) end
   for _, phone in ipairs(PHONE_EXPORTS) do
     if started(phone.resource) then
-      local ok, number = pcall(phone.get, source)
-      if ok and number and number ~= "" then return tostring(number) end
+      local ok, number = pcall(phone.get, source, characterId)
+      if ok and number ~= nil and number ~= "" and type(number) ~= "table" then
+        numbers[phone.resource] = tostring(number)
+      end
     end
   end
-  return nil
+  return numbers
+end
+
+--- the CAD picks from `phones`; character.phoneNumber stays filled for CADs that don't know `phones`
+local function addPhones(source, characterId, character)
+  if not character or Config.Character.phone == false then return nil end
+  local phones = phoneNumbers(source, characterId, character.phoneNumber)
+  if not character.phoneNumber then
+    for _, phone in ipairs(PHONE_EXPORTS) do
+      if phones[phone.resource] then
+        character.phoneNumber = phones[phone.resource]
+        break
+      end
+    end
+  end
+  return phones
 end
 
 --- the game licences a character holds and all licence types the server has ({ [type] = true })
@@ -214,7 +285,7 @@ local function savedSkin(identifier)
   return rows and rows[1] and rows[1].skin or nil
 end
 
---- the character's id and CAD data, or nil (not loaded / no identity yet)
+--- the character's id, CAD data and phone numbers per phone, or nil (not loaded / no identity yet)
 --- override: values that just changed (e.g. from esx_identity:completedRegistration)
 function Framework.getCharacter(source, override)
   local player = Framework.getPlayer(source)
@@ -237,21 +308,17 @@ function Framework.getCharacter(source, override)
     end
     if Config.Character.appearance ~= false then data.skin = savedSkin(data.identifier) end
     local characterId, character = Mapping.esxCharacter(data, characterOptions())
-    if character and not character.phoneNumber and Config.Character.phone ~= false then
-      character.phoneNumber = phoneFromPhoneScript(source)
-    end
+    local phones = addPhones(source, characterId, character)
     addLicences(character, data.identifier, nil)
-    return characterId, character
+    return characterId, character, phones
   end
 
   local playerData = player.PlayerData
   local skin = Config.Character.appearance ~= false and playerData and savedSkin(playerData.citizenid) or nil
   local characterId, character = Mapping.qbCharacter(playerData, characterOptions(), skin)
-  if character and not character.phoneNumber and Config.Character.phone ~= false then
-    character.phoneNumber = phoneFromPhoneScript(source)
-  end
+  local phones = addPhones(source, characterId, character)
   addLicences(character, nil, playerData)
-  return characterId, character
+  return characterId, character, phones
 end
 
 -- --- vehicles ------------------------------------------------------------------------------------

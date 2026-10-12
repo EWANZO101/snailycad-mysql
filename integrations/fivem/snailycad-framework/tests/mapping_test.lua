@@ -281,6 +281,28 @@ local _, registered = Framework.getCharacter(1, { firstname = "New", lastname = 
 eq(registered.firstName, "New", "ESX esx_identity override")
 eq(registered.gender, "Female", "ESX override gender")
 
+-- phones: every running phone's number is sent; the framework's stays the legacy phoneNumber
+running["lb-phone"] = true
+exports["lb-phone"] = { GetEquippedPhoneNumber = function(_, source) return source == 1 and 5550001 or nil end }
+local _, phoneChar, phones = Framework.getCharacter(1)
+eq(phones.framework, "555-1234", "phones: framework number")
+eq(phones["lb-phone"], "5550001", "phones: lb-phone number, as a string")
+eq(phoneChar.phoneNumber, "555-1234", "phones: framework number stays the fallback")
+eq(table.concat(Framework.phoneResources(), ","), "framework,lb-phone", "phones: running phones reported")
+exports["lb-phone"] = { GetEquippedPhoneNumber = function() return { number = "x" } end }
+local _, _, oddPhones = Framework.getCharacter(1)
+eq(oddPhones["lb-phone"], nil, "phones: a table from an export is ignored")
+running["lb-phone"] = nil
+exports["lb-phone"] = nil
+running.npwd = true
+exports.npwd = { getPlayerData = function(_, locator) return { phoneNumber = "555-NPWD", source = locator.source } end }
+running.roadphone = true
+exports.roadphone = { getNumberFromIdentifier = function(_, id) return id == "char1:abc" and "555-ROAD" or nil end }
+local _, _, more = Framework.getCharacter(1)
+eq(more.npwd, "555-NPWD", "phones: npwd's phoneNumber field")
+eq(more.roadphone, "555-ROAD", "phones: older RoadPhone by identifier")
+running.npwd, running.roadphone, exports.npwd, exports.roadphone = nil, nil, nil, nil
+
 local job, onDuty = Framework.getJob(1)
 eq(job, "police", "ESX job")
 eq(onDuty, true, "ESX duty")

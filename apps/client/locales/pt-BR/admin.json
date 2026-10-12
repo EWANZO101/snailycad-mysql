@@ -132,7 +132,8 @@
     "quickLinkCadSettings": "Features, integrations, webhooks and defaults.",
     "quickLinkValuesTitle": "Values",
     "quickLinkValues": "Departments, penal codes, vehicles and other lists.",
-    "quickLinkAuditLogs": "See who changed what, and when."
+    "quickLinkAuditLogs": "See who changed what, and when.",
+    "PHONES": "Phones"
   },
   "AuditLogs": {
     "userBanned": "Usuário: <span>{value}</span> foi banido.",

@@ -35,7 +35,7 @@ RegisterCommand("snailyframework_setup", function(source, args)
     return
   end
   CreateThread(function()
-    local data, status, raw = Api.await("/check", { framework = Framework.name }, url, token)
+    local data, status, raw = Api.await("/check", { framework = Framework.name, phoneResources = Framework.phoneResources() }, url, token)
     if not data or not data.ok then
       out("^1not saved: %s^0", Api.describeError(status, raw))
       return
@@ -71,7 +71,9 @@ RegisterCommand("snailyframework_check", function(source)
       }
     end
 
-    local data, status, raw = Api.await("/check", { framework = Framework.name, players = list })
+    local data, status, raw = Api.await("/check", {
+      framework = Framework.name, players = list, phoneResources = Framework.phoneResources(),
+    })
     if not data or not data.ok then
       out("^1%s^0", Api.describeError(status, raw))
       return
@@ -95,6 +97,16 @@ RegisterCommand("snailyframework_check", function(source)
       out("^3vehicles need a registration status value (Admin > Values > License)^0")
     end
     if cad.dmv then out("^3the CAD's DMV feature is on: synced vehicles wait for DMV approval^0") end
+    if Config.Character.phone == false then
+      out("phone numbers: off (Config.Character.phone)")
+    else
+      local off, phones = {}, {}
+      for _, id in ipairs(settings.disabledPhones or {}) do off[id] = true end
+      for _, id in ipairs(Framework.phoneResources()) do
+        phones[#phones + 1] = off[id] and (id .. " (off in CAD Settings > Phones)") or id
+      end
+      out("phone numbers from: %s", table.concat(phones, ", "))
+    end
 
     if #online == 0 then
       out("no players with a character online")

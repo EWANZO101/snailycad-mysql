@@ -22,6 +22,8 @@ const SERVER = {
   serverName: z.string().trim().max(255).nullish(),
   /** the resource version */
   version: z.string().trim().max(32).nullish(),
+  /** the phones running on the game server (lib/fivem/phones.ts ids), "framework" included */
+  phoneResources: z.array(z.string().trim().max(64)).max(50).nullish(),
 };
 
 /** ESX: the users.identifier (e.g. "char1:abc..."), QBCore / Qbox: the citizenid */
@@ -45,6 +47,16 @@ export const FIVEM_CHARACTER_SYNC_SCHEMA = z.object({
   /** what to do with a character whose player has no CAD account: skip it, or create a citizen
    * without a user (CAD users can claim it later) */
   unlinked: z.enum(["skip", "create"]).default("skip"),
+  /** the character's phone number from each phone that has one ({ "lb-phone": "5551234" }); the
+   * CAD picks one (lib/fivem/phones.ts). Older resources only send character.phoneNumber. */
+  phones: emptyArrayAsObject(
+    z
+      .record(
+        z.string().trim().max(64),
+        z.union([z.string(), z.number()]).transform((value) => String(value).trim().slice(0, 64)),
+      )
+      .nullish(),
+  ),
   character: z.object({
     firstName: z.string().trim().min(1).max(255),
     lastName: z.string().trim().min(1).max(255),
@@ -111,6 +123,7 @@ export const FIVEM_DUTY_SCHEMA = z.object({
 export const FIVEM_CHECK_SCHEMA = emptyArrayAsObject(
   z.object({
     framework: z.enum(FIVEM_FRAMEWORKS).nullish(),
+    phoneResources: SERVER.phoneResources,
     players: z
       .array(
         emptyArrayAsObject(
