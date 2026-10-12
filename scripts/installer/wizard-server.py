@@ -1357,6 +1357,10 @@ def windows_service():
     fallback, when NSSM can't be downloaded) only restarts when the task fails to start and keeps
     no log of its own."""
     os.makedirs(LOGS_DIR, exist_ok=True)
+    # "Update SnailyCAD.bat": double-click to update (runs app\scripts\update-cad.ps1)
+    bat = os.path.join(APP_DIR, "scripts", "installer", "update-snailycad.bat")
+    if os.path.isfile(bat):
+        shutil.copyfile(bat, os.path.join(INSTALL_DIR, "Update SnailyCAD.bat"))
     add_to_manifest("CAD_SERVICE", NAME)
     depends_on = MARIADB_SERVICE if manifest_value("WINGET_MARIADB") == "1" else None
     nssm = ensure_nssm()

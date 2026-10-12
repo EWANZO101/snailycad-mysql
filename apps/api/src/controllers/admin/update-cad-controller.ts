@@ -1,5 +1,5 @@
 import { execFile, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { copyFileSync, existsSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 import { promisify } from "node:util";
 import { Controller, UseBeforeEach } from "@tsed/common";
@@ -12,6 +12,7 @@ import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { findApiRoot } from "lib/recovery/recovery-token";
 import { assertNotDemoAccount, getDemoConfig, isDemoMode } from "lib/demo/demo-mode";
 import { getCADVersion } from "@snailycad/utils/version";
+import { runDetachedPowerShellTask } from "lib/windows/run-detached-task";
 
 const execFileAsync = promisify(execFile);
 
@@ -35,14 +36,44 @@ function getProjectRoot() {
 }
 
 async function git(args: string[], timeout = 15_000) {
-  const { stdout } = await execFileAsync("git", args, { cwd: getProjectRoot(), timeout });
+  // the folder may belong to another user than this API's (e.g. SYSTEM on Windows)
+  const { stdout } = await execFileAsync("git", ["-c", "safe.directory=*", ...args], {
+    cwd: getProjectRoot(),
+    timeout,
+    windowsHide: true,
+  });
   return stdout.trim();
+}
+
+/**
+ * A Windows CAD made by the one-line installer: updated by scripts/update-cad.ps1, which needs the
+ * installer's private Node.js and its manifest (<install folder>\installer\manifest.env).
+ */
+function getWindowsInstall() {
+  if (process.platform !== "win32") return null;
+  const installDir = resolvePath(getProjectRoot(), "..");
+  const script = join(getProjectRoot(), "scripts", "update-cad.ps1");
+  if (!existsSync(join(installDir, "installer", "manifest.env")) || !existsSync(script))
+    return null;
+
+  // "Update SnailyCAD.bat" in the install folder: double-click to update without the dashboard
+  const bat = join(installDir, "Update SnailyCAD.bat");
+  const bundledBat = join(getProjectRoot(), "scripts", "installer", "update-snailycad.bat");
+  if (!existsSync(bat) && existsSync(bundledBat)) {
+    try {
+      copyFileSync(bundledBat, bat);
+    } catch {
+      // not fatal: the dashboard button still works
+    }
+  }
+  return { installDir, script, bat: existsSync(bat) ? bat : null };
 }
 
 /** whether this process can start the updater (it must run on the host, with systemd) */
 function canRunUpdater(mode: UpdateMode) {
   const isInContainer = existsSync("/.dockerenv");
   if (isInContainer) return false;
+  if (process.platform === "win32") return mode === "git" && !!getWindowsInstall();
   if (process.platform !== "linux") return false;
   if (mode === "docker") return true;
   return existsSync("/run/systemd/system");
@@ -80,6 +111,7 @@ export class UpdateCadController {
     }
 
     const isInContainer = existsSync("/.dockerenv");
+    const windowsInstall = getWindowsInstall();
     const isDemoAccount = isDemoMode() && user.username === getDemoConfig().username;
 
     return {
@@ -95,8 +127,14 @@ export class UpdateCadController {
       isDemoAccount,
       isOwner: user.rank === Rank.OWNER,
       isInContainer,
-      manualCommands:
-        mode === "docker"
+      updateBat: windowsInstall?.bat ?? null,
+      manualCommands: windowsInstall
+        ? [
+            windowsInstall.bat
+              ? `"${windowsInstall.bat}"`
+              : `powershell -ExecutionPolicy Bypass -File "${windowsInstall.script}" -Interactive`,
+          ]
+        : mode === "docker"
           ? [
               "git stash",
               "git pull origin main",
@@ -128,12 +166,28 @@ export class UpdateCadController {
       throw new BadRequest("updateMustRunOnHost");
     }
 
+    const startedAt = Math.floor(Date.now() / 1000);
+
+    const windowsInstall = getWindowsInstall();
+    if (windowsInstall) {
+      try {
+        await runDetachedPowerShellTask({
+          taskName: `SnailyCAD-Update-${startedAt}`,
+          scriptPath: windowsInstall.script,
+          args: [],
+        });
+      } catch {
+        throw new BadRequest("unableToStartUpdate");
+      }
+      // the progress page only appears once the updater has stopped the CAD
+      return { started: true, startedAt, mode, waitForStop: true };
+    }
+
     const script = join(getProjectRoot(), "scripts", "update-cad.sh");
     if (!existsSync(script)) {
       throw new BadRequest("updateScriptMissing");
     }
 
-    const startedAt = Math.floor(Date.now() / 1000);
     const env = {
       ...process.env,
       UPDATE_MODE: mode,

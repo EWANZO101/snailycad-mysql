@@ -178,9 +178,21 @@ For a Docker install, see [managing the CAD](install-docker.md#managing-the-cad)
 
 ## Uninstalling
 
+The easiest way: as the CAD owner, open **Admin → Dashboard → Danger zone** and click **Uninstall
+SnailyCAD**. It lists everything the installer added (the CAD, its database, Node.js and pnpm,
+MariaDB or Docker if the wizard installed them, packages, firewall rules and download caches).
+Untick anything you want to keep, for example the database, type the CAD's name and confirm. The
+CAD then removes itself; the page tells you when it's gone. This works on Ubuntu (standalone) and
+Windows installs; for Docker, use the command below on the server.
+
+Or from the command line:
+
 ```bash
 sudo bash /opt/snailycad/uninstall.sh
 ```
+
+Add `--keep=database,runtime` (any of `database`, `db-server`, `docker`, `runtime`, `caches`,
+`firewall`, `pkg:<package>`) to leave those in place, and `--yes` to skip the question.
 
 It lists what it will remove and asks first. It removes the CAD and **its database (all CAD
 data)**, the `snailycad` service or the Docker containers and images, the firewall rules it opened,
@@ -232,7 +244,11 @@ The steps are the same as on Ubuntu, with these differences:
 - **Firewall**: Windows Firewall rules `SnailyCAD-snailycad-<port>` for the website and API ports.
   A router or hosting firewall in front of the PC still needs its own port forwards.
 
-The built-in **Update CAD** button needs the Linux service and doesn't work on Windows yet.
+To update, use **Admin → Dashboard → Update CAD** in the CAD, or double-click
+**`C:\SnailyCAD\Update SnailyCAD.bat`** on the PC (it asks for administrator rights and shows the
+progress in its window, then opens the CAD). Either way the CAD is offline for 10–25 minutes while
+it builds, and the website shows a progress page. A CAD installed before this existed gets the
+`.bat` the first time an updated CAD starts; update that one by hand once (see below).
 
 ### Where everything is
 
@@ -244,6 +260,8 @@ The built-in **Update CAD** button needs the Linux service and doesn't work on W
 | `C:\SnailyCAD\installer\install.log`  | Every command the wizard ran                           |
 | `C:\SnailyCAD\installer\wizard.log`   | The setup wizard's own log                             |
 | `C:\SnailyCAD\installer\manifest.env` | Everything the installer added **outside** this folder |
+| `C:\SnailyCAD\Update SnailyCAD.bat`   | Double-click to update the CAD                         |
+| `C:\SnailyCAD\logs\update.log`        | The last updates' log                                  |
 | `C:\SnailyCAD\uninstall.ps1`          | Removes all of it again                                |
 
 ### Managing the CAD on Windows
@@ -270,7 +288,9 @@ It lists what it will remove and asks first. It removes the `snailycad` service 
 task), the firewall rules, the CAD's database, MariaDB if the wizard installed it (with all its
 data), the programs it installed with winget (Python, Git, NSSM; not ones you already had) and
 `C:\SnailyCAD`. Add `-KeepMariaDB` to keep MariaDB (only the CAD's database and user are dropped;
-the root password is shown) and `-Yes` to skip the question.
+the root password is shown), `-Keep "database,runtime"` to keep any of `database`, `db-server`,
+`runtime`, `firewall` or `pkg:<winget id>`, and `-Yes` to skip the question. The Danger zone on the
+admin dashboard does the same with checkboxes.
 
 ### Windows options
 

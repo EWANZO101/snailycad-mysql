@@ -19,6 +19,8 @@ interface UpdateInfo {
   isOwner: boolean;
   isInContainer: boolean;
   isDemoAccount: boolean;
+  /** Windows: the "Update SnailyCAD.bat" in the install folder */
+  updateBat: string | null;
   manualCommands: string[];
 }
 
@@ -36,6 +38,7 @@ export function UpdateCadCard() {
   const { hasPermissions } = usePermission();
   const { execute, state } = useFetch();
   const [copied, setCopied] = React.useState(false);
+  const [isStarting, setIsStarting] = React.useState(false);
   const canManage = hasPermissions([Permissions.ManageCADSettings]);
 
   const { data, isPending } = useQuery({
@@ -64,14 +67,27 @@ export function UpdateCadCard() {
       return;
     }
 
-    const { json } = await execute<{ started: boolean; startedAt: number }>({
+    const { json } = await execute<{ started: boolean; startedAt: number; waitForStop?: boolean }>({
       path: "/admin/update",
       method: "POST",
     });
 
-    if (json.started) {
-      window.location.href = `/__snaily_update?since=${json.startedAt}`;
+    if (!json.started) return;
+    const progressUrl = `/__snaily_update?since=${json.startedAt}`;
+    if (!json.waitForStop) {
+      window.location.href = progressUrl;
+      return;
     }
+
+    // Windows: the updater stops the CAD first, then serves the progress page on this port
+    setIsStarting(true);
+    const deadline = Date.now() + 90_000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const check = await execute<UpdateInfo>({ path: "/admin/update", noToast: true });
+      if (!check.json || !("mode" in check.json)) break;
+    }
+    window.location.href = progressUrl;
   }
 
   async function handleCopy() {
@@ -138,6 +154,15 @@ export function UpdateCadCard() {
                       docs <BoxArrowUpRight className="w-3 h-3" aria-hidden />
                     </Link>
                   </dd>
+                  {data.updateBat ? (
+                    <>
+                      <dt className="text-neutral-500 dark:text-gray-400">On the PC</dt>
+                      <dd>
+                        double-click{" "}
+                        <code className="font-mono text-xs break-all">{data.updateBat}</code>
+                      </dd>
+                    </>
+                  ) : null}
                   {data.mode !== "local" && data.localChanges > 0 ? (
                     <>
                       <dt className="text-neutral-500 dark:text-gray-400">Local changes</dt>
@@ -156,10 +181,18 @@ export function UpdateCadCard() {
               variant="blue"
               className="flex items-center gap-2 shrink-0 w-fit"
               onPress={handleUpdate}
-              disabled={state === "loading"}
+              disabled={state === "loading" || isStarting}
             >
-              {state === "loading" ? <Loader /> : <ArrowRepeat aria-hidden className="w-4 h-4" />}
-              {data.mode === "local" ? "Apply latest build" : "Update now"}
+              {state === "loading" || isStarting ? (
+                <Loader />
+              ) : (
+                <ArrowRepeat aria-hidden className="w-4 h-4" />
+              )}
+              {isStarting
+                ? "Stopping the CAD…"
+                : data.mode === "local"
+                  ? "Apply latest build"
+                  : "Update now"}
             </Button>
           ) : (
             <p className="text-sm text-neutral-600 dark:text-gray-400 md:max-w-xs">
