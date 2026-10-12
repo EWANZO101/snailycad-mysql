@@ -386,5 +386,26 @@ eq(withLooks.address, "Los Santos", "address from Config.Character")
 eq(withLooks.weight, "80", "weight from Config.Character, trimmed")
 eq(withLooks.ethnicity, nil, "no ethnicity configured -> nil (the CAD picks)")
 
+-- --- licences -----------------------------------------------------------------------------------
+
+local licenceOptions = {
+  map = { drivers = { "drive", "drive_bike", "drive_truck", "driver" }, weapon = { "weapon" },
+    water = { "boat" }, hunting = { "hunting" } },
+  categories = { drive = "Class C", drive_truck = "Class A", drive_bike = "Class M" },
+}
+local esxKnown = { dmv = true, drive = true, drive_bike = true, drive_truck = true, weapon = true, boat = true }
+local held, categories = Mapping.licences({ drive = true, drive_truck = true }, esxKnown, licenceOptions)
+eq(held.drivers, true, "drive -> driver's licence held")
+eq(held.weapon, false, "no weapon licence -> false")
+eq(held.water, false, "no boat licence -> false")
+eq(held.hunting, nil, "server has no hunting licence -> left out")
+eq(table.concat(categories, ","), "Class A,Class C", "categories of the held licences, sorted")
+held = Mapping.licences({ dmv = true }, esxKnown, licenceOptions)
+eq(held.drivers, false, "only the dmv permit -> no driver's licence")
+eq(Mapping.licences({}, {}, licenceOptions), nil, "server without licences -> nil")
+held = Mapping.licences({ driver = true }, { driver = true, weapon = true, business = true }, licenceOptions)
+eq(held.drivers, true, "QBCore metadata.licences.driver")
+eq(held.weapon, false, "QBCore weapon licence not held")
+
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then os.exit(1) end

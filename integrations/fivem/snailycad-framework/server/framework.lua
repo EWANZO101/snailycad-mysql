@@ -165,6 +165,42 @@ local function phoneFromPhoneScript(source)
   return nil
 end
 
+--- the game licences a character holds and all licence types the server has ({ [type] = true })
+local esxLicenceTypes
+local function licences(identifier, playerData)
+  if Config.Licenses == nil or Config.Licenses.sync == false then return nil, nil end
+  local held, known = {}, {}
+  if Framework.name == "esx" then
+    if not identifier or not columns("user_licenses").type then return nil, nil end
+    if not esxLicenceTypes then
+      esxLicenceTypes = {}
+      for _, row in ipairs(query("SELECT type FROM licenses") or {}) do esxLicenceTypes[row.type] = true end
+    end
+    for licenceType in pairs(esxLicenceTypes) do known[licenceType] = true end
+    for _, row in ipairs(query("SELECT type FROM user_licenses WHERE owner = ?", { identifier }) or {}) do
+      held[row.type] = true
+      known[row.type] = true
+    end
+  else
+    local metadata = playerData and playerData.metadata or {}
+    for licenceType, has in pairs(metadata.licences or metadata.licenses or {}) do
+      known[licenceType] = true
+      if has == true then held[licenceType] = true end
+    end
+  end
+  return held, known
+end
+
+local function addLicences(character, identifier, playerData)
+  if not character then return end
+  local held, known = licences(identifier, playerData)
+  if not held then return end
+  local result, categories = Mapping.licences(held, known, Config.Licenses)
+  character.licenses = result
+  character.licenseCategories = categories
+  character.licenseValues = { valid = Config.Licenses.valid, none = Config.Licenses.none }
+end
+
 --- the saved skin (JSON) for hair and eye colour: ESX users.skin, QBCore / Qbox playerskins
 local function savedSkin(identifier)
   if not identifier then return nil end
@@ -204,6 +240,7 @@ function Framework.getCharacter(source, override)
     if character and not character.phoneNumber and Config.Character.phone ~= false then
       character.phoneNumber = phoneFromPhoneScript(source)
     end
+    addLicences(character, data.identifier, nil)
     return characterId, character
   end
 
@@ -213,6 +250,7 @@ function Framework.getCharacter(source, override)
   if character and not character.phoneNumber and Config.Character.phone ~= false then
     character.phoneNumber = phoneFromPhoneScript(source)
   end
+  addLicences(character, nil, playerData)
   return characterId, character
 end
 

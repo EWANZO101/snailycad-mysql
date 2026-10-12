@@ -106,6 +106,35 @@ Config.Character = {
   ethnicity = nil,  -- the name of an ethnicity in the CAD (Admin > Values > Ethnicity)
 }
 
+--[[
+  Licences: the game decides whether a character holds a licence. Held -> the CAD licence is set
+  to `valid`; not held -> `none` (a licence value in the CAD; nil or missing = empty). A status
+  set in the CAD (e.g. Suspended, Revoked) is never overwritten, and CAD licences this server has
+  no game licence for are left alone.
+    map:        CAD licence -> game licence types (ESX user_licenses / QBCore metadata.licences)
+    categories: game licence type -> driver's licence category name in the CAD
+                (Admin > Values > Drivers license category); unknown names are skipped
+]]
+Config.Licenses = {
+  sync = true,
+  valid = "Valid",
+  none = "None",
+  map = {
+    drivers = { "drive", "drive_bike", "drive_truck", "driver" },
+    weapon = { "weapon" },
+    water = { "boat" },
+    pilot = { "aircraft", "pilot", "plane", "helicopter" },
+    hunting = { "hunting" },
+    fishing = { "fishing" },
+  },
+  categories = {
+    drive = "Class C",
+    driver = "Class C",
+    drive_bike = "Class M",
+    drive_truck = "Class A",
+  },
+}
+
 -- the server name shown in CAD Settings (default: sv_projectName, else sv_hostname)
 Config.ServerName = nil
 
