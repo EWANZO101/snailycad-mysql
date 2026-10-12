@@ -55,6 +55,9 @@
   (positional audio, earpieces, pma-voice / SaltyChat / TokoVOIP / mumble-voip) —
   [docs/radio](docs/radio/README.md)
 - **Login page notice** admins write themselves, instead of the link to snailycad.org
+- **FiveM scripts** (`sna-call911`, `sna-sync`, ...): players are signed in by their linked
+  Discord / Steam account, no API tokens to paste; still work with the original SnailyCAD —
+  [docs/integrations/fivem-integrations.md](docs/integrations/fivem-integrations.md)
 - **Coming by 15 October 2026:** FiveM framework integration (ESX, QBCore, Qbox)
 
 Full list: [Updates — October 2026](https://snaily-doc.opslabsystems.cloud/docs/features/updates-october-2026)

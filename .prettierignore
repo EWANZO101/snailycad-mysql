@@ -2,3 +2,10 @@
 # built FiveM UI bundle
 integrations/fivem/snailycad-radio/html/app.js
 integrations/fivem/snailycad-radio/html/chunks
+
+# built sna-* FiveM resources
+integrations/fivem/sna-*/server/server.js
+integrations/fivem/sna-*/client/client.js
+integrations/fivem/sna-*/nui/app.js
+integrations/fivem/sna-*/postals.json
+integrations/fivem/sna-src/lib/postals.json

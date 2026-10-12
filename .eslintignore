@@ -14,3 +14,8 @@ next-env.d.ts
 # built FiveM UI bundle (from integrations/fivem/snailycad-radio/web/src)
 integrations/fivem/snailycad-radio/html/app.js
 integrations/fivem/snailycad-radio/html/chunks
+
+# built sna-* FiveM resources (from integrations/fivem/sna-src)
+integrations/fivem/sna-*/server/server.js
+integrations/fivem/sna-*/client/client.js
+integrations/fivem/sna-*/nui/app.js
