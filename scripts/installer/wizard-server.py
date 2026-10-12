@@ -808,6 +808,11 @@ def validate_settings(body):
             errors.append(f"{label} port is the setup wizard's own port.")
     if client_port == api_port:
         errors.append("Website and API need different ports.")
+    # Danger zone password (UNINSTALL_PASSWORD): goes into .env inside double quotes
+    uninstall_password = str(body.get("uninstallPassword") or "snaily-2026")
+    if not re.match(r"""^[^\s"'\\$`]{6,64}$""", uninstall_password):
+        errors.append("Danger zone password: 6-64 characters, no spaces, quotes, \\, $ or `.")
+    settings["uninstallPassword"] = uninstall_password
 
     mode = db.get("mode")
     if IS_WINDOWS:
@@ -1197,6 +1202,7 @@ def write_env(settings, database, extra=None):
         "PORT_API": str(settings["apiPort"]),
         "PORT_CLIENT": str(settings["clientPort"]),
         "NODE_ENV": "production",
+        "UNINSTALL_PASSWORD": settings.get("uninstallPassword") or "snaily-2026",
         **(extra or {}),
     }
     with open(os.path.join(APP_DIR, ".env.example"), encoding="utf-8") as f:

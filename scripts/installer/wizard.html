@@ -801,6 +801,14 @@
           <div class="field">
             <label for="api-port">API port</label><input id="api-port" inputmode="numeric" />
           </div>
+          <div class="field full">
+            <label for="uninstall-password">Danger zone password</label
+            ><input id="uninstall-password" value="snaily-2026" autocomplete="off" />
+            <div class="help">
+              Unlocks CAD Settings &gt; Danger zone (uninstalling the CAD). Change it from the
+              default; later it's <code>UNINSTALL_PASSWORD</code> in the CAD's <code>.env</code>.
+            </div>
+          </div>
         </div>
         <div class="alert info" id="urls"></div>
         <div class="alert error hidden" id="site-error"></div>
@@ -1175,6 +1183,12 @@
           return alertBox($("site-error"), "error", "Enter a valid IP address or domain.");
         if (client === apiPort)
           return alertBox($("site-error"), "error", "The website and API need different ports.");
+        if (!/^[^\s"'\\$`]{6,64}$/.test($("uninstall-password").value))
+          return alertBox(
+            $("site-error"),
+            "error",
+            "Danger zone password: 6-64 characters, no spaces, quotes, \\, $ or `.",
+          );
         for (const [label, port] of [
           ["Website", client],
           ["API", apiPort],
@@ -1198,6 +1212,7 @@
           address: $("address").value.trim(),
           clientPort: Number($("client-port").value),
           apiPort: Number($("api-port").value),
+          uninstallPassword: $("uninstall-password").value,
           db: dbSettings(),
         };
       }

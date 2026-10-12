@@ -84,6 +84,8 @@
     "quickLinkValuesTitle": "Values",
     "quickLinkValues": "Departments, penal codes, vehicles and other lists.",
     "quickLinkAuditLogs": "See who changed what, and when.",
-    "PHONES": "Phones"
+    "PHONES": "Phones",
+    "DANGER_ZONE": "Uninstall SnailyCAD",
+    "dangerZone": "Danger zone"
   }
 }

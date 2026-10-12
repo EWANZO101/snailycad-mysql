@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { copyFileSync, existsSync, readFileSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 import { Controller, UseBeforeEach } from "@tsed/common";
@@ -257,12 +258,50 @@ async function startOnWindows(install: Install, keep: string[], startedAt: numbe
   }
 }
 
+/**
+ * The Danger zone is locked with a password: UNINSTALL_PASSWORD in the CAD's .env (the setup
+ * wizard asks for it), "snaily-2026" when it isn't set.
+ */
+export const DEFAULT_UNINSTALL_PASSWORD = "snaily-2026";
+
+function getUninstallPassword() {
+  return process.env.UNINSTALL_PASSWORD?.trim() || DEFAULT_UNINSTALL_PASSWORD;
+}
+
+async function assertUninstallPassword(input: unknown) {
+  const digest = (value: string) => createHash("sha256").update(value).digest();
+  const ok =
+    typeof input === "string" && timingSafeEqual(digest(input), digest(getUninstallPassword()));
+  if (!ok) {
+    // slows down guessing
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 1500);
+    });
+    throw new Forbidden("wrongUninstallPassword");
+  }
+}
+
+function describeInstall(install: Install | null) {
+  return {
+    name: install?.one("NAME") || "snailycad",
+    installDir: install?.installDir ?? null,
+    items: install ? getItems(install) : [],
+    manualCommand: install
+      ? install.isWindows
+        ? `powershell -ExecutionPolicy Bypass -File "${install.script}"`
+        : `sudo bash ${install.script}`
+      : null,
+  };
+}
+
 @Controller("/admin/uninstall")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
 export class UninstallCadController {
   @Get("/")
-  @Description("What uninstalling this CAD would remove, and whether it can be done from here")
+  @Description(
+    "Whether this CAD can uninstall itself from here (what it removes needs the password)",
+  )
   @UsePermissions({ permissions: [Permissions.ManageCADSettings] })
   async getUninstallInfo(@Context("user") user: User) {
     const install = readInstall();
@@ -276,15 +315,21 @@ export class UninstallCadController {
       isOwner,
       isDemoAccount,
       platform: install?.isWindows ? "windows" : "linux",
-      name: install?.one("NAME") || "snailycad",
-      installDir: install?.installDir ?? null,
-      items: install ? getItems(install) : [],
-      manualCommand: install
-        ? install.isWindows
-          ? `powershell -ExecutionPolicy Bypass -File "${install.script}"`
-          : `sudo bash ${install.script}`
-        : null,
+      isDefaultPassword: !process.env.UNINSTALL_PASSWORD?.trim(),
     };
+  }
+
+  @Post("/unlock")
+  @Description(
+    "Open the Danger zone: what uninstalling would remove (needs the uninstall password)",
+  )
+  @UsePermissions({ permissions: [Permissions.ManageCADSettings] })
+  async unlock(@Context("user") user: User, @BodyParams("password") password: unknown) {
+    if (user.rank !== Rank.OWNER) {
+      throw new Forbidden("onlyOwnerCanUninstall");
+    }
+    await assertUninstallPassword(password);
+    return { ...(await this.getUninstallInfo(user)), ...describeInstall(readInstall()) };
   }
 
   @Post("/")
@@ -294,11 +339,13 @@ export class UninstallCadController {
     @Context("user") user: User,
     @BodyParams("keep") rawKeep: unknown,
     @BodyParams("confirm") confirm: unknown,
+    @BodyParams("password") password: unknown,
   ) {
     await assertNotDemoAccount(user.id);
     if (user.rank !== Rank.OWNER) {
       throw new Forbidden("onlyOwnerCanUninstall");
     }
+    await assertUninstallPassword(password);
 
     const install = readInstall();
     if (whyUnavailable(install) || !install) {

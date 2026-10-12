@@ -202,7 +202,8 @@
     "uninstallMustRunOnHost": "This CAD can't uninstall itself from here. Run the uninstaller on the server or PC instead.",
     "uninstallConfirmMismatch": "Type the CAD's name exactly to confirm the uninstall.",
     "unableToStartUninstall": "The uninstaller could not be started. Run it by hand on the server or PC.",
-    "uninstallScriptOutdated": "This CAD's uninstaller is too old to keep items. Update the CAD first, or untick nothing."
+    "uninstallScriptOutdated": "This CAD's uninstaller is too old to keep items. Update the CAD first, or untick nothing.",
+    "wrongUninstallPassword": "That's not the uninstall password (UNINSTALL_PASSWORD in the CAD's .env)."
   },
   "Statuses": {
     "ACCEPTED": "Принят(о)",

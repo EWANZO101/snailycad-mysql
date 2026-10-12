@@ -112,6 +112,12 @@ const Tabs = {
         .FivemFrameworkTab,
     { ssr: false },
   ),
+  DangerZoneTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/danger-zone-tab"))
+        .DangerZoneTab,
+    { ssr: false },
+  ),
   PhonesTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/misc-features/phones-tab")).PhonesTab,
@@ -153,6 +159,7 @@ export default function CadSettings(props: Props) {
       <Tabs.OpsPhoneTab />
       <Tabs.FivemFrameworkTab />
       <Tabs.PhonesTab />
+      <Tabs.DangerZoneTab />
       <Tabs.DiscordRolesTab />
       <Tabs.DiscordWebhooksTab />
       <Tabs.RawWebhooksTab />

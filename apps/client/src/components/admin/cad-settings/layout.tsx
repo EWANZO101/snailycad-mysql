@@ -37,6 +37,9 @@ export enum SettingsTabs {
   FivemFramework = "FIVEM_FRAMEWORK",
   Phones = "PHONES",
 
+  /** danger zone */
+  DangerZone = "DANGER_ZONE",
+
   /** permissions */
   DefaultPermissions = "DEFAULT_PERMISSIONS",
   DiscordRoles = "DISCORD_ROLES",
@@ -135,6 +138,10 @@ function CadSettingsSidebar() {
     {
       name: t("webhooks"),
       items: [SettingsTabs.DiscordWebhooks, SettingsTabs.RawWebhooks],
+    },
+    {
+      name: t("dangerZone"),
+      items: [SettingsTabs.DangerZone],
     },
   ];
 
