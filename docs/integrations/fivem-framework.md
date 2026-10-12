@@ -18,14 +18,16 @@ The resource is in `integrations/fivem/snailycad-framework`.
 - Synced fields: first name, last name, date of birth, gender, height (ESX) and phone number.
 - Every field the CAD needs is filled, so synced citizens can be edited and saved in the CAD:
 
-  | CAD field           | Comes from                                                                         |
-  | ------------------- | ---------------------------------------------------------------------------------- |
-  | Name, date of birth | the character                                                                      |
-  | Gender, height      | the character (height: ESX, or QBCore metadata)                                    |
-  | Phone number        | the framework, else ops-phone or lb-phone                                          |
-  | Hair and eye colour | the saved skin (skinchanger, fivem-appearance, illenium-appearance, qb-clothing)   |
-  | Weight, address     | `Config.Character.weight` / `.address`, else "Unknown"                             |
-  | Ethnicity           | `Config.Character.ethnicity` (a name in the CAD), else the CAD's default ethnicity |
+  | CAD field                   | Comes from                                                                                                                                                   |
+  | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+  | Name, date of birth         | the character                                                                                                                                                |
+  | Gender, height              | the character (height: ESX, or QBCore metadata)                                                                                                              |
+  | Phone number                | the framework, else ops-phone or lb-phone                                                                                                                    |
+  | Hair and eye colour         | the saved skin (skinchanger, fivem-appearance, illenium-appearance, qb-clothing)                                                                             |
+  | Weight, address             | `Config.Character.weight` / `.address`, else "Unknown"                                                                                                       |
+  | Ethnicity                   | `Config.Character.ethnicity` (a name in the CAD), else the CAD's default ethnicity                                                                           |
+  | Licences                    | ESX `user_licenses` / QBCore `metadata.licences`: held → "Valid", not held → "None" (`Config.Licenses`). A status set in the CAD (Suspended, Revoked) stays. |
+  | Driver's licence categories | the held driving licences (`Config.Licenses.categories`, e.g. `drive_truck` → "Class A"); only added, never removed                                          |
 
   Weight, address and ethnicity are only defaults: once someone changes them in the CAD, the sync
   leaves them alone.
