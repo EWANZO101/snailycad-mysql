@@ -167,7 +167,12 @@
     "ownerCannotDiscordAuth": "Det första kontot (Ägaren) kan inte registreras via Discord. Använd användarnamn/lösenordsregistrering. Du kan ansluta Discord senare i kontoinställningarna.",
     "steamAuthIssue": "Ett fel uppstod när autentiseringen med Steam försökte. Försök igen senare.",
     "discordAuthIssue": "Ett fel uppstod när autentiseringen med Discord försökte. Försök igen senare.",
-    "blacklistedWordUsed": "Det här ordet är svartlistat och kan inte användas."
+    "blacklistedWordUsed": "Det här ordet är svartlistat och kan inte användas.",
+    "onlyOwnerCanUninstall": "Only the CAD owner can uninstall the CAD.",
+    "uninstallMustRunOnHost": "This CAD can't uninstall itself from here. Run the uninstaller on the server or PC instead.",
+    "uninstallConfirmMismatch": "Type the CAD's name exactly to confirm the uninstall.",
+    "unableToStartUninstall": "The uninstaller could not be started. Run it by hand on the server or PC.",
+    "uninstallScriptOutdated": "This CAD's uninstaller is too old to keep items. Update the CAD first, or untick nothing."
   },
   "Statuses": {
     "ACCEPTED": "Godkänd",

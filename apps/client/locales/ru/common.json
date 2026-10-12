@@ -197,7 +197,12 @@
     "ownerCannotDiscordAuth": "Первый аккаунт (Владелец) не может быть зарегистрирован через Discord. Используйте логин/пароль. Вы сможете подключить Discord позднее в настройках профиля.",
     "steamAuthIssue": "Возникла ошибка при аутентификации через Steam. Попробуйте снова.",
     "discordAuthIssue": "Возникла ошибка при аутентификации через Discord. Попробуйте снова.",
-    "blacklistedWordUsed": "Это слово запрещено и не может быть использовано."
+    "blacklistedWordUsed": "Это слово запрещено и не может быть использовано.",
+    "onlyOwnerCanUninstall": "Only the CAD owner can uninstall the CAD.",
+    "uninstallMustRunOnHost": "This CAD can't uninstall itself from here. Run the uninstaller on the server or PC instead.",
+    "uninstallConfirmMismatch": "Type the CAD's name exactly to confirm the uninstall.",
+    "unableToStartUninstall": "The uninstaller could not be started. Run it by hand on the server or PC.",
+    "uninstallScriptOutdated": "This CAD's uninstaller is too old to keep items. Update the CAD first, or untick nothing."
   },
   "Statuses": {
     "ACCEPTED": "Принят(о)",

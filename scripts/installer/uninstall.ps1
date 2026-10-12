@@ -2,18 +2,31 @@
 # everything it added outside the install folder. Copied to <install folder>\uninstall.ps1.
 #
 # usage (PowerShell or cmd, as administrator):
-#   powershell -ExecutionPolicy Bypass -File C:\SnailyCAD\uninstall.ps1 [-Yes] [-KeepMariaDB]
+#   powershell -ExecutionPolicy Bypass -File C:\SnailyCAD\uninstall.ps1 [-Yes] [-KeepMariaDB] [-Keep <items>]
 #
 #   -Yes          don't ask before removing
 #   -KeepMariaDB  keep the MariaDB server the wizard installed (only the CAD's database and user
-#                 are dropped from it)
+#                 are dropped from it); same as -Keep db-server
+#   -Keep         leave these in place, comma-separated (one string, so it survives -File).
+#                 Admin > Dashboard > Danger zone passes the items you untick there:
+#                   database   the CAD's database and MySQL user (all CAD data)
+#                   db-server  the MariaDB server the wizard installed (keeping the database keeps it too)
+#                   runtime    the private Node.js + pnpm (and NSSM) in <install folder>\runtime
+#                   firewall   the Windows Firewall rules the wizard added
+#                   pkg:<id>   one winget package the wizard installed, e.g. pkg:Git.Git
+#   -TaskName     the one-off scheduled task the CAD started this from; removed when done
 #
 # Written for Windows PowerShell 5.1: no PowerShell 7-only syntax.
 param(
     [switch]$Yes,
-    [switch]$KeepMariaDB
+    [switch]$KeepMariaDB,
+    [string]$Keep = '',
+    [string]$TaskName = ''
 )
 $ErrorActionPreference = 'Continue'
+$keepItems = @($Keep -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+if ($KeepMariaDB) { $keepItems += 'db-server' }
+function Test-Keep([string]$Item) { return $keepItems -contains $Item }
 
 function Say([string]$Text) { Write-Host "[*] $Text" -ForegroundColor Green }
 function Warn([string]$Text) { Write-Host "[!] $Text" -ForegroundColor Yellow }
@@ -40,7 +53,7 @@ foreach ($line in Get-Content -LiteralPath $manifestPath -Encoding UTF8) {
     if ($line -match '^([A-Z_]+)=(.*)$') {
         $key = $Matches[1]
         $value = $Matches[2].Trim()
-        if ($key -eq 'WINGET_PACKAGE') { if (-not $packages.Contains($value)) { [void]$packages.Add($value) } }
+        if ($key -eq 'WINGET_PACKAGE') { if (-not $packages.Contains($value) -and -not (Test-Keep "pkg:$value")) { [void]$packages.Add($value) } }
         elseif ($key -eq 'WIN_FW_RULE') { if (-not $rules.Contains($value)) { [void]$rules.Add($value) } }
         else { $single[$key] = $value }
     }
@@ -61,16 +74,22 @@ $dbAdmin = Get-Value 'DB_ADMIN'
 $ourMariaDB = (Get-Value 'WINGET_MARIADB') -eq '1'
 $mariaService = Get-Value 'MARIADB_SERVICE'
 if (-not $mariaService) { $mariaService = 'MariaDB' }
-$removeMariaDB = $ourMariaDB -and -not $KeepMariaDB
+# removing the MariaDB server takes every database in it, so keeping the CAD's database keeps it too
+$dropDatabase = $dbName -and -not (Test-Keep 'database')
+$removeMariaDB = $ourMariaDB -and -not (Test-Keep 'db-server') -and -not (Test-Keep 'database')
+$removeRuntime = -not (Test-Keep 'runtime')
+if (Test-Keep 'firewall') { $rules = @() }
 
 Write-Host 'This permanently removes:'
-Write-Host "  - $dir (the CAD, its build, Node.js copy and logs)"
+if ($removeRuntime) { Write-Host "  - $dir (the CAD, its build, Node.js + pnpm and logs)" }
+else { Write-Host "  - $dir except runtime\ (Node.js + pnpm are kept)" }
 if ($cadService -and $serviceKind -eq 'task') { Write-Host "  - scheduled task \SnailyCAD\$cadService" }
 elseif ($cadService) { Write-Host "  - Windows service $cadService" }
-if ($dbName) { Write-Host "  - database $dbName and MySQL user $dbUser (all CAD data)" }
+if ($dropDatabase) { Write-Host "  - database $dbName and MySQL user $dbUser (all CAD data)" }
 if ($rules.Count -gt 0) { Write-Host "  - Windows Firewall rule(s) $($rules -join ', ')" }
 if ($removeMariaDB) { Write-Host '  - the MariaDB server it installed (and every database in it)' }
 if ($packages.Count -gt 0) { Write-Host "  - program(s) it installed with winget: $($packages -join ', ')" }
+if ($keepItems.Count -gt 0) { Write-Host "Keeping: $($keepItems -join ', ')" }
 if (-not $Yes) {
     $answer = Read-Host 'Continue? [y/N]'
     if ($answer -notmatch '^[yY]') { Write-Host 'Cancelled.'; exit 0 }
@@ -121,7 +140,7 @@ function Find-MySql {
     return $null
 }
 $rootPasswordFile = Join-Path $dir 'installer\mariadb-root-password.txt'
-if ($dbName -and $ourMariaDB -and $KeepMariaDB) {
+if ($dropDatabase -and $ourMariaDB -and -not $removeMariaDB) {
     $mysql = Find-MySql
     if ($mysql -and (Test-Path -LiteralPath $rootPasswordFile)) {
         Say "Dropping database $dbName and user $dbUser..."
@@ -134,8 +153,14 @@ if ($dbName -and $ourMariaDB -and $KeepMariaDB) {
     } else {
         Warn "Could not log in to MariaDB; drop the database $dbName and user $dbUser by hand."
     }
-} elseif ($dbName -and -not $ourMariaDB) {
+} elseif ($dropDatabase -and -not $ourMariaDB) {
     Warn "The database $dbName is on a server this installer did not manage; drop it there yourself."
+} elseif ($dbName -and -not $dropDatabase) {
+    Say "Keeping database $dbName and user $dbUser."
+    if ($ourMariaDB -and (Test-Path -LiteralPath $rootPasswordFile)) {
+        $rootPassword = (Get-Content -LiteralPath $rootPasswordFile -Raw).Trim()
+        Warn "MariaDB is kept. Its root password is: $rootPassword  (write it down: the file holding it is deleted now)"
+    }
 }
 
 if ($removeMariaDB) {
@@ -171,18 +196,33 @@ foreach ($rule in $rules) {
 }
 
 # --- the folder ---
-Say "Deleting $dir..."
-Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction SilentlyContinue
-if (Test-Path -LiteralPath $dir) {
-    # node_modules paths can be longer than Remove-Item handles: robocopy an empty folder over it
-    $empty = Join-Path $env:TEMP ('snailycad-empty-' + [guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Path $empty | Out-Null
-    & robocopy.exe $empty $dir /MIR /NFL /NDL /NJH /NJS /NP /R:1 /W:1 | Out-Null
-    Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath $empty -Force -ErrorAction SilentlyContinue
+function Remove-Tree([string]$Path) {
+    Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $Path) {
+        # node_modules paths can be longer than Remove-Item handles: robocopy an empty folder over it
+        $empty = Join-Path $env:TEMP ('snailycad-empty-' + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $empty | Out-Null
+        & robocopy.exe $empty $Path /MIR /NFL /NDL /NJH /NJS /NP /R:1 /W:1 | Out-Null
+        Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $empty -Force -ErrorAction SilentlyContinue
+    }
 }
-if (Test-Path -LiteralPath $dir) {
+if ($removeRuntime) {
+    Say "Deleting $dir..."
+    Remove-Tree $dir
+    $left = Test-Path -LiteralPath $dir
+} else {
+    Say "Deleting $dir (keeping runtime\)..."
+    Get-ChildItem -LiteralPath $dir -Force -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ne 'runtime' } | ForEach-Object { Remove-Tree $_.FullName }
+    $left = @(Get-ChildItem -LiteralPath $dir -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'runtime' }).Count -gt 0
+}
+if ($left) {
     Warn "$dir could not be deleted completely (a file may be in use). Restart Windows and delete it by hand."
 } else {
     Say "Done. SnailyCAD ($name) is gone."
+}
+
+if ($TaskName) {
+    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 }

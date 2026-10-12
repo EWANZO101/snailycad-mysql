@@ -197,7 +197,12 @@
     "ownerCannotDiscordAuth": "Le premier compte (Propriétaire) ne peut pas être enregistré via Discord. Veuillez utiliser l'enregistrement par nom d'utilisateur/mot de passe. Vous pourrez vous connecter à Discord plus tard dans les paramètres du compte.",
     "steamAuthIssue": "Une erreur s'est produite lors de la tentative d'authentification auprès de Steam. Veuillez réessayer plus tard.",
     "discordAuthIssue": "Une erreur s'est produite lors de la tentative d'authentification avec Discord. Veuillez réessayer plus tard.",
-    "blacklistedWordUsed": "Ce mot est sur liste noire et ne peut pas être utilisé."
+    "blacklistedWordUsed": "Ce mot est sur liste noire et ne peut pas être utilisé.",
+    "onlyOwnerCanUninstall": "Only the CAD owner can uninstall the CAD.",
+    "uninstallMustRunOnHost": "This CAD can't uninstall itself from here. Run the uninstaller on the server or PC instead.",
+    "uninstallConfirmMismatch": "Type the CAD's name exactly to confirm the uninstall.",
+    "unableToStartUninstall": "The uninstaller could not be started. Run it by hand on the server or PC.",
+    "uninstallScriptOutdated": "This CAD's uninstaller is too old to keep items. Update the CAD first, or untick nothing."
   },
   "Statuses": {
     "ACCEPTED": "Accepté",

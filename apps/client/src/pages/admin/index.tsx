@@ -13,6 +13,7 @@ import { Fira_Mono } from "next/font/google";
 import { classNames } from "lib/classNames";
 import { RecoveryTokenCard } from "components/admin/recovery-token-card";
 import { UpdateCadCard } from "components/admin/update-cad-card";
+import { DangerZoneCard } from "components/admin/danger-zone-card";
 import Link from "next/link";
 import useFetch from "lib/useFetch";
 import { useQuery } from "@tanstack/react-query";
@@ -63,6 +64,8 @@ export default function Admin({ counts }: Props) {
           message={t("unableToLoadStatisticsMessage")}
           title={t("unableToLoadStatisticsTitle")}
         />
+
+        <DangerZoneCard />
       </AdminLayout>
     );
   }
@@ -158,6 +161,8 @@ export default function Admin({ counts }: Props) {
       </div>
 
       <QuickLinks />
+
+      <DangerZoneCard />
     </AdminLayout>
   );
 }

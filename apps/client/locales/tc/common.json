@@ -148,7 +148,12 @@
     "steamNameInUse": "無法使用 Steam 創建新帳戶,因為用戶名已在使用中",
     "steamAccountAlreadyLinked": "此 Steam 帳戶已鏈接到另一個帳戶",
     "cannotRegisterFirstWithSteam": "第一個帳戶必須在沒有Steam的情況下註冊,創建帳戶後,您可以鏈接Steam",
-    "Unauthorized": "您已註銷,請重新登錄以繼續"
+    "Unauthorized": "您已註銷,請重新登錄以繼續",
+    "onlyOwnerCanUninstall": "Only the CAD owner can uninstall the CAD.",
+    "uninstallMustRunOnHost": "This CAD can't uninstall itself from here. Run the uninstaller on the server or PC instead.",
+    "uninstallConfirmMismatch": "Type the CAD's name exactly to confirm the uninstall.",
+    "unableToStartUninstall": "The uninstaller could not be started. Run it by hand on the server or PC.",
+    "uninstallScriptOutdated": "This CAD's uninstaller is too old to keep items. Update the CAD first, or untick nothing."
   },
   "Tones": {
     "toneReceived": "Tone: {name}",
