@@ -83,9 +83,11 @@ export function UpdateCadCard() {
     setIsStarting(true);
     const deadline = Date.now() + 90_000;
     while (Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 3000);
+      });
       const check = await execute<UpdateInfo>({ path: "/admin/update", noToast: true });
-      if (!check.json || !("mode" in check.json)) break;
+      if (!("mode" in check.json)) break;
     }
     window.location.href = progressUrl;
   }

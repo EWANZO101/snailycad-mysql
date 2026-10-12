@@ -63,7 +63,7 @@ export function DangerZoneCard() {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       const { json } = await execute<UninstallInfo>({ path: "/admin/uninstall", noToast: true });
-      return json && "items" in json ? json : null;
+      return "items" in json ? json : null;
     },
   });
 
@@ -77,7 +77,7 @@ export function DangerZoneCard() {
     let failures = 0;
     const timer = setInterval(async () => {
       const { json } = await execute<UninstallInfo>({ path: "/admin/uninstall", noToast: true });
-      failures = json && "items" in json ? 0 : failures + 1;
+      failures = "items" in json ? 0 : failures + 1;
       if (failures >= 3) {
         clearInterval(timer);
         setPhase("done");
@@ -86,7 +86,7 @@ export function DangerZoneCard() {
     return () => clearInterval(timer);
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!canManage || !data || !data.isOwner || data.isDemoAccount) return null;
+  if (!canManage || !data?.isOwner || data.isDemoAccount) return null;
 
   function toggle(item: UninstallItem) {
     if (item.locked || item.unavailable) return;
@@ -112,7 +112,7 @@ export function DangerZoneCard() {
       method: "POST",
       data: { keep, confirm: confirm.trim() },
     });
-    if (json?.started) setPhase("running");
+    if (json.started) setPhase("running");
   }
 
   async function handleCopy() {

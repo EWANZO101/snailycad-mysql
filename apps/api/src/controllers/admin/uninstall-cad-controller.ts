@@ -57,7 +57,9 @@ function readInstall() {
   if (!existsSync(manifestPath)) return null;
 
   const values = new Map<string, string[]>();
-  for (const line of readFileSync(manifestPath, "utf8").replace(/^﻿/, "").split(/\r?\n/)) {
+  for (const line of readFileSync(manifestPath, "utf8")
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)) {
     const match = line.match(/^([A-Z_]+)=(.*)$/);
     if (!match) continue;
     const [, key, value] = match as unknown as [string, string, string];

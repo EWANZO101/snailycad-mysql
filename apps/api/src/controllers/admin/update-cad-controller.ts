@@ -53,8 +53,9 @@ function getWindowsInstall() {
   if (process.platform !== "win32") return null;
   const installDir = resolvePath(getProjectRoot(), "..");
   const script = join(getProjectRoot(), "scripts", "update-cad.ps1");
-  if (!existsSync(join(installDir, "installer", "manifest.env")) || !existsSync(script))
+  if (!existsSync(join(installDir, "installer", "manifest.env")) || !existsSync(script)) {
     return null;
+  }
 
   // "Update SnailyCAD.bat" in the install folder: double-click to update without the dashboard
   const bat = join(installDir, "Update SnailyCAD.bat");
