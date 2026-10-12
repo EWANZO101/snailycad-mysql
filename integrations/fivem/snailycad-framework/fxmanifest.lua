@@ -19,6 +19,7 @@ server_scripts {
   "server/api.lua",
   "server/framework.lua",
   "server/main.lua",
+  "server/vehicles.lua",
   "server/commands.lua",
 }
 

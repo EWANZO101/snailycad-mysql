@@ -317,7 +317,9 @@ eq(ids.steamId, "76561197960265728", "steam id decimal")
 eq(ids.license, "abc123", "license")
 
 Framework.loadModelNames()
-local vehicles, unknown = Framework.getVehicles("char1:abc")
+local vehicles, unknown, ownedPlates = Framework.getVehicles("char1:abc")
+-- every plate, the skipped job vehicle included: only plates missing here count as sold
+eq(table.concat(ownedPlates, ","), "AB 123  ,XY 999,UNK 1,POL 1", "ESX plates: all owned, skipped ones too")
 eq(#vehicles, 3, "ESX vehicles (job vehicle skipped)")
 eq(vehicles[1].plate, "AB 123", "ESX plate")
 eq(vehicles[1].model, "adder", "ESX model name from the vehicles table")
@@ -428,6 +430,21 @@ eq(Mapping.licences({}, {}, licenceOptions), nil, "server without licences -> ni
 held = Mapping.licences({ driver = true }, { driver = true, weapon = true, business = true }, licenceOptions)
 eq(held.drivers, true, "QBCore metadata.licences.driver")
 eq(held.weapon, false, "QBCore weapon licence not held")
+
+-- vehicle watcher: which characters' garages changed between two copies of the vehicle table
+CreateThread = function() end
+exports = setmetatable({}, { __call = function() end })
+dofile(root .. "server/vehicles.lua")
+local function owners(old, new)
+  local list = VehicleWatch.changedOwners(old, new)
+  table.sort(list)
+  return table.concat(list, ",")
+end
+eq(owners({ A = "c1" }, { A = "c1" }), "", "watcher: nothing changed")
+eq(owners({ A = "c1" }, { A = "c1", B = "c1" }), "c1", "watcher: bought")
+eq(owners({ A = "c1", B = "c2" }, { B = "c2" }), "c1", "watcher: sold / deleted")
+eq(owners({ A = "c1" }, { A = "c2" }), "c1,c2", "watcher: transfer touches both owners")
+eq(owners({ A = "c1", B = "c2" }, { A = "c2", B = "c1" }), "c1,c2", "watcher: swap")
 
 print(("%d passed, %d failed"):format(passed, failed))
 if failed > 0 then os.exit(1) end

@@ -116,7 +116,8 @@ async function generateVinNumber(): Promise<string> {
 /**
  * Registers a character's game vehicles in the CAD, matched by plate. Vehicles that came from the
  * game and changed owner in game move to the new owner; plates the CAD already has for someone
- * else (registered by hand) are left alone. Vehicles that are gone from the garage are kept.
+ * else (registered by hand) are left alone. Vehicles gone from the garage are handled afterwards by
+ * removeGoneFivemVehicles (lib/fivem/remove-vehicles.ts).
  */
 export async function syncFivemVehicles(options: Options): Promise<VehicleSyncResult> {
   const { cad } = options;

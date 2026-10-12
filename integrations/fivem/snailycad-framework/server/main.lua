@@ -22,12 +22,15 @@ local function state(source)
 end
 
 local function serverInfo(body)
+  -- (Sync.serverInfo, for server/vehicles.lua)
   body.framework = Framework.name
   body.serverName = Api.serverName()
   body.version = Api.version
   body.phoneResources = Framework.phoneResources()
   return body
 end
+Sync.serverInfo = serverInfo
+Sync.log = log
 
 -- --- model names from clients ----------------------------------------------------------------
 
@@ -109,10 +112,10 @@ function Sync.player(source, options)
     current.characterId = characterId
     current.identifiers = Framework.getIdentifiers(source)
 
-    local vehicles
+    local vehicles, plates
     if Config.Sync.vehicles then
       local unknown
-      vehicles, unknown = Framework.getVehicles(characterId)
+      vehicles, unknown, plates = Framework.getVehicles(characterId)
       if vehicles == nil then
         debug("oxmysql isn't running: vehicles aren't synced")
       elseif unknown and #unknown > 0 then
@@ -128,6 +131,7 @@ function Sync.player(source, options)
       character = character,
       phones = phones,
       vehicles = vehicles,
+      plates = plates,
       createVehicleModels = Config.Vehicles.createModels == true,
     })
     local data, status, raw = Api.await("/characters", body)

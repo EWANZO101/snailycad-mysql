@@ -29,6 +29,8 @@ const SERVER = {
 /** ESX: the users.identifier (e.g. "char1:abc..."), QBCore / Qbox: the citizenid */
 const CHARACTER_ID = z.string().trim().min(1).max(191);
 
+const PLATE_LIST = z.array(z.string().trim().max(32)).max(500);
+
 export const FIVEM_VEHICLE_SCHEMA = z.object({
   plate: z.string().trim().min(1).max(16),
   /** spawn name, e.g. "adder" (QBCore / Qbox, or resolved from the hash) */
@@ -104,8 +106,34 @@ export const FIVEM_CHARACTER_SYNC_SCHEMA = z.object({
   }),
   /** the character's garage. Leave out to not touch vehicles. */
   vehicles: z.array(FIVEM_VEHICLE_SCHEMA).max(200).nullish(),
+  /** every plate the character owns in game, skipped ones included: synced vehicles whose plate
+   * isn't here are gone (sold, deleted). Leave out to never remove vehicles (older resources). */
+  plates: PLATE_LIST.nullish(),
   /** create vehicle models the CAD doesn't know yet (Admin > Values > Vehicle) */
   createVehicleModels: z.boolean().default(false),
+});
+
+/**
+ * Garages that changed in game (bought, sold, transferred, deleted), found by the resource's
+ * vehicle watcher: each character's whole garage, so the CAD can add, move and remove vehicles.
+ */
+export const FIVEM_VEHICLES_SYNC_SCHEMA = z.object({
+  ...SERVER,
+  characters: z
+    .array(
+      z.object({
+        characterId: CHARACTER_ID,
+        vehicles: z.array(FIVEM_VEHICLE_SCHEMA).max(200),
+        plates: PLATE_LIST,
+      }),
+    )
+    .max(100),
+  createVehicleModels: z.boolean().default(false),
+});
+
+/** asks which characters the CAD has synced (the vehicle watcher catches up on those at start) */
+export const FIVEM_KNOWN_CHARACTERS_SCHEMA = z.object({
+  framework: z.enum(FIVEM_FRAMEWORKS),
 });
 
 export const FIVEM_DUTY_SCHEMA = z.object({

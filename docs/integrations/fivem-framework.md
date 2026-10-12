@@ -52,7 +52,16 @@ The resource is in `integrations/fivem/snailycad-framework`.
 - New vehicles get the default registration status (a **License** value, **Admin > Values > License**). With the **DMV** feature on, they wait for DMV approval, like vehicles registered in the CAD.
 - A vehicle sold to another character in game moves to the new owner's citizen.
 - A plate the CAD already has for someone else (registered by hand) is left alone and reported as `plateAlreadyInUse`.
-- Vehicles that leave a garage stay in the CAD. Remove them in the CAD if needed.
+- Vehicles stay in step with the game within seconds, whatever script changes them (garages,
+  dealerships, vehicle shops, transfers, impounds, admin menus): they all write to the vehicle
+  table, which the resource checks every `Config.Vehicles.watchSeconds` (default 5) with a cheap
+  fingerprint. The characters whose garage changed are synced with their whole garage, online or
+  not, and at start every character the CAD knows is caught up. Scripts can call
+  `exports["snailycad-framework"]:VehiclesChanged()` for an immediate check.
+- A vehicle gone from the game (sold to the dealer, deleted) is handled as set in \*\*CAD Settings
+  > FiveM framework > Vehicles gone from the game\*\*: removed from the CAD (default), kept without an
+  > owner (its records stay), or kept with its owner. Only vehicles that came from the game are
+  > touched; vehicles registered by hand in the CAD never are.
 
 ### Duty → unit status
 
@@ -123,19 +132,19 @@ It also has switches: the whole sync, citizens, vehicles and duty. A switch turn
 
 ## Config
 
-| Option                 | Default                          | What it does                                          |
-| ---------------------- | -------------------------------- | ----------------------------------------------------- |
-| `Config.Framework`     | `"auto"`                         | `"esx"`, `"qbcore"`, `"qbox"` or detect               |
-| `Config.Sync`          | all `true`                       | `citizens`, `vehicles`, `duty`                        |
-| `Config.Unlinked`      | `"skip"`                         | players without a CAD account: `"skip"` or `"create"` |
-| `Config.ResyncMinutes` | `10`                             | resync everyone online (0 = off)                      |
-| `Config.Vehicles`      |                                  | `createModels`, `skipJobVehicles`, `types` (ESX)      |
-| `Config.Jobs`          | police, sheriff, ambulance, fire | job → `unitType` and `departments`                    |
-| `Config.Duty`          |                                  | `onLoad`, `offDutyOnLeave`, `pollSeconds`             |
-| `Config.Callsign`      | none                             | function returning a callsign to pick the unit        |
-| `Config.Character`     |                                  | `genders`, `dateFormat` (ESX), `phone`, `height`      |
-| `Config.ServerName`    | sv_projectName                   | the name shown in CAD Settings                        |
-| `Config.Debug`         | `false`                          | print every sync in the console                       |
+| Option                 | Default                          | What it does                                                                       |
+| ---------------------- | -------------------------------- | ---------------------------------------------------------------------------------- |
+| `Config.Framework`     | `"auto"`                         | `"esx"`, `"qbcore"`, `"qbox"` or detect                                            |
+| `Config.Sync`          | all `true`                       | `citizens`, `vehicles`, `duty`                                                     |
+| `Config.Unlinked`      | `"skip"`                         | players without a CAD account: `"skip"` or `"create"`                              |
+| `Config.ResyncMinutes` | `10`                             | resync everyone online (0 = off)                                                   |
+| `Config.Vehicles`      |                                  | `createModels`, `skipJobVehicles`, `types` (ESX), `watchSeconds`, `catchUpOnStart` |
+| `Config.Jobs`          | police, sheriff, ambulance, fire | job → `unitType` and `departments`                                                 |
+| `Config.Duty`          |                                  | `onLoad`, `offDutyOnLeave`, `pollSeconds`                                          |
+| `Config.Callsign`      | none                             | function returning a callsign to pick the unit                                     |
+| `Config.Character`     |                                  | `genders`, `dateFormat` (ESX), `phone`, `height`                                   |
+| `Config.ServerName`    | sv_projectName                   | the name shown in CAD Settings                                                     |
+| `Config.Debug`         | `false`                          | print every sync in the console                                                    |
 
 ## Phones
 
@@ -175,6 +184,7 @@ see which phones the resource found.
 | Export (server)        | What it does                                       |
 | ---------------------- | -------------------------------------------------- |
 | `SyncPlayer(source)`   | sync the player's character and vehicles now       |
+| `VehiclesChanged()`    | check the vehicle table for changes now            |
 | `SyncDuty(source)`     | re-check the player's duty now                     |
 | `GetCitizenId(source)` | the player's CAD citizen id (after the first sync) |
 
@@ -211,7 +221,6 @@ Set `Config.Debug = true` to see every sync in the console.
 
 ## Limits
 
-- Vehicles that leave a garage (sold to the dealer, deleted) are not removed from the CAD.
 - Only one off-duty / on-duty status pair is used: the first one that fits the unit's department.
 - Players need a CAD account linked by Discord or Steam for duty sync and for linked citizens.
 - The game doesn't know weight, address or ethnicity: they are defaults ("Unknown" unless set in `Config.Character`).

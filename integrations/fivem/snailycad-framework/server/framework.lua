@@ -366,9 +366,11 @@ end
 
 --- the character's owned vehicles for the CAD, and model hashes without a name
 --- returns nil when there is no database (oxmysql)
+--- vehicles: what the CAD registers; unknown: hashes to name; plates: every plate the character
+--- owns, skipped ones included (the CAD removes synced vehicles whose plate isn't in it)
 function Framework.getVehicles(characterId)
   if not hasDatabase() then return nil end
-  local vehicles, unknown = {}, {}
+  local vehicles, unknown, plates = {}, {}, {}
 
   if Framework.name == "esx" then
     local cols = columns("owned_vehicles")
@@ -378,9 +380,11 @@ function Framework.getVehicles(characterId)
     local rows = query(
       ("SELECT %s FROM owned_vehicles WHERE owner = ?"):format(table.concat(select, ", ")),
       { characterId }
-    ) or {}
+    )
+    if not rows then return nil end
     local options = { skipJobVehicles = Config.Vehicles.skipJobVehicles, types = Config.Vehicles.types }
     for _, row in ipairs(rows) do
+      if row.plate then plates[#plates + 1] = tostring(row.plate) end
       local vehicle, reason = Mapping.esxVehicle(row, decode(row.vehicle), modelNames, options)
       if vehicle then
         vehicles[#vehicles + 1] = vehicle
@@ -393,15 +397,23 @@ function Framework.getVehicles(characterId)
     local rows = query(
       "SELECT plate, vehicle, hash, mods FROM player_vehicles WHERE citizenid = ?",
       { characterId }
-    ) or {}
+    )
+    if not rows then return nil end
     local shared = qbSharedVehicles()
     for _, row in ipairs(rows) do
+      if row.plate then plates[#plates + 1] = tostring(row.plate) end
       local vehicle = Mapping.qbVehicle(row, decode(row.mods), shared)
       if vehicle then vehicles[#vehicles + 1] = vehicle end
     end
   end
 
-  return vehicles, unknown
+  return vehicles, unknown, plates
+end
+
+--- the table every garage / dealership script writes owned vehicles to, and its owner column
+function Framework.vehicleTable()
+  if Framework.name == "esx" then return "owned_vehicles", "owner" end
+  return "player_vehicles", "citizenid"
 end
 
 --- fills in model names for vehicles that only have a hash (after a client named them)

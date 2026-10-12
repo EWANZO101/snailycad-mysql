@@ -51,6 +51,13 @@ Config.Vehicles = {
   createModels = false,
   skipJobVehicles = true,
   types = {},
+  -- how often (seconds) to check the vehicle table for changes made by any garage, dealership,
+  -- transfer or impound script, and sync the characters whose vehicles changed (0 = off: only
+  -- when the player's character syncs)
+  watchSeconds = 5,
+  -- at start, sync the garages of every character the CAD knows (changes made while the
+  -- resource was stopped)
+  catchUpOnStart = true,
 }
 
 --[[
