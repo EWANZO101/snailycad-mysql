@@ -28,6 +28,7 @@ import type * as APITypes from "@snailycad/types/api";
 import type { cad } from "@snailycad/types";
 import { getTranslator } from "utils/get-translator";
 import { HandleInactivity } from "middlewares/handle-inactivity";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/bolos")
 @UseBeforeEach(IsAuth)
@@ -56,12 +57,12 @@ export class BoloController {
     const where: Prisma.BoloWhereInput = query
       ? {
           OR: [
-            { plate: { contains: query.trim() } },
-            { name: { contains: query } },
-            { color: { contains: query } },
-            { plate: { contains: query } },
-            { model: { contains: query } },
-            { description: { contains: query } },
+            { plate: { contains: query.trim(), ...insensitive() } },
+            { name: { contains: query, ...insensitive() } },
+            { color: { contains: query, ...insensitive() } },
+            { plate: { contains: query, ...insensitive() } },
+            { model: { contains: query, ...insensitive() } },
+            { description: { contains: query, ...insensitive() } },
           ],
         }
       : {};

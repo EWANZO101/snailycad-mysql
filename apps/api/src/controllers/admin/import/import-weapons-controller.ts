@@ -18,6 +18,7 @@ import { citizenInclude } from "controllers/citizen/CitizenController";
 import type { Prisma } from "@prisma/client";
 import type * as APITypes from "@snailycad/types/api";
 import { Permissions, UsePermissions } from "middlewares/use-permissions";
+import { insensitive } from "lib/data/db-provider";
 
 const weaponsInclude = { ...citizenInclude.weapons.include, citizen: true };
 
@@ -38,8 +39,8 @@ export class ImportWeaponsController {
     const where: Prisma.WeaponWhereInput | undefined = query
       ? {
           OR: [
-            { serialNumber: { contains: query } },
-            { model: { value: { value: { contains: query } } } },
+            { serialNumber: { contains: query, ...insensitive() } },
+            { model: { value: { value: { contains: query, ...insensitive() } } } },
           ],
         }
       : undefined;

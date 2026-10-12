@@ -3,6 +3,7 @@ import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
 import { NotFound, InternalServerError, BadRequest } from "@tsed/exceptions";
 import { QueryParams, BodyParams, Context, PathParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
+import { insensitive } from "lib/data/db-provider";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { leoProperties, _leoProperties, assignedUnitsInclude } from "utils/leo/includes";
 import { LEO_INCIDENT_SCHEMA } from "@snailycad/schemas";
@@ -88,7 +89,7 @@ export class IncidentController {
                 ...(Number.isNaN(parsedCaseNumber)
                   ? []
                   : [{ caseNumber: { equals: parsedCaseNumber } }]),
-                { description: { contains: trimmedQuery } },
+                { description: { contains: trimmedQuery, ...insensitive() } },
               ],
             },
           ],

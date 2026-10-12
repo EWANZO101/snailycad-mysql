@@ -40,6 +40,7 @@ import { type AllowedFileExtension, allowedFileExtensions } from "@snailycad/con
 import { getImageWebPPath } from "~/lib/images/get-image-webp-path";
 import fs from "node:fs/promises";
 import { ExtendedNotFound } from "~/exceptions/extended-not-found";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/vehicles")
 @UseBeforeEach(IsAuth)
@@ -59,11 +60,11 @@ export class VehiclesController {
       ...(query
         ? {
             OR: [
-              { color: { contains: query } },
-              { model: { value: { value: { contains: query } } } },
-              { registrationStatus: { value: { contains: query } } },
-              { vinNumber: { contains: query } },
-              { plate: { contains: query } },
+              { color: { contains: query, ...insensitive() } },
+              { model: { value: { value: { contains: query, ...insensitive() } } } },
+              { registrationStatus: { value: { contains: query, ...insensitive() } } },
+              { vinNumber: { contains: query, ...insensitive() } },
+              { plate: { contains: query, ...insensitive() } },
             ],
           }
         : {}),
@@ -101,11 +102,11 @@ export class VehiclesController {
       ...(query
         ? {
             OR: [
-              { color: { contains: query } },
-              { model: { value: { value: { contains: query } } } },
-              { registrationStatus: { value: { contains: query } } },
-              { vinNumber: { contains: query } },
-              { plate: { contains: query } },
+              { color: { contains: query, ...insensitive() } },
+              { model: { value: { value: { contains: query, ...insensitive() } } } },
+              { registrationStatus: { value: { contains: query, ...insensitive() } } },
+              { vinNumber: { contains: query, ...insensitive() } },
+              { plate: { contains: query, ...insensitive() } },
             ],
           }
         : {}),
@@ -150,7 +151,7 @@ export class VehiclesController {
 
     const isPlateBlacklisted = await prisma.blacklistedWord.findFirst({
       where: {
-        word: { contains: data.plate },
+        word: { contains: data.plate, ...insensitive() },
       },
     });
     if (isPlateBlacklisted) {
@@ -324,7 +325,7 @@ export class VehiclesController {
 
     const isPlateBlacklisted = await prisma.blacklistedWord.findFirst({
       where: {
-        word: { contains: data.plate },
+        word: { contains: data.plate, ...insensitive() },
       },
     });
     if (isPlateBlacklisted) {
@@ -394,7 +395,7 @@ export class VehiclesController {
       valueModel = await prisma.vehicleValue.findFirst({
         where: {
           value: {
-            value: { contains: data.model },
+            value: { contains: data.model, ...insensitive() },
           },
         },
       });
@@ -671,7 +672,7 @@ export class VehiclesController {
 
     const existing = await prisma.registeredVehicle.findFirst({
       where: {
-        vinNumber: { equals: vinNumber },
+        vinNumber: { ...insensitive(), equals: vinNumber },
         NOT: options.vehicle ? { id: options.vehicle.id } : undefined,
       },
     });

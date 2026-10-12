@@ -44,6 +44,7 @@ import { HandleInactivity } from "middlewares/handle-inactivity";
 import { handleEndCall } from "lib/dispatch/911-calls/handle-end-911-call";
 import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 import { _leoProperties, assignedUnitsInclude, callInclude } from "utils/leo/includes";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/911-calls")
 @UseBeforeEach(IsAuth)
@@ -78,12 +79,12 @@ export class Calls911Controller {
       OR: query
         ? [
             { descriptionData: { array_contains: query } },
-            { name: { contains: query } },
-            { postal: { contains: query } },
-            { location: { contains: query } },
-            { description: { contains: query } },
-            { type: { value: { value: { contains: query } } } },
-            { situationCode: { value: { value: { contains: query } } } },
+            { name: { contains: query, ...insensitive() } },
+            { postal: { contains: query, ...insensitive() } },
+            { location: { contains: query, ...insensitive() } },
+            { description: { contains: query, ...insensitive() } },
+            { type: { value: { value: { contains: query, ...insensitive() } } } },
+            { situationCode: { value: { value: { contains: query, ...insensitive() } } } },
           ]
         : undefined,
     };

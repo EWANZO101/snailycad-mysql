@@ -45,6 +45,7 @@ import {
   assertCanChangePermissions,
   getEffectivePermissions,
 } from "lib/auth/permission-escalation";
+import { insensitive } from "lib/data/db-provider";
 
 const manageUsersSelect = (
   selectCitizens: boolean = false,
@@ -276,7 +277,7 @@ export class ManageUsersController {
     @BodyParams("username") username: string,
   ): Promise<APITypes.PostManageUsersSearchData> {
     const users = await prisma.user.findMany({
-      where: { username: { contains: username } },
+      where: { username: { contains: username, ...insensitive() } },
       select: userProperties,
       take: 35,
     });

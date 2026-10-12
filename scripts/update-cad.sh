@@ -24,7 +24,12 @@ fi
 mkdir -p "$STATUS_DIR" 2>/dev/null || true
 STATUS_FILE="$STATUS_DIR/status.json"
 UPDATE_MODE="${UPDATE_MODE:-git}"
-COMPOSE_FILE="${UPDATE_COMPOSE_FILE:-production.docker-compose.yml}"
+COMPOSE_FILE="${UPDATE_COMPOSE_FILE:-}"
+if [[ -z "$COMPOSE_FILE" ]]; then
+    # the one-line installer records which compose file it used (production.postgres... for PostgreSQL)
+    COMPOSE_FILE=$(sed -n 's/^DOCKER_COMPOSE_FILE=//p' "$PROJECT_DIR/../installer/manifest.env" 2>/dev/null | tail -1)
+    COMPOSE_FILE="${COMPOSE_FILE:-production.docker-compose.yml}"
+fi
 BRANCH="${UPDATE_BRANCH:-main}"
 LOG_FILE="$PROJECT_DIR/start.log"
 STARTED_AT=$(date +%s)

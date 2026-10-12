@@ -2,6 +2,7 @@ import { Controller, UseBeforeEach } from "@tsed/common";
 import { ContentType, Description, Post } from "@tsed/schema";
 import { BodyParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
+import { insensitive } from "lib/data/db-provider";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 
@@ -19,6 +20,7 @@ export class SearchController {
       where: {
         address: {
           contains: address,
+          ...insensitive(),
         },
       },
       include: { warrants: true },

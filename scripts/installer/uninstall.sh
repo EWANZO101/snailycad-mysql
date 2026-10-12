@@ -8,7 +8,8 @@
 #   --keep    leave these in place (comma-separated). Admin > Dashboard > Danger zone passes the
 #             items you untick there:
 #               database   the CAD's database and MySQL user (all CAD data)
-#               db-server  the MariaDB server the wizard installed (keeping the database keeps it too)
+#               db-server  the MariaDB / PostgreSQL server the wizard installed (keeping the database
+#                          keeps it too)
 #               docker     Docker itself, when the wizard installed it
 #               runtime    the private Node.js + pnpm in <install folder>/runtime
 #               caches     pnpm's package store, npm's cache and Prisma's engine cache in root's home
@@ -36,7 +37,8 @@ main() {
     [[ -f "$manifest" ]] || { echo "No installer manifest in $dir; is this a SnailyCAD install folder?" >&2; exit 1; }
 
     local NAME="" INSTALL_DIR="" SERVICE="" CAD_SERVICE="" DB_NAME="" DB_USER="" DB_ADMIN="" APT_MARIADB=""
-    local DOCKER_PROJECT="" DOCKER_NETWORK="" APT_DOCKER=""
+    local DOCKER_PROJECT="" DOCKER_NETWORK="" APT_DOCKER="" DB_ENGINE="" APT_POSTGRES=""
+    local DOCKER_COMPOSE_FILE="production.docker-compose.yml"
     local -a UFW_PORTS=() APT_PACKAGES=()
     local key value
     while IFS='=' read -r key value; do
@@ -54,6 +56,9 @@ main() {
             DOCKER_PROJECT) DOCKER_PROJECT="$value" ;;
             DOCKER_NETWORK) DOCKER_NETWORK="$value" ;;
             APT_DOCKER) APT_DOCKER="$value" ;;
+            DB_ENGINE) DB_ENGINE="$value" ;;
+            APT_POSTGRES) APT_POSTGRES="$value" ;;
+            DOCKER_COMPOSE_FILE) DOCKER_COMPOSE_FILE="$value" ;;
         esac
     done < "$manifest"
 
@@ -61,9 +66,11 @@ main() {
 
     # what to remove. Removing the MariaDB server takes every database in it, so keeping the
     # CAD's database keeps the server too.
-    local drop_db="" remove_mariadb="" remove_docker="" remove_runtime=1 remove_caches=1 remove_firewall=1
+    local drop_db="" remove_mariadb="" remove_postgres="" remove_docker="" remove_runtime=1 remove_caches=1 remove_firewall=1
     [[ -n "$DB_NAME" ]] && ! keeping database && drop_db=1
     [[ "$APT_MARIADB" == 1 ]] && ! keeping db-server && ! keeping database && remove_mariadb=1
+    [[ "$APT_POSTGRES" == 1 ]] && ! keeping db-server && ! keeping database && remove_postgres=1
+    local remove_db_server="$remove_mariadb$remove_postgres"
     [[ "$APT_DOCKER" == 1 ]] && ! keeping docker && remove_docker=1
     keeping runtime && remove_runtime=""
     keeping caches && remove_caches=""
@@ -91,9 +98,10 @@ main() {
     [[ -n "$DOCKER_PROJECT" ]] && echo "  - Docker containers, images and data of project $DOCKER_PROJECT"
     [[ -n "$DOCKER_NETWORK" ]] && echo "  - Docker network $DOCKER_NETWORK"
     [[ -n "$remove_docker" ]] && echo "  - Docker itself (it was installed by the wizard), with all its data"
-    [[ -n "$drop_db" ]] && echo "  - database $DB_NAME and MySQL user $DB_USER (all CAD data)"
+    [[ -n "$drop_db" ]] && echo "  - database $DB_NAME and database user $DB_USER (all CAD data)"
     [[ -n "$remove_firewall" ]] && echo "  - firewall rules for port(s) ${UFW_PORTS[*]}"
     [[ -n "$remove_mariadb" ]] && echo "  - the MariaDB server it installed (and every database in it)"
+    [[ -n "$remove_postgres" ]] && echo "  - the PostgreSQL server it installed (and every database in it)"
     [[ ${#APT_PACKAGES[@]} -gt 0 ]] && echo "  - package(s) ${APT_PACKAGES[*]}"
     [[ ${#cache_dirs[@]} -gt 0 ]] && echo "  - download caches: ${cache_dirs[*]}"
     [[ -n "$keep_list" ]] && echo "Keeping: ${keep_list//,/, }"
@@ -120,8 +128,8 @@ main() {
 
     if [[ -n "$DOCKER_PROJECT" ]] && command -v docker >/dev/null 2>&1; then
         echo "[*] Removing Docker containers, images and volumes of $DOCKER_PROJECT..."
-        if [[ -f "$INSTALL_DIR/app/production.docker-compose.yml" ]]; then
-            (cd "$INSTALL_DIR/app" && docker compose -p "$DOCKER_PROJECT" -f production.docker-compose.yml \
+        if [[ -f "$INSTALL_DIR/app/$DOCKER_COMPOSE_FILE" ]]; then
+            (cd "$INSTALL_DIR/app" && docker compose -p "$DOCKER_PROJECT" -f "$DOCKER_COMPOSE_FILE" \
                 down --rmi all --volumes --remove-orphans)
         fi
     fi
@@ -130,11 +138,16 @@ main() {
             || echo "[!] Docker network $DOCKER_NETWORK is still used by other containers; left in place." >&2
     fi
 
-    if [[ -n "$drop_db" && -z "$remove_mariadb" && "$DB_ADMIN" == socket ]]; then
+    if [[ -n "$drop_db" && -z "$remove_db_server" && "$DB_ADMIN" == socket && "$DB_ENGINE" == postgresql ]]; then
+        echo "[*] Dropping PostgreSQL database $DB_NAME and user $DB_USER..."
+        (cd /tmp && runuser -u postgres -- psql -q -v ON_ERROR_STOP=1 \
+            -c "DROP DATABASE IF EXISTS \"$DB_NAME\" WITH (FORCE)" -c "DROP ROLE IF EXISTS \"$DB_USER\"") \
+            || echo "[!] Could not drop the database; remove it by hand." >&2
+    elif [[ -n "$drop_db" && -z "$remove_db_server" && "$DB_ADMIN" == socket ]]; then
         echo "[*] Dropping database $DB_NAME and user $DB_USER..."
         mysql -uroot -e "DROP DATABASE IF EXISTS \`$DB_NAME\`; DROP USER IF EXISTS '$DB_USER'@'localhost'; DROP USER IF EXISTS '$DB_USER'@'127.0.0.1';" \
             || echo "[!] Could not drop the database; remove it by hand." >&2
-    elif [[ -n "$drop_db" && -z "$remove_mariadb" ]]; then
+    elif [[ -n "$drop_db" && -z "$remove_db_server" ]]; then
         echo "[!] The database $DB_NAME is on a server this installer did not manage; drop it there yourself." >&2
     elif [[ -n "$DB_NAME" && -z "$drop_db" ]]; then
         echo "[*] Keeping database $DB_NAME and user $DB_USER."
@@ -146,6 +159,13 @@ main() {
         DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq 'mariadb-server*' 'mariadb-client*' >/dev/null
         DEBIAN_FRONTEND=noninteractive apt-get autoremove -y -qq >/dev/null
         rm -rf /var/lib/mysql /etc/mysql/mariadb.conf.d
+    fi
+    if [[ -n "$remove_postgres" ]]; then
+        echo "[*] Removing PostgreSQL..."
+        systemctl stop postgresql 2>/dev/null
+        DEBIAN_FRONTEND=noninteractive apt-get purge -y -qq 'postgresql*' >/dev/null
+        DEBIAN_FRONTEND=noninteractive apt-get autoremove -y -qq >/dev/null
+        rm -rf /var/lib/postgresql /etc/postgresql /var/log/postgresql
     fi
     if [[ -n "$remove_docker" ]]; then
         systemctl stop docker.socket docker containerd 2>/dev/null

@@ -8,6 +8,7 @@ import { $log } from "@tsed/logger";
 import { prisma } from "lib/data/prisma";
 import { findOrCreateCAD } from "lib/upsert-cad";
 import { findApiRoot } from "lib/recovery/recovery-token";
+import { isPostgres } from "lib/data/db-provider";
 
 /**
  * Demo mode.
@@ -17,7 +18,7 @@ import { findApiRoot } from "lib/recovery/recovery-token";
  * - its credentials are shown on the login page,
  * - every `DEMO_RESET_MINUTES` (default 10) all data is reset to a baseline snapshot.
  *
- * The baseline is a data-only `mysqldump` / `mariadb-dump` taken once, the first time demo mode starts, and stored in
+ * The baseline is a data-only `mysqldump` / `mariadb-dump` (`pg_dump` on PostgreSQL) taken once, the first time demo mode starts, and stored in
  * `apps/api/.demo-baseline.sql`. Delete that file and restart the API to take a new baseline.
  */
 
@@ -83,13 +84,13 @@ interface DbConnection {
 function getDbConnection(): DbConnection {
   const url = process.env.DATABASE_URL;
   if (!url || url.includes("${")) {
-    throw new Error("DATABASE_URL must be a complete mysql:// URL for demo mode");
+    throw new Error("DATABASE_URL must be a complete mysql:// or postgresql:// URL for demo mode");
   }
 
   const parsed = new URL(url);
   return {
     host: parsed.hostname,
-    port: parsed.port || "3306",
+    port: parsed.port || (isPostgres() ? "5432" : "3306"),
     user: decodeURIComponent(parsed.username),
     password: decodeURIComponent(parsed.password),
     database: decodeURIComponent(parsed.pathname.slice(1)),
@@ -118,12 +119,21 @@ function connectionArgs(connection: DbConnection) {
   ];
 }
 
+function pgConnectionArgs(connection: DbConnection) {
+  return [
+    `--host=${connection.host}`,
+    `--port=${connection.port}`,
+    `--username=${connection.user}`,
+    `--dbname=${connection.database}`,
+  ];
+}
+
 function run(command: string, args: string[]) {
   const connection = getDbConnection();
   return new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, {
       // keeps the password out of the process list
-      env: { ...process.env, MYSQL_PWD: connection.password },
+      env: { ...process.env, MYSQL_PWD: connection.password, PGPASSWORD: connection.password },
       stdio: ["ignore", "ignore", "pipe"],
     });
     let stderr = "";
@@ -167,8 +177,23 @@ async function takeBaseline() {
   const baselinePath = getBaselinePath();
   const tmpPath = `${baselinePath}.${process.pid}.tmp`;
   const connection = getDbConnection();
-  const commands = await getClientCommands();
 
+  if (isPostgres()) {
+    await run("pg_dump", [
+      ...pgConnectionArgs(connection),
+      "--data-only",
+      "--no-owner",
+      "--no-privileges",
+      "--exclude-table=_prisma_migrations",
+      `--file=${tmpPath}`,
+    ]);
+    chmodSync(tmpPath, 0o600);
+    renameSync(tmpPath, baselinePath);
+    $log.info(`[demo] baseline snapshot saved to ${baselinePath}`);
+    return;
+  }
+
+  const commands = await getClientCommands();
   await run(commands.dump, [
     ...connectionArgs(connection),
     "--no-create-info",
@@ -197,6 +222,12 @@ export async function resetDemoData() {
 
   try {
     const connection = getDbConnection();
+    if (isPostgres()) {
+      await resetPostgres(connection, baselinePath, scriptPath);
+      $log.info("[demo] data reset to baseline");
+      return;
+    }
+
     const commands = await getClientCommands();
     const tables = await prisma.$queryRaw<{ name: string }[]>`
       SELECT TABLE_NAME AS name FROM information_schema.TABLES
@@ -238,6 +269,55 @@ export async function resetDemoData() {
       // already gone
     }
   }
+}
+
+/**
+ * PostgreSQL: DDL and TRUNCATE are transactional there, so the whole reset is one transaction. A
+ * data-only dump can't be restored in foreign-key order (some tables reference each other, e.g.
+ * Officer and Call911), and disabling the FK triggers needs a superuser; so the foreign keys are
+ * dropped for the load and added back (and checked) before the commit. The CAD's database user
+ * owns the tables, which is all that takes.
+ */
+async function resetPostgres(connection: DbConnection, baselinePath: string, scriptPath: string) {
+  const [tables, foreignKeys] = await Promise.all([
+    prisma.$queryRaw<{ name: string }[]>`
+      SELECT format('%I', tablename) AS name FROM pg_tables
+      WHERE schemaname = current_schema() AND tablename <> '_prisma_migrations'
+    `,
+    prisma.$queryRaw<{ tableName: string; name: string; definition: string }[]>`
+      SELECT conrelid::regclass::text AS "tableName", format('%I', conname) AS name,
+        pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint
+      WHERE contype = 'f' AND connamespace = current_schema()::regnamespace
+    `,
+  ]);
+
+  writeFileSync(
+    scriptPath,
+    [
+      "SET lock_timeout = '15s';",
+      "BEGIN;",
+      ...foreignKeys.map((fk) => `ALTER TABLE ${fk.tableName} DROP CONSTRAINT ${fk.name};`),
+      tables.length ? `TRUNCATE ${tables.map((t) => t.name).join(", ")} RESTART IDENTITY;` : "",
+      `\\i '${baselinePath.replace(/'/g, "''")}'`,
+      // pg_dump's file empties the search_path; the constraints below use unqualified names
+      "RESET search_path;",
+      ...foreignKeys.map(
+        (fk) => `ALTER TABLE ${fk.tableName} ADD CONSTRAINT ${fk.name} ${fk.definition};`,
+      ),
+      "COMMIT;",
+      "",
+    ].join("\n"),
+    { mode: 0o600 },
+  );
+
+  await run("psql", [
+    ...pgConnectionArgs(connection),
+    "--no-psqlrc",
+    "--quiet",
+    "--set=ON_ERROR_STOP=1",
+    `--file=${scriptPath}`,
+  ]);
 }
 
 function scheduleNextReset() {

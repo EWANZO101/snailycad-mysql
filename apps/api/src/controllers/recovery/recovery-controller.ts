@@ -9,6 +9,7 @@ import { prisma } from "lib/data/prisma";
 import { validateSchema } from "lib/data/validate-schema";
 import { createFeaturesObject } from "middlewares/is-enabled";
 import { verifyRecoveryToken } from "lib/recovery/recovery-token";
+import { insensitive } from "lib/data/db-provider";
 
 /**
  * Recovery endpoints (roadmap 2.1).
@@ -198,7 +199,7 @@ export class RecoveryController {
       where: query
         ? {
             OR: [
-              { username: { contains: query } },
+              { username: { contains: query, ...insensitive() } },
               { id: query },
               { discordId: query },
               { steamId: query },

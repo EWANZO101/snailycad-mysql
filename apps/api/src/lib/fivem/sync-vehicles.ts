@@ -1,6 +1,7 @@
 import { Feature, ValueLicenseType, ValueType, WhitelistStatus } from "@prisma/client";
 import type { z } from "zod";
 import { prisma } from "lib/data/prisma";
+import { insensitive } from "lib/data/db-provider";
 import { isFeatureEnabled } from "lib/upsert-cad";
 import { generateString } from "utils/generate-string";
 import type { CadWithFeatures } from "./cad";
@@ -55,9 +56,9 @@ async function findVehicleModel(vehicle: GameVehicle) {
   }
   const names = [vehicle.label, vehicle.model].filter((name): name is string => !!name);
   for (const name of names) {
-    // MySQL compares case-insensitively (utf8mb4_unicode_ci)
+    // any case: MySQL's collation ignores it, PostgreSQL needs mode "insensitive"
     const byName = await prisma.vehicleValue.findFirst({
-      where: { value: { value: name, type: ValueType.VEHICLE } },
+      where: { value: { value: { equals: name, ...insensitive() }, type: ValueType.VEHICLE } },
       orderBy: { value: { isDisabled: "asc" } },
       select: { id: true },
     });

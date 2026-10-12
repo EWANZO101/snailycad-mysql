@@ -2,15 +2,17 @@
   "name": "@snailycad/api",
   "version": "1.80.2",
   "scripts": {
-    "watch": "pnpm prisma generate && pnpm nodemon --watch \"./src/**/*.ts\" --ignore \"node_modules/**/*\" --exec ts-node src/main.ts",
+    "watch": "node scripts/prisma.mjs generate && pnpm nodemon --watch \"./src/**/*.ts\" --ignore \"node_modules/**/*\" --exec ts-node src/main.ts",
     "build": "swc src -d dist && node scripts/postbuild.mjs",
-    "start": "pnpm prisma migrate deploy && pnpm prisma generate && node dist/main.js",
-    "format": "pnpm prisma format",
-    "generate": "pnpm prisma generate",
+    "start": "node scripts/prisma.mjs migrate deploy && node scripts/prisma.mjs generate && node dist/main.js",
+    "format": "pnpm prisma format && node scripts/postgres-schema.mjs",
+    "generate": "node scripts/prisma.mjs generate",
     "typecheck": "pnpm generate && tsc --noEmit",
     "copy-env": "node ../../scripts/copy-env.mjs --api",
     "test:watch": "pnpm vitest --watch",
-    "test": "pnpm vitest run"
+    "test": "pnpm vitest run",
+    "prisma:postgres-schema": "node scripts/postgres-schema.mjs",
+    "prisma:migrate-postgres": "node scripts/prisma.mjs migrate-postgres"
   },
   "devDependencies": {
     "@swc/cli": "^0.1.63",

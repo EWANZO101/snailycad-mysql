@@ -20,6 +20,7 @@ import { getAPIUrl } from "@snailycad/utils/api-url";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
 import { encode } from "lib/discord/utils";
 import { setCookie } from "utils/set-cookie";
+import { insensitive } from "lib/data/db-provider";
 
 const callbackUrl = makeCallbackURL(getAPIUrl());
 const authorizeUrl = makeAuthorizeURL(getAPIUrl());
@@ -168,7 +169,7 @@ export class DiscordAuth {
      */
     if (!user && !authUser) {
       const existingUserWithUsername = await prisma.user.findFirst({
-        where: { username: { equals: data.username } },
+        where: { username: { equals: data.username, ...insensitive() } },
       });
 
       if (existingUserWithUsername) {

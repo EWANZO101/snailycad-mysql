@@ -1,0 +1,18 @@
+# Development database: PostgreSQL (docker-compose.yml is the MariaDB one).
+services:
+  postgres:
+    container_name: "snaily-cad-postgres"
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - ./.dev-data-postgres:/var/lib/postgresql/data

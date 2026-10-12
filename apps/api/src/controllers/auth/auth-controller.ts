@@ -27,6 +27,7 @@ import { validateDiscordAndSteamId } from "lib/auth/validate-discord-steam-id";
 import { createFeaturesObject } from "middlewares/is-enabled";
 import { sendUserWhitelistStatusChangeWebhook } from "../admin/manage/manage-users-controller";
 import { sendUserRegisteredWebhook } from "lib/discord/extra-webhooks";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/auth")
 @ContentType("application/json")
@@ -44,7 +45,7 @@ export class AuthController {
 
     const user = await prisma.user.findFirst({
       where: {
-        username: { equals: data.username },
+        username: { equals: data.username, ...insensitive() },
       },
     });
 
@@ -128,7 +129,7 @@ export class AuthController {
 
     const existing = await prisma.user.findFirst({
       where: {
-        username: { equals: data.username },
+        username: { equals: data.username, ...insensitive() },
       },
     });
 

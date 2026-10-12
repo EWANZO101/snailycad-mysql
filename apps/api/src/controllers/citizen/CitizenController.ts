@@ -36,6 +36,7 @@ import { recordsInclude } from "controllers/leo/search/SearchController";
 import { leoProperties } from "utils/leo/includes";
 import { sendDiscordWebhook } from "~/lib/discord/webhooks";
 import { sendCitizenChangeWebhook } from "~/lib/discord/extra-webhooks";
+import { insensitive } from "lib/data/db-provider";
 
 export const citizenInclude = Prisma.validator<Prisma.CitizenInclude>()({
   user: { select: userProperties },
@@ -117,15 +118,15 @@ export class CitizenController {
       userId: checkCitizenUserId ? user.id : undefined,
       OR: [
         {
-          name: { contains: name },
-          surname: { contains: surname },
+          name: { contains: name, ...insensitive() },
+          surname: { contains: surname, ...insensitive() },
         },
         {
-          name: { contains: surname },
-          surname: { contains: name },
+          name: { contains: surname, ...insensitive() },
+          surname: { contains: name, ...insensitive() },
         },
-        { socialSecurityNumber: { contains: name } },
-        { phoneNumber: { contains: name } },
+        { socialSecurityNumber: { contains: name, ...insensitive() } },
+        { phoneNumber: { contains: name, ...insensitive() } },
       ],
     };
 
@@ -363,12 +364,12 @@ export class CitizenController {
     const [isFirstNameBlacklisted, isLastNameBlacklisted] = await Promise.all([
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.name },
+          word: { contains: data.name, ...insensitive() },
         },
       }),
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.surname },
+          word: { contains: data.surname, ...insensitive() },
         },
       }),
     ]);
@@ -459,12 +460,12 @@ export class CitizenController {
     const [isFirstNameBlacklisted, isLastNameBlacklisted] = await Promise.all([
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.name },
+          word: { contains: data.name, ...insensitive() },
         },
       }),
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.surname },
+          word: { contains: data.surname, ...insensitive() },
         },
       }),
     ]);

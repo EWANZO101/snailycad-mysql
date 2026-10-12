@@ -1,5 +1,6 @@
 import { type Prisma } from "@prisma/client";
 import { WhitelistStatus } from "@snailycad/types";
+import { insensitive } from "lib/data/db-provider";
 
 interface CreateWhereObjOptions<Type extends "OFFICER" | "DEPUTY"> {
   departmentId?: string;
@@ -54,18 +55,18 @@ export function createWhere<Type extends "OFFICER" | "DEPUTY">({
       { id: query },
       { callsign: query },
       { callsign2: query },
-      { department: { value: { value: { contains: query } } } },
-      { status: { value: { value: { contains: query } } } },
+      { department: { value: { value: { contains: query, ...insensitive() } } } },
+      { status: { value: { value: { contains: query, ...insensitive() } } } },
       {
         citizen: {
           OR: [
             {
-              name: { contains: name },
-              surname: { contains: surname },
+              name: { contains: name, ...insensitive() },
+              surname: { contains: surname, ...insensitive() },
             },
             {
-              name: { contains: name },
-              surname: { contains: surname },
+              name: { contains: name, ...insensitive() },
+              surname: { contains: surname, ...insensitive() },
             },
           ],
         },
@@ -73,7 +74,7 @@ export function createWhere<Type extends "OFFICER" | "DEPUTY">({
       { user: { username: { contains: query } } },
       type === "OFFICER"
         ? {
-            divisions: { some: { value: { value: { contains: query } } } },
+            divisions: { some: { value: { value: { contains: query, ...insensitive() } } } },
           }
         : {},
     ],

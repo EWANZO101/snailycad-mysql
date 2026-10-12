@@ -1,6 +1,7 @@
 import { type Prisma, ValueType } from "@prisma/client";
 import { GET_VALUES } from "controllers/admin/values/values-controller";
 import { getTypeFromPath } from "./utils";
+import { insensitive } from "lib/data/db-provider";
 
 interface CreateSearchWhereObjectOptions {
   path: string;
@@ -19,9 +20,9 @@ export function createSearchWhereObject(options: CreateSearchWhereObjectOptions)
 
     const where: Prisma.PenalCodeWhereInput = {
       OR: [
-        { title: { contains: options.query } },
-        { description: { contains: options.query } },
-        { group: { name: { contains: options.query } } },
+        { title: { contains: options.query, ...insensitive() } },
+        { description: { contains: options.query, ...insensitive() } },
+        { group: { name: { contains: options.query, ...insensitive() } } },
       ],
       AND: groupId
         ? groupId === "ungrouped"
@@ -37,7 +38,7 @@ export function createSearchWhereObject(options: CreateSearchWhereObjectOptions)
     let where: any = {
       value: {
         isDisabled: showDisabled ? undefined : false,
-        value: { contains: options.query },
+        value: { contains: options.query, ...insensitive() },
       },
     };
 
@@ -56,7 +57,7 @@ export function createSearchWhereObject(options: CreateSearchWhereObjectOptions)
 
       const whereAND = [
         { value: { isDisabled: showDisabled ? undefined : false } },
-        { value: { value: { contains: options.query } } },
+        { value: { value: { contains: options.query, ...insensitive() } } },
       ] as any[];
 
       if (options.queryParams.department) {
@@ -75,9 +76,9 @@ export function createSearchWhereObject(options: CreateSearchWhereObjectOptions)
     if (ValueType.ADDRESS === type) {
       where = {
         OR: [
-          { value: { value: { contains: options.query } } },
-          { county: { contains: options.query } },
-          { postal: { contains: options.query } },
+          { value: { value: { contains: options.query, ...insensitive() } } },
+          { county: { contains: options.query, ...insensitive() } },
+          { postal: { contains: options.query, ...insensitive() } },
         ],
         AND: [{ value: { isDisabled: showDisabled ? undefined : false } }],
       };
@@ -89,6 +90,6 @@ export function createSearchWhereObject(options: CreateSearchWhereObjectOptions)
   return {
     type,
     isDisabled: showDisabled ? undefined : false,
-    value: { contains: options.query },
+    value: { contains: options.query, ...insensitive() },
   };
 }

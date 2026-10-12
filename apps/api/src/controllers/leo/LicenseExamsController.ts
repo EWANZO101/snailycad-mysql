@@ -17,6 +17,7 @@ import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { manyToManyHelper } from "lib/data/many-to-many";
 import type * as APITypes from "@snailycad/types/api";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
+import { insensitive } from "lib/data/db-provider";
 
 const licenseExamIncludes = {
   citizen: true,
@@ -40,9 +41,9 @@ export class LicenseExamsController {
     const where: Prisma.LicenseExamWhereInput | undefined = query
       ? {
           OR: [
-            { license: { value: { contains: query } } },
-            { citizen: { name: { contains: query } } },
-            { citizen: { surname: { contains: query } } },
+            { license: { value: { contains: query, ...insensitive() } } },
+            { citizen: { name: { contains: query, ...insensitive() } } },
+            { citizen: { surname: { contains: query, ...insensitive() } } },
           ],
         }
       : undefined;

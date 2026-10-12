@@ -38,6 +38,7 @@ import { hasPermission } from "@snailycad/permissions";
 import { parseImportFile } from "~/utils/file";
 import { getPrismaModelOrderBy } from "~/utils/order-by";
 import { radioServer } from "lib/radio/radio-server";
+import { insensitive, jsonPath } from "lib/data/db-provider";
 
 @Controller("/admin/manage/cad-settings")
 @ContentType("application/json")
@@ -100,7 +101,7 @@ export class CADSettingsController {
     const OR: Prisma.Enumerable<Prisma.AuditLogWhereInput> = [];
     const _typeWhere: Prisma.Enumerable<Prisma.AuditLogWhereInput> | undefined =
       type && Object.hasOwn(AuditLogActionType, type)
-        ? { action: { string_contains: type, path: "$.type" } }
+        ? { action: { string_contains: type, path: jsonPath("type") } }
         : undefined;
 
     if (_typeWhere) {
@@ -109,7 +110,7 @@ export class CADSettingsController {
 
     if (query) {
       OR.push({ action: { string_contains: query } });
-      OR.push({ executor: { username: { contains: query } } });
+      OR.push({ executor: { username: { contains: query, ...insensitive() } } });
     }
 
     const where = { OR: OR.length > 0 ? OR : undefined };
@@ -497,10 +498,10 @@ export class CADSettingsController {
 
     const [totalCount, blacklistedWords] = await prisma.$transaction([
       prisma.blacklistedWord.count({
-        where: query ? { word: { contains: query } } : undefined,
+        where: query ? { word: { contains: query, ...insensitive() } } : undefined,
       }),
       prisma.blacklistedWord.findMany({
-        where: query ? { word: { contains: query } } : undefined,
+        where: query ? { word: { contains: query, ...insensitive() } } : undefined,
         take: includeAll ? undefined : 35,
         skip: includeAll ? undefined : skip,
         orderBy,

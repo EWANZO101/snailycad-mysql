@@ -16,3 +16,4 @@ dist/
 .snaily-cache/
 .snailycad-data/
 .data/
+.data-postgres/

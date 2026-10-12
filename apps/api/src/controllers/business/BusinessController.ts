@@ -11,6 +11,7 @@ import {
 } from "@snailycad/schemas";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { prisma } from "lib/data/prisma";
+import { insensitive } from "lib/data/db-provider";
 import {
   type User,
   EmployeeAsEnum,
@@ -81,7 +82,9 @@ export class BusinessController {
 
   @Get("/search")
   async searchBusinesses(@QueryParams("query") query: string) {
-    const where: Prisma.BusinessWhereInput = query ? { name: { contains: query } } : {};
+    const where: Prisma.BusinessWhereInput = query
+      ? { name: { contains: query, ...insensitive() } }
+      : {};
     const joinableBusinesses = await prisma.business.findMany({
       where,
     });

@@ -10,7 +10,8 @@
 #   -Keep         leave these in place, comma-separated (one string, so it survives -File).
 #                 Admin > Dashboard > Danger zone passes the items you untick there:
 #                   database   the CAD's database and MySQL user (all CAD data)
-#                   db-server  the MariaDB server the wizard installed (keeping the database keeps it too)
+#                   db-server  the MariaDB / PostgreSQL server the wizard installed (keeping the
+#                              database keeps it too)
 #                   runtime    the private Node.js + pnpm (and NSSM) in <install folder>\runtime
 #                   firewall   the Windows Firewall rules the wizard added
 #                   pkg:<id>   one winget package the wizard installed, e.g. pkg:Git.Git
@@ -77,6 +78,11 @@ if (-not $mariaService) { $mariaService = 'MariaDB' }
 # removing the MariaDB server takes every database in it, so keeping the CAD's database keeps it too
 $dropDatabase = $dbName -and -not (Test-Keep 'database')
 $removeMariaDB = $ourMariaDB -and -not (Test-Keep 'db-server') -and -not (Test-Keep 'database')
+$isPostgres = (Get-Value 'DB_ENGINE') -eq 'postgresql'
+$ourPostgres = (Get-Value 'WINGET_POSTGRES') -eq '1'
+$pgService = Get-Value 'POSTGRES_SERVICE'
+if (-not $pgService) { $pgService = 'postgresql-x64-17' }
+$removePostgres = $ourPostgres -and -not (Test-Keep 'db-server') -and -not (Test-Keep 'database')
 $removeRuntime = -not (Test-Keep 'runtime')
 if (Test-Keep 'firewall') { $rules = @() }
 
@@ -85,9 +91,10 @@ if ($removeRuntime) { Write-Host "  - $dir (the CAD, its build, Node.js + pnpm a
 else { Write-Host "  - $dir except runtime\ (Node.js + pnpm are kept)" }
 if ($cadService -and $serviceKind -eq 'task') { Write-Host "  - scheduled task \SnailyCAD\$cadService" }
 elseif ($cadService) { Write-Host "  - Windows service $cadService" }
-if ($dropDatabase) { Write-Host "  - database $dbName and MySQL user $dbUser (all CAD data)" }
+if ($dropDatabase) { Write-Host "  - database $dbName and database user $dbUser (all CAD data)" }
 if ($rules.Count -gt 0) { Write-Host "  - Windows Firewall rule(s) $($rules -join ', ')" }
 if ($removeMariaDB) { Write-Host '  - the MariaDB server it installed (and every database in it)' }
+if ($removePostgres) { Write-Host '  - the PostgreSQL server and pgAdmin it installed (and every database in it)' }
 if ($packages.Count -gt 0) { Write-Host "  - program(s) it installed with winget: $($packages -join ', ')" }
 if ($keepItems.Count -gt 0) { Write-Host "Keeping: $($keepItems -join ', ')" }
 if (-not $Yes) {
@@ -140,7 +147,39 @@ function Find-MySql {
     return $null
 }
 $rootPasswordFile = Join-Path $dir 'installer\mariadb-root-password.txt'
-if ($dropDatabase -and $ourMariaDB -and -not $removeMariaDB) {
+$pgPasswordFile = Join-Path $dir 'installer\postgres-password.txt'
+function Find-Psql {
+    $root = $env:ProgramFiles
+    $found = Get-ChildItem -Path (Join-Path $root 'PostgreSQL\*\bin\psql.exe') -ErrorAction SilentlyContinue |
+        Sort-Object FullName -Descending | Select-Object -First 1
+    if ($found) { return $found.FullName }
+    return $null
+}
+if ($isPostgres) {
+    if ($dropDatabase -and $ourPostgres -and -not $removePostgres) {
+        $psql = Find-Psql
+        if ($psql -and (Test-Path -LiteralPath $pgPasswordFile)) {
+            Say "Dropping PostgreSQL database $dbName and user $dbUser..."
+            $pgPassword = (Get-Content -LiteralPath $pgPasswordFile -Raw).Trim()
+            $env:PGPASSWORD = $pgPassword
+            & $psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -q -v ON_ERROR_STOP=1 `
+                -c "DROP DATABASE IF EXISTS `"$dbName`" WITH (FORCE)" -c "DROP ROLE IF EXISTS `"$dbUser`""
+            if ($LASTEXITCODE -ne 0) { Warn 'Could not drop the database; remove it by hand.' }
+            Remove-Item Env:\PGPASSWORD
+            Warn "PostgreSQL is kept. The postgres user's password is: $pgPassword  (write it down: the file holding it is deleted now)"
+        } else {
+            Warn "Could not log in to PostgreSQL; drop the database $dbName and user $dbUser by hand."
+        }
+    } elseif ($dropDatabase -and -not $ourPostgres) {
+        Warn "The database $dbName is on a server this installer did not manage; drop it there yourself."
+    } elseif ($dbName -and -not $dropDatabase) {
+        Say "Keeping database $dbName and user $dbUser."
+        if ($ourPostgres -and (Test-Path -LiteralPath $pgPasswordFile)) {
+            $pgPassword = (Get-Content -LiteralPath $pgPasswordFile -Raw).Trim()
+            Warn "PostgreSQL is kept. The postgres user's password is: $pgPassword  (write it down: the file holding it is deleted now)"
+        }
+    }
+} elseif ($dropDatabase -and $ourMariaDB -and -not $removeMariaDB) {
     $mysql = Find-MySql
     if ($mysql -and (Test-Path -LiteralPath $rootPasswordFile)) {
         Say "Dropping database $dbName and user $dbUser..."
@@ -175,6 +214,24 @@ if ($removeMariaDB) {
         if ($msi.ExitCode -ne 0 -and $msi.ExitCode -ne 3010) { Warn "Removing $($entry.DisplayName) ended with code $($msi.ExitCode)." }
     }
     if (-not $entries) { Warn 'MariaDB was not found in the installed programs; nothing to remove.' }
+}
+
+if ($removePostgres) {
+    Say 'Removing PostgreSQL and pgAdmin (and their data)...'
+    & sc.exe stop $pgService 2>&1 | Out-Null
+    $pgDirs = @(Get-ChildItem -Path (Join-Path $env:ProgramFiles 'PostgreSQL\*') -Directory -ErrorAction SilentlyContinue)
+    $removed = $false
+    foreach ($pgDir in $pgDirs) {
+        $uninstaller = Join-Path $pgDir.FullName 'uninstall-postgresql.exe'
+        if (Test-Path -LiteralPath $uninstaller) {
+            $process = Start-Process -FilePath $uninstaller -Wait -PassThru -ArgumentList @('--mode', 'unattended', '--unattendedmodeui', 'none')
+            if ($process.ExitCode -ne 0) { Warn "Removing PostgreSQL ended with code $($process.ExitCode)." }
+            $removed = $true
+        }
+        # the EDB uninstaller leaves the data directory behind
+        Remove-Item -LiteralPath $pgDir.FullName -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    if (-not $removed) { Warn 'PostgreSQL was not found in the installed programs; nothing to remove.' }
 }
 
 # --- programs installed with winget (Git, NSSM, Python) ---

@@ -46,6 +46,7 @@ import { citizenInclude } from "controllers/citizen/CitizenController";
 import { unitProperties, combinedEmsFdUnitProperties } from "utils/leo/includes";
 import { sendDiscordWebhook } from "~/lib/discord/webhooks";
 import { createWhere } from "../leo/create-where-obj";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/ems-fd")
 @UseBeforeEach(IsAuth)
@@ -647,18 +648,18 @@ function activeEmsFdDeputiesWhereInput(query: string) {
 
   return {
     OR: [
-      { callsign: { contains: query } },
-      { callsign2: { contains: query } },
-      { division: { value: { value: { contains: query } } } },
-      { department: { value: { value: { contains: query } } } },
-      { badgeNumberString: { contains: query } },
-      { rank: { value: { contains: query } } },
-      { activeVehicle: { value: { value: { contains: query } } } },
-      { radioChannelId: { contains: query } },
+      { callsign: { contains: query, ...insensitive() } },
+      { callsign2: { contains: query, ...insensitive() } },
+      { division: { value: { value: { contains: query, ...insensitive() } } } },
+      { department: { value: { value: { contains: query, ...insensitive() } } } },
+      { badgeNumberString: { contains: query, ...insensitive() } },
+      { rank: { value: { contains: query, ...insensitive() } } },
+      { activeVehicle: { value: { value: { contains: query, ...insensitive() } } } },
+      { radioChannelId: { contains: query, ...insensitive() } },
       {
         status: {
           AND: [
-            { value: { value: { contains: query } } },
+            { value: { value: { contains: query, ...insensitive() } } },
             { NOT: { shouldDo: ShouldDoType.SET_OFF_DUTY } },
           ],
         },
@@ -667,12 +668,12 @@ function activeEmsFdDeputiesWhereInput(query: string) {
         citizen: {
           OR: [
             {
-              name: { contains: name },
-              surname: { contains: surname },
+              name: { contains: name, ...insensitive() },
+              surname: { contains: surname, ...insensitive() },
             },
             {
-              name: { contains: surname },
-              surname: { contains: name },
+              name: { contains: surname, ...insensitive() },
+              surname: { contains: name, ...insensitive() },
             },
           ],
         },

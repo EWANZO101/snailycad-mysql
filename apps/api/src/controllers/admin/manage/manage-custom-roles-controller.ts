@@ -30,6 +30,7 @@ import {
   assertActorHoldsPermissions,
   assertCanChangePermissions,
 } from "lib/auth/permission-escalation";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/admin/manage/custom-roles")
 @UseBeforeEach(IsAuth)
@@ -45,7 +46,10 @@ export class AdminManageCustomRolesController {
   ): Promise<APITypes.GetCustomRolesData> {
     const where = query
       ? ({
-          OR: [{ name: { contains: query } }, { discordRole: { name: { contains: query } } }],
+          OR: [
+            { name: { contains: query, ...insensitive() } },
+            { discordRole: { name: { contains: query, ...insensitive() } } },
+          ],
         } satisfies Prisma.CustomRoleWhereInput)
       : undefined;
 
@@ -79,7 +83,7 @@ export class AdminManageCustomRolesController {
     assertActorHoldsPermissions(sessionUser, data.permissions as string[]);
 
     const existing = await prisma.customRole.findFirst({
-      where: { name: { equals: data.name } },
+      where: { name: { equals: data.name, ...insensitive() } },
     });
 
     if (existing) {

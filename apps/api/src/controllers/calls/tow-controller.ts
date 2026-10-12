@@ -35,6 +35,7 @@ import { getTranslator } from "utils/get-translator";
 import { callInclude } from "~/utils/leo/includes";
 import { createTowCall, towIncludes } from "lib/calls/create-tow-taxi-call";
 import { notifyOpsPhoneTowTaxi } from "lib/ops-phone/back-channel";
+import { insensitive } from "lib/data/db-provider";
 
 export { towIncludes };
 
@@ -63,12 +64,12 @@ export class TowController {
       ? {
           OR: [
             {
-              creator: { name: { contains: query } },
+              creator: { name: { contains: query, ...insensitive() } },
             },
-            { description: { contains: query } },
+            { description: { contains: query, ...insensitive() } },
             { descriptionData: { array_contains: query } },
-            { location: { contains: query } },
-            { postal: { contains: query } },
+            { location: { contains: query, ...insensitive() } },
+            { postal: { contains: query, ...insensitive() } },
           ],
         }
       : {};

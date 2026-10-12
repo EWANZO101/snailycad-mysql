@@ -292,6 +292,10 @@
         }
       }
 
+      .options.engines {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        margin-bottom: 18px;
+      }
       .options {
         display: grid;
         gap: 10px;
@@ -678,13 +682,34 @@
       <!-- 4. database -->
       <section class="card hidden" data-page="3">
         <h1>Database</h1>
-        <p class="lead">SnailyCAD stores its data in MySQL or MariaDB.</p>
+        <p class="lead">Pick the database SnailyCAD stores its data in, then where it runs.</p>
+        <div class="options engines">
+          <label class="option"
+            ><input type="radio" name="dbengine" value="mysql" checked />
+            <span
+              ><b>MySQL / MariaDB</b>
+              <small
+                >MySQL 8.0+ or MariaDB 10.6+. Manage it with phpMyAdmin, HeidiSQL, …</small
+              ></span
+            ></label
+          >
+          <label class="option"
+            ><input type="radio" name="dbengine" value="postgresql" />
+            <span
+              ><b>PostgreSQL</b>
+              <small
+                >PostgreSQL 14+, like the original SnailyCAD. Manage it with pgAdmin (installed with
+                PostgreSQL on Windows).</small
+              ></span
+            ></label
+          >
+        </div>
         <div class="options">
           <label class="option" id="opt-container"
             ><input type="radio" name="dbmode" value="container" />
             <span
-              ><b>MariaDB container</b>
-              <small
+              ><b data-engine-text="container">MariaDB container</b>
+              <small data-engine-text="container-help"
                 >A MariaDB 11.4 container next to the CAD, only reachable from this server. Its data
                 is kept in the install folder.</small
               ></span
@@ -693,7 +718,7 @@
           <label class="option" id="opt-local"
             ><input type="radio" name="dbmode" value="local" />
             <span
-              ><b>Use the MySQL/MariaDB server on this machine</b>
+              ><b data-engine-text="local">Use the MySQL/MariaDB server on this machine</b>
               <small
                 >Creates a new database and user on it. Your other databases are not touched.</small
               ></span
@@ -702,8 +727,8 @@
           <label class="option" id="opt-install"
             ><input type="radio" name="dbmode" value="install" />
             <span
-              ><b>Install MariaDB for me</b>
-              <small
+              ><b data-engine-text="install">Install MariaDB for me</b>
+              <small data-engine-text="install-help"
                 >Installs MariaDB on this server and creates the database. Removed again by the
                 uninstaller.</small
               ></span
@@ -713,7 +738,7 @@
             ><input type="radio" name="dbmode" value="external" />
             <span
               ><b>Connect to another database server</b>
-              <small
+              <small data-engine-text="external-help"
                 >You already have a MySQL 8 / MariaDB 10.6+ server and a user for the CAD.</small
               ></span
             ></label
@@ -998,9 +1023,46 @@
       $("req-next").addEventListener("click", () => show(3));
 
       // --- 4. database
+      const dbEngine = () =>
+        document.querySelector("input[name=dbengine]:checked")?.value || "mysql";
+      const ENGINE_TEXT = {
+        mysql: {
+          container: "MariaDB container",
+          "container-help":
+            "A MariaDB 11.4 container next to the CAD, only reachable from this server. Its data is kept in the install folder.",
+          local: "Use the MySQL/MariaDB server on this machine",
+          install: "Install MariaDB for me",
+          "install-help":
+            "Installs MariaDB on this server and creates the database. Removed again by the uninstaller.",
+          "external-help":
+            "You already have a MySQL 8 / MariaDB 10.6+ server and a user for the CAD.",
+          port: "3306",
+          name: "MySQL/MariaDB",
+        },
+        postgresql: {
+          container: "PostgreSQL container",
+          "container-help":
+            "A PostgreSQL 17 container next to the CAD, only reachable from this server. Its data is kept in the install folder.",
+          local: "Use the PostgreSQL server on this machine",
+          install: "Install PostgreSQL for me",
+          "install-help":
+            "Installs PostgreSQL on this server (on Windows with pgAdmin 4) and creates the database. Removed again by the uninstaller.",
+          "external-help": "You already have a PostgreSQL 14+ server and a user for the CAD.",
+          port: "5432",
+          name: "PostgreSQL",
+        },
+      };
       function setupDbOptions() {
         const docker = state.method === "docker";
-        const db = state.checks?.db ?? {};
+        const engine = dbEngine();
+        const allDb = state.checks?.db ?? {};
+        const db = engine === "postgresql" ? (allDb.postgresql ?? {}) : allDb;
+        const texts = ENGINE_TEXT[engine];
+        document.querySelectorAll("[data-engine-text]").forEach((el) => {
+          el.textContent = texts[el.dataset.engineText];
+        });
+        const port = $("ext-port");
+        if (!port.dataset.edited) port.value = texts.port;
         const options = {
           container: docker,
           local: !docker && db.local,
@@ -1037,6 +1099,15 @@
       document
         .querySelectorAll("input[name=dbmode]")
         .forEach((r) => r.addEventListener("change", syncDbFields));
+      document.querySelectorAll("input[name=dbengine]").forEach((r) =>
+        r.addEventListener("change", () => {
+          state.dbTested = false;
+          setupDbOptions();
+        }),
+      );
+      $("ext-port").addEventListener("input", () => {
+        $("ext-port").dataset.edited = "1";
+      });
       document.querySelectorAll("#db-external-fields input").forEach((i) =>
         i.addEventListener("input", () => {
           state.dbTested = false;
@@ -1045,9 +1116,11 @@
 
       function dbSettings() {
         const mode = dbMode();
+        const engine = dbEngine();
         if (mode === "external") {
           return {
             mode,
+            engine,
             host: $("ext-host").value.trim(),
             port: Number($("ext-port").value),
             user: $("ext-user").value,
@@ -1055,7 +1128,7 @@
             name: $("ext-name").value.trim(),
           };
         }
-        return { mode, name: $("db-name").value.trim(), user: $("db-user").value.trim() };
+        return { mode, engine, name: $("db-name").value.trim(), user: $("db-user").value.trim() };
       }
 
       async function testDb() {
@@ -1130,11 +1203,12 @@
       }
       function renderSummary() {
         const s = settings();
+        const pg = s.db.engine === "postgresql";
         const dbText = {
-          container: `MariaDB container, database <code>${esc(s.db.name)}</code>, user <code>${esc(s.db.user)}</code>`,
-          local: `New database <code>${esc(s.db.name)}</code> and user <code>${esc(s.db.user)}</code> on this server's MySQL/MariaDB`,
-          install: `Install MariaDB, then create database <code>${esc(s.db.name)}</code> and user <code>${esc(s.db.user)}</code>`,
-          external: `<code>${esc(s.db.name)}</code> on <code>${esc(s.db.host)}:${esc(s.db.port)}</code> as <code>${esc(s.db.user)}</code>`,
+          container: `${pg ? "PostgreSQL" : "MariaDB"} container, database <code>${esc(s.db.name)}</code>, user <code>${esc(s.db.user)}</code>`,
+          local: `New database <code>${esc(s.db.name)}</code> and user <code>${esc(s.db.user)}</code> on this server's ${pg ? "PostgreSQL" : "MySQL/MariaDB"}`,
+          install: `Install ${pg ? "PostgreSQL" : "MariaDB"}, then create database <code>${esc(s.db.name)}</code> and user <code>${esc(s.db.user)}</code>`,
+          external: `${pg ? "PostgreSQL" : "MySQL/MariaDB"}: <code>${esc(s.db.name)}</code> on <code>${esc(s.db.host)}:${esc(s.db.port)}</code> as <code>${esc(s.db.user)}</code>`,
         }[s.db.mode];
         const docker = state.method === "docker";
         const windows = state.checks?.platform === "windows";

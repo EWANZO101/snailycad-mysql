@@ -6,6 +6,7 @@ import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { ContentType, Description, Get, Put } from "@tsed/schema";
 import { type AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 import { prisma } from "lib/data/prisma";
+import { ident, isPostgres } from "lib/data/db-provider";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { ExtendedBadRequest } from "~/exceptions/extended-bad-request";
@@ -84,9 +85,25 @@ function clampMaxHours(value: number | undefined) {
 }
 
 function utcTimestamp(date: Date) {
-  // `OfficerLog` timestamps are `DATETIME(3)` holding UTC values.
+  // `OfficerLog` timestamps hold UTC values: DATETIME(3) on MySQL, TIMESTAMP(3) on PostgreSQL
+  // (plain TIMESTAMP there: the recursive week list needs one type for its anchor and its step)
   const utc = date.toISOString().replace("T", " ").replace("Z", "");
-  return Prisma.sql`CAST(${utc} AS DATETIME(3))`;
+  return isPostgres()
+    ? Prisma.sql`CAST(${utc} AS TIMESTAMP)`
+    : Prisma.sql`CAST(${utc} AS DATETIME(3))`;
+}
+
+/** seconds between two timestamps */
+function secondsBetween(start: Prisma.Sql, end: Prisma.Sql) {
+  return isPostgres()
+    ? Prisma.sql`EXTRACT(EPOCH FROM (${end} - ${start}))`
+    : Prisma.sql`(TIMESTAMPDIFF(MICROSECOND, ${start}, ${end}) / 1000000)`;
+}
+
+function plusOneWeek(value: Prisma.Sql) {
+  return isPostgres()
+    ? Prisma.sql`(${value} + INTERVAL '7 days')`
+    : Prisma.sql`DATE_ADD(${value}, INTERVAL 7 DAY)`;
 }
 
 function getUnitKey(row: { officerId: string | null; emsFdDeputyId: string | null }) {
@@ -156,70 +173,70 @@ export class AdminDutyHoursController {
     const pWeekStart = utcTimestamp(weekStart);
     const maxSeconds = maxSessionHours * 3600;
 
+    const q = ident;
     const sessionsCte = Prisma.sql`
       sessions AS (
         SELECT
-          l.\`id\`,
-          l.\`officerId\`,
-          l.\`emsFdDeputyId\`,
-          l.\`userId\`,
-          l.\`startedAt\`,
-          l.\`endedAt\`,
-          GREATEST(l.\`startedAt\`, ${pFrom}) AS clipStart,
-          LEAST(COALESCE(l.\`endedAt\`, ${pNow}), ${pTo}) AS clipEnd
-        FROM \`OfficerLog\` l
-        WHERE l.\`startedAt\` < ${pTo}
-          AND COALESCE(l.\`endedAt\`, ${pNow}) > ${pFrom}
-          AND (l.\`officerId\` IS NOT NULL OR l.\`emsFdDeputyId\` IS NOT NULL)
+          l.${q("id")},
+          l.${q("officerId")},
+          l.${q("emsFdDeputyId")},
+          l.${q("userId")},
+          l.${q("startedAt")},
+          l.${q("endedAt")},
+          GREATEST(l.${q("startedAt")}, ${pFrom}) AS clipStart,
+          LEAST(COALESCE(l.${q("endedAt")}, ${pNow}), ${pTo}) AS clipEnd
+        FROM ${q("OfficerLog")} l
+        WHERE l.${q("startedAt")} < ${pTo}
+          AND COALESCE(l.${q("endedAt")}, ${pNow}) > ${pFrom}
+          AND (l.${q("officerId")} IS NOT NULL OR l.${q("emsFdDeputyId")} IS NOT NULL)
       )
     `;
-    const seconds = (start: Prisma.Sql, end: Prisma.Sql) =>
-      Prisma.sql`(TIMESTAMPDIFF(MICROSECOND, ${start}, ${end}) / 1000000)`;
+    const seconds = secondsBetween;
 
     const [rawWeekRows, rawStatsRows, flaggedRows] = await Promise.all([
       prisma.$queryRaw<UnitWeekRow[]>`
         WITH RECURSIVE ${sessionsCte},
         weeks AS (
-          SELECT ${pWeekStart} AS weekStart, DATE_ADD(${pWeekStart}, INTERVAL 7 DAY) AS weekEnd
+          SELECT ${pWeekStart} AS weekStart, ${plusOneWeek(pWeekStart)} AS weekEnd
           UNION ALL
-          SELECT weekEnd, DATE_ADD(weekEnd, INTERVAL 7 DAY) FROM weeks WHERE weekEnd < ${pTo}
+          SELECT weekEnd, ${plusOneWeek(Prisma.sql`weekEnd`)} FROM weeks WHERE weekEnd < ${pTo}
         )
         SELECT
-          s.\`officerId\` AS officerId,
-          s.\`emsFdDeputyId\` AS emsFdDeputyId,
-          w.weekStart AS weekStart,
-          SUM(${seconds(Prisma.sql`GREATEST(s.clipStart, w.weekStart)`, Prisma.sql`LEAST(s.clipEnd, w.weekEnd)`)}) AS seconds
+          s.${q("officerId")} AS ${q("officerId")},
+          s.${q("emsFdDeputyId")} AS ${q("emsFdDeputyId")},
+          w.weekStart AS ${q("weekStart")},
+          SUM(${seconds(Prisma.sql`GREATEST(s.clipStart, w.weekStart)`, Prisma.sql`LEAST(s.clipEnd, w.weekEnd)`)}) AS ${q("seconds")}
         FROM sessions s
         INNER JOIN weeks w ON s.clipStart < w.weekEnd AND s.clipEnd > w.weekStart
         WHERE w.weekStart < ${pTo}
-        GROUP BY s.\`officerId\`, s.\`emsFdDeputyId\`, w.weekStart
+        GROUP BY s.${q("officerId")}, s.${q("emsFdDeputyId")}, w.weekStart
       `,
       prisma.$queryRaw<UnitStatsRow[]>`
         WITH ${sessionsCte}
         SELECT
-          s.\`officerId\` AS officerId,
-          s.\`emsFdDeputyId\` AS emsFdDeputyId,
-          MAX(s.\`userId\`) AS logUserId,
-          COUNT(*) AS sessionCount,
-          SUM(CASE WHEN s.\`endedAt\` IS NULL THEN 1 ELSE 0 END) AS openCount,
-          SUM(CASE WHEN ${seconds(Prisma.sql`s.\`startedAt\``, Prisma.sql`COALESCE(s.\`endedAt\`, ${pNow})`)} > ${maxSeconds} THEN 1 ELSE 0 END) AS flaggedCount,
-          MIN(s.\`startedAt\`) AS firstSeen,
-          MAX(COALESCE(s.\`endedAt\`, ${pNow})) AS lastSeen
+          s.${q("officerId")} AS ${q("officerId")},
+          s.${q("emsFdDeputyId")} AS ${q("emsFdDeputyId")},
+          MAX(s.${q("userId")}) AS ${q("logUserId")},
+          COUNT(*) AS ${q("sessionCount")},
+          SUM(CASE WHEN s.${q("endedAt")} IS NULL THEN 1 ELSE 0 END) AS ${q("openCount")},
+          SUM(CASE WHEN ${seconds(Prisma.sql`s.${q("startedAt")}`, Prisma.sql`COALESCE(s.${q("endedAt")}, ${pNow})`)} > ${maxSeconds} THEN 1 ELSE 0 END) AS ${q("flaggedCount")},
+          MIN(s.${q("startedAt")}) AS ${q("firstSeen")},
+          MAX(COALESCE(s.${q("endedAt")}, ${pNow})) AS ${q("lastSeen")}
         FROM sessions s
-        GROUP BY s.\`officerId\`, s.\`emsFdDeputyId\`
+        GROUP BY s.${q("officerId")}, s.${q("emsFdDeputyId")}
       `,
       prisma.$queryRaw<{ id: string }[]>`
         WITH ${sessionsCte}
-        SELECT s.\`id\` AS id
+        SELECT s.${q("id")} AS id
         FROM sessions s
-        WHERE s.\`endedAt\` IS NULL
-          OR ${seconds(Prisma.sql`s.\`startedAt\``, Prisma.sql`s.\`endedAt\``)} > ${maxSeconds}
-        ORDER BY s.\`startedAt\` DESC
+        WHERE s.${q("endedAt")} IS NULL
+          OR ${seconds(Prisma.sql`s.${q("startedAt")}`, Prisma.sql`s.${q("endedAt")}`)} > ${maxSeconds}
+        ORDER BY s.${q("startedAt")} DESC
         LIMIT ${MAX_FLAGGED_SESSIONS}
       `,
     ]);
 
-    // MySQL returns COUNT() as BigInt and SUM() as Decimal
+    // COUNT() comes back as BigInt and SUM() as Decimal
     const weekRows = rawWeekRows.map((row) => ({ ...row, seconds: Number(row.seconds) }));
     const statsRows = rawStatsRows.map((row) => ({
       ...row,

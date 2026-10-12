@@ -10,6 +10,7 @@ import { validateSchema } from "lib/data/validate-schema";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import type * as APITypes from "@snailycad/types/api";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/admin/manage/custom-fields")
 @UseBeforeEach(IsAuth)
@@ -24,7 +25,7 @@ export class AdminManageCustomFieldsController {
   ): Promise<APITypes.GetManageCustomFieldsData> {
     const where = query
       ? ({
-          OR: [{ name: { contains: query } }],
+          OR: [{ name: { contains: query, ...insensitive() } }],
         } satisfies Prisma.CustomFieldWhereInput)
       : undefined;
 

@@ -7,6 +7,7 @@ import { CREATE_PENAL_CODE_GROUP_SCHEMA } from "@snailycad/schemas";
 import { validateSchema } from "lib/data/validate-schema";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import type * as APITypes from "@snailycad/types/api";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/admin/penal-code-group")
 @UseBeforeEach(IsAuth)
@@ -18,7 +19,7 @@ export class PenalCodeGroupController {
     @QueryParams("includeAll", Boolean) includeAll = false,
     @QueryParams("query", String) query = "",
   ): Promise<APITypes.GetPenalCodeGroupsData> {
-    const where = query ? ({ name: { contains: query } } as const) : undefined;
+    const where = query ? ({ name: { contains: query, ...insensitive() } } as const) : undefined;
 
     const [totalCount, penalCodeGroups] = await prisma.$transaction([
       prisma.penalCodeGroup.count({ where, orderBy: { position: "asc" } }),

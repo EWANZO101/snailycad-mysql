@@ -3,6 +3,7 @@ import { ContentType, Delete, Description, Get } from "@tsed/schema";
 import { QueryParams, BodyParams, PathParams } from "@tsed/platform-params";
 import { NotFound } from "@tsed/exceptions";
 import { prisma } from "lib/data/prisma";
+import { ident, isPostgres } from "lib/data/db-provider";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { leoProperties } from "utils/leo/includes";
 import type { z } from "zod";
@@ -65,22 +66,25 @@ export class JailController {
       jailTimeScale: cad.miscCadSettings?.jailTimeScale,
     }).catch(console.error);
 
+    const q = ident;
     const conditions = [
-      Prisma.sql`r.\`type\` = 'ARREST_REPORT'`,
-      Prisma.sql`r.\`publishStatus\` = 'PUBLISHED'`,
+      Prisma.sql`r.${q("type")} = 'ARREST_REPORT'`,
+      Prisma.sql`r.${q("publishStatus")} = 'PUBLISHED'`,
     ];
 
     if (activeOnly) {
-      conditions.push(Prisma.sql`r.\`releaseId\` IS NULL`);
+      conditions.push(Prisma.sql`r.${q("releaseId")} IS NULL`);
     }
 
     const search = query.trim();
     if (search) {
       const like = `%${search.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+      // MySQL / MariaDB compare case-insensitively already; PostgreSQL needs ILIKE
+      const op = isPostgres() ? Prisma.sql`ILIKE` : Prisma.sql`LIKE`;
       conditions.push(Prisma.sql`(
-        CONCAT(c.\`name\`, ' ', c.\`surname\`) LIKE ${like}
-        OR CONCAT(c.\`surname\`, ' ', c.\`name\`) LIKE ${like}
-        OR c.\`socialSecurityNumber\` = ${search}
+        CONCAT(c.${q("name")}, ' ', c.${q("surname")}) ${op} ${like}
+        OR CONCAT(c.${q("surname")}, ' ', c.${q("name")}) ${op} ${like}
+        OR c.${q("socialSecurityNumber")} = ${search}
       )`);
     }
 
@@ -90,26 +94,26 @@ export class JailController {
 
     const orderBy =
       sortKey === "citizen"
-        ? Prisma.sql`LOWER(c.\`name\`) ${direction}, LOWER(c.\`surname\`) ${direction}, c.\`id\` ASC`
+        ? Prisma.sql`LOWER(c.${q("name")}) ${direction}, LOWER(c.${q("surname")}) ${direction}, c.${q("id")} ASC`
         : sortKey === "createdAt"
-          ? Prisma.sql`MAX(r.\`createdAt\`) ${direction}, c.\`id\` ASC`
-          : Prisma.sql`MAX(r.\`createdAt\`) DESC, c.\`id\` ASC`;
+          ? Prisma.sql`MAX(r.${q("createdAt")}) ${direction}, c.${q("id")} ASC`
+          : Prisma.sql`MAX(r.${q("createdAt")}) DESC, c.${q("id")} ASC`;
 
     const pagination = includeAll ? Prisma.empty : Prisma.sql`LIMIT 35 OFFSET ${skip}`;
 
     const [countResult, citizenIdsResult] = await Promise.all([
       prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(DISTINCT c.\`id\`) AS count
-        FROM \`Citizen\` c
-        INNER JOIN \`Record\` r ON r.\`citizenId\` = c.\`id\`
+        SELECT COUNT(DISTINCT c.${q("id")}) AS count
+        FROM ${q("Citizen")} c
+        INNER JOIN ${q("Record")} r ON r.${q("citizenId")} = c.${q("id")}
         WHERE ${where}
       `,
       prisma.$queryRaw<{ id: string }[]>`
-        SELECT c.\`id\`
-        FROM \`Citizen\` c
-        INNER JOIN \`Record\` r ON r.\`citizenId\` = c.\`id\`
+        SELECT c.${q("id")} AS id
+        FROM ${q("Citizen")} c
+        INNER JOIN ${q("Record")} r ON r.${q("citizenId")} = c.${q("id")}
         WHERE ${where}
-        GROUP BY c.\`id\`
+        GROUP BY c.${q("id")}
         ORDER BY ${orderBy}
         ${pagination}
       `,

@@ -31,6 +31,7 @@ import { setEndedSuspendedLicenses } from "lib/citizen/licenses/set-ended-suspen
 import { incidentInclude } from "../incidents/IncidentController";
 import { officerOrDeputyToUnit } from "lib/leo/officerOrDeputyToUnit";
 import { updateCitizensJailStatus } from "lib/leo/jail";
+import { insensitive } from "lib/data/db-provider";
 
 export const vehicleSearchInclude = {
   model: { include: { value: true } },
@@ -191,29 +192,29 @@ export class LeoSearchController {
         userId: fromAuthUserOnly && checkUserId ? user.id : undefined,
         OR: [
           {
-            name: { contains: name },
-            surname: { contains: surname },
+            name: { contains: name, ...insensitive() },
+            surname: { contains: surname, ...insensitive() },
           },
           {
-            name: { contains: surname },
-            surname: { contains: name },
+            name: { contains: surname, ...insensitive() },
+            surname: { contains: name, ...insensitive() },
           },
-          { driversLicenseNumber: { contains: name } },
-          { weaponLicenseNumber: { contains: name } },
-          { waterLicenseNumber: { contains: name } },
-          { pilotLicenseNumber: { contains: name } },
+          { driversLicenseNumber: { contains: name, ...insensitive() } },
+          { weaponLicenseNumber: { contains: name, ...insensitive() } },
+          { waterLicenseNumber: { contains: name, ...insensitive() } },
+          { pilotLicenseNumber: { contains: name, ...insensitive() } },
           { socialSecurityNumber: name },
           {
             aliases: {
               some: {
                 OR: [
                   {
-                    name: { contains: name },
-                    surname: { contains: surname },
+                    name: { contains: name, ...insensitive() },
+                    surname: { contains: surname, ...insensitive() },
                   },
                   {
-                    name: { contains: surname },
-                    surname: { contains: name },
+                    name: { contains: surname, ...insensitive() },
+                    surname: { contains: name, ...insensitive() },
                   },
                 ],
               },
@@ -261,6 +262,7 @@ export class LeoSearchController {
       where: {
         name: {
           contains: name,
+          ...insensitive(),
         },
       },
       include: {
@@ -297,6 +299,7 @@ export class LeoSearchController {
       where: {
         serialNumber: {
           startsWith: serialNumber,
+          ...insensitive(),
         },
       },
       include: weaponsInclude,
@@ -374,7 +377,7 @@ export class LeoSearchController {
     });
 
     const _results = await prisma.customFieldValue.findMany({
-      where: { fieldId: data.customFieldId, value: { equals: data.query } },
+      where: { fieldId: data.customFieldId, value: { ...insensitive(), equals: data.query } },
       include: {
         Citizens: citizenSearchIncludeOrSelect(user, cad),
         RegisteredVehicles: { include: vehicleSearchInclude },

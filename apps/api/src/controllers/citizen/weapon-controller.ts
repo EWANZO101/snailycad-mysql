@@ -16,6 +16,7 @@ import type * as APITypes from "@snailycad/types/api";
 import { ExtendedBadRequest } from "~/exceptions/extended-bad-request";
 import type { Weapon } from "@snailycad/types";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/weapons")
 @UseBeforeEach(IsAuth)
@@ -47,9 +48,9 @@ export class WeaponController {
       ...(query
         ? {
             OR: [
-              { model: { value: { value: { contains: query } } } },
-              { registrationStatus: { value: { contains: query } } },
-              { serialNumber: { contains: query } },
+              { model: { value: { value: { contains: query, ...insensitive() } } } },
+              { registrationStatus: { value: { contains: query, ...insensitive() } } },
+              { serialNumber: { contains: query, ...insensitive() } },
             ],
           }
         : {}),
@@ -179,7 +180,7 @@ export class WeaponController {
 
     if (isCustomEnabled) {
       const weaponModel = await prisma.weaponValue.findFirst({
-        where: { value: { value: { equals: data.model } } },
+        where: { value: { value: { equals: data.model, ...insensitive() } } },
       });
 
       const newModel = await prisma.weaponValue.upsert({
@@ -266,7 +267,7 @@ export class WeaponController {
 
     const existing = await prisma.weapon.findFirst({
       where: {
-        serialNumber: { equals: serialNumber },
+        serialNumber: { ...insensitive(), equals: serialNumber },
         NOT: weapon ? { id: weapon.id } : undefined,
       },
     });

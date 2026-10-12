@@ -7,6 +7,7 @@ import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { appendConfidential } from "controllers/leo/search/SearchController";
 import { citizenInclude } from "controllers/citizen/CitizenController";
+import { insensitive } from "lib/data/db-provider";
 
 const citizenSearchInclude = {
   ...citizenInclude,
@@ -44,13 +45,13 @@ export class EMSFDSearchController {
       where: {
         OR: [
           {
-            name: { contains: name },
-            surname: { contains: surname },
+            name: { contains: name, ...insensitive() },
+            surname: { contains: surname, ...insensitive() },
           },
           { socialSecurityNumber: name },
           {
-            name: { contains: surname },
-            surname: { contains: name },
+            name: { contains: surname, ...insensitive() },
+            surname: { contains: name, ...insensitive() },
           },
         ],
       },

@@ -26,6 +26,7 @@ import { handlePanicButtonPressed } from "lib/leo/send-panic-button-webhook";
 import { HandleInactivity } from "middlewares/handle-inactivity";
 import { userProperties } from "~/lib/auth/getSessionUser";
 import { recordsLogsInclude } from "../admin/manage/citizens/records-logs-controller";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/leo")
 @UseBeforeEach(IsAuth)
@@ -225,8 +226,8 @@ export class LeoController {
   ): Promise<APITypes.GetLeoImpoundedVehiclesData> {
     const where: Prisma.ImpoundedVehicleWhereInput = {
       vehicle: {
-        plate: { contains: search },
-        model: { value: { value: { contains: search } } },
+        plate: { contains: search, ...insensitive() },
+        model: { value: { value: { contains: search, ...insensitive() } } },
       },
     };
 
@@ -397,18 +398,18 @@ function activeOfficersWhereInput(query: string) {
 
   return {
     OR: [
-      { callsign: { contains: query } },
-      { callsign2: { contains: query } },
-      { divisions: { some: { value: { value: { contains: query } } } } },
-      { department: { value: { value: { contains: query } } } },
-      { badgeNumberString: { contains: query } },
-      { rank: { value: { contains: query } } },
-      { activeVehicle: { value: { value: { contains: query } } } },
-      { radioChannelId: { contains: query } },
+      { callsign: { contains: query, ...insensitive() } },
+      { callsign2: { contains: query, ...insensitive() } },
+      { divisions: { some: { value: { value: { contains: query, ...insensitive() } } } } },
+      { department: { value: { value: { contains: query, ...insensitive() } } } },
+      { badgeNumberString: { contains: query, ...insensitive() } },
+      { rank: { value: { contains: query, ...insensitive() } } },
+      { activeVehicle: { value: { value: { contains: query, ...insensitive() } } } },
+      { radioChannelId: { contains: query, ...insensitive() } },
       {
         status: {
           AND: [
-            { value: { value: { contains: query } } },
+            { value: { value: { contains: query, ...insensitive() } } },
             { NOT: { shouldDo: ShouldDoType.SET_OFF_DUTY } },
           ],
         },
@@ -417,12 +418,12 @@ function activeOfficersWhereInput(query: string) {
         citizen: {
           OR: [
             {
-              name: { contains: name },
-              surname: { contains: surname },
+              name: { contains: name, ...insensitive() },
+              surname: { contains: surname, ...insensitive() },
             },
             {
-              name: { contains: surname },
-              surname: { contains: name },
+              name: { contains: surname, ...insensitive() },
+              surname: { contains: name, ...insensitive() },
             },
           ],
         },

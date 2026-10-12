@@ -21,6 +21,7 @@ import { createTaxiCall, towIncludes } from "lib/calls/create-tow-taxi-call";
 import { notifyOpsPhoneTowTaxi } from "lib/ops-phone/back-channel";
 import type * as APITypes from "@snailycad/types/api";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/taxi")
 @UseBeforeEach(IsAuth)
@@ -46,11 +47,11 @@ export class TaxiController {
       ? {
           OR: [
             {
-              creator: { name: { contains: query } },
+              creator: { name: { contains: query, ...insensitive() } },
             },
-            { description: { contains: query } },
-            { location: { contains: query } },
-            { postal: { contains: query } },
+            { description: { contains: query, ...insensitive() } },
+            { location: { contains: query, ...insensitive() } },
+            { postal: { contains: query, ...insensitive() } },
           ],
         }
       : {};

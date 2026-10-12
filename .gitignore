@@ -56,3 +56,6 @@ start.log
 .snailycad-data
 .db-credentials
 livekit.yaml
+.data-postgres
+.dev-data-postgres
+__pycache__/

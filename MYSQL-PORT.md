@@ -1,4 +1,4 @@
-# SnailyCAD on MySQL / MariaDB
+# SnailyCAD on MySQL / MariaDB (or PostgreSQL)
 
 This branch (`feat/mysql-support`) runs SnailyCAD on **MySQL 8.0+** or **MariaDB 10.6+** instead of
 PostgreSQL. It is MySQL-only: the PostgreSQL migrations were replaced by one MySQL baseline.
@@ -19,6 +19,29 @@ Tested with MySQL 8.0.46 and MariaDB 11.4.12.
 | Demo mode    | Snapshot/reset with `mysqldump`/`mysql` (or `mariadb-dump`/`mariadb`, detected automatically)                                      |
 | Config       | `.env` uses `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`; `DATABASE_URL=mysql://…`                                    |
 | Docker       | Both compose files use `mariadb:11.4`                                                                                              |
+
+## PostgreSQL
+
+The same code also runs on **PostgreSQL 14+**. Set `DB_PROVIDER="postgresql"` in `.env` (the
+one-line installers ask in the wizard's Database step); `DATABASE_URL` is built from it.
+
+| Piece      | How                                                                                                         |
+| ---------- | ----------------------------------------------------------------------------------------------------------- |
+| Schema     | `apps/api/prisma/postgresql/schema.prisma`, generated from `schema.prisma` by `scripts/postgres-schema.mjs` |
+| Migrations | `apps/api/prisma/postgresql/migrations` (baseline `20261011000000_postgres_init`)                           |
+| Prisma CLI | `node scripts/prisma.mjs <command>` (what `pnpm start` / `generate` use) picks the schema from `.env`       |
+| Search     | `...insensitive()` adds `mode: "insensitive"` on PostgreSQL (MySQL collations already ignore case)          |
+| Raw SQL    | `ident()` quotes names for either database; the jail list and duty-hours report have a branch per database  |
+| Demo mode  | `pg_dump` / `psql`; the reset drops and re-adds the foreign keys inside one transaction                     |
+| Docker     | `production.postgres.docker-compose.yml` (PostgreSQL 17), `docker-compose.postgres.yml` for development     |
+
+Changing the schema: edit `schema.prisma`, add the MySQL migration as usual, then run
+`pnpm prisma:migrate-postgres <name>` in `apps/api` (with `SHADOW_DATABASE_URL` set to an empty
+PostgreSQL database) to write the PostgreSQL twin and its migration. A test fails when the two
+schemas drift apart.
+
+The **Import from PostgreSQL** tool (copy an old SnailyCAD into this one) needs a MySQL / MariaDB
+target; it isn't available when the CAD itself runs on PostgreSQL.
 
 ## Behaviour differences
 

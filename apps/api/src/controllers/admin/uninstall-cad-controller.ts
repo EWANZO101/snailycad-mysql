@@ -94,14 +94,19 @@ function getItems({ installDir, isWindows, one, all }: Install): UninstallItem[]
     locked: true,
   });
 
-  const ourMariaDB = one("APT_MARIADB") === "1" || one("WINGET_MARIADB") === "1";
+  const isPostgres = one("DB_ENGINE") === "postgresql";
+  const ourServer = isPostgres
+    ? one("APT_POSTGRES") === "1" || one("WINGET_POSTGRES") === "1"
+    : one("APT_MARIADB") === "1" || one("WINGET_MARIADB") === "1";
   if (one("DB_NAME")) {
-    const canDrop = isWindows ? one("WINGET_MARIADB") === "1" : one("DB_ADMIN") === "socket";
+    const canDrop = isWindows
+      ? one(isPostgres ? "WINGET_POSTGRES" : "WINGET_MARIADB") === "1"
+      : one("DB_ADMIN") === "socket";
     items.push({
       id: "database",
       group: "data",
       label: `Database ${one("DB_NAME")}`,
-      description: `All CAD data (users, citizens, records, settings) and the MySQL user ${one(
+      description: `All CAD data (users, citizens, records, settings) and the database user ${one(
         "DB_USER",
       )}. Untick to keep it, e.g. to reinstall later with the same data.`,
       unavailable: canDrop
@@ -109,11 +114,15 @@ function getItems({ installDir, isWindows, one, all }: Install): UninstallItem[]
         : "It's on a database server the installer doesn't manage, so it's left alone. Drop it there yourself if you want it gone.",
     });
   }
-  if (ourMariaDB) {
+  if (ourServer) {
     items.push({
       id: "db-server",
       group: "software",
-      label: "MariaDB server",
+      label: isPostgres
+        ? isWindows
+          ? "PostgreSQL server and pgAdmin"
+          : "PostgreSQL server"
+        : "MariaDB server",
       description:
         "Installed by the setup wizard. Removing it deletes every database in it, not only the CAD's, so it's only removed together with the CAD database.",
       implies: ["database"],
@@ -306,7 +315,7 @@ export class UninstallCadController {
     const keep = Array.isArray(rawKeep)
       ? rawKeep.filter((id): id is string => typeof id === "string" && keepable.has(id))
       : [];
-    // the MariaDB server only goes together with the CAD's database
+    // the database server only goes together with the CAD's database
     if (keep.includes("database") && keepable.has("db-server") && !keep.includes("db-server")) {
       keep.push("db-server");
     }

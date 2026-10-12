@@ -33,6 +33,7 @@ import { createSearchWhereObject } from "lib/values/create-where-object";
 import generateBlurPlaceholder from "lib/images/generate-image-blur-data";
 import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 import { getPrismaModelOrderBy } from "~/utils/order-by";
+import { insensitive } from "lib/data/db-provider";
 
 export const GET_VALUES: Partial<Record<ValueType, ValuesSelect>> = {
   QUALIFICATION: {
@@ -253,7 +254,7 @@ export class ValuesController {
     }
 
     const values = await prisma.value.findMany({
-      where: { type, isDisabled: false, value: { contains: query } },
+      where: { type, isDisabled: false, value: { contains: query, ...insensitive() } },
       orderBy: { position: "asc" },
       take: 35,
       include:

@@ -59,6 +59,7 @@ STATE_PATH = os.path.join(INSTALLER_DIR, "state.json")
 STATUS_DIR = os.path.join(APP_DIR, ".snaily-cache", "status")
 PAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "wizard.html")
 COMPOSE_FILE = "production.docker-compose.yml"
+COMPOSE_FILE_POSTGRES = "production.postgres.docker-compose.yml"
 PORT = int(os.environ.get("SNAILY_WIZARD_PORT", "3100"))
 NODE_MAJOR = os.environ.get("SNAILY_NODE_MAJOR", "22")
 PNPM_VERSION = "9.0.4"
@@ -694,7 +695,8 @@ def windows_checks():
         ],
         "docker": None,
         # no root-over-socket on Windows: an existing server is used as an "external" one
-        "db": {"local": False, "install": not windows_db_server_present()},
+        "db": {"local": False, "install": not windows_db_server_present(),
+               "postgresql": {"local": False, "install": not pg_server_present()}},
     }
 
 
@@ -740,7 +742,8 @@ def checks():
              "ok": has_command("systemctl"), "hint": "needed to run the CAD as a service"},
         ],
         "docker": docker_version(),
-        "db": {"local": socket_root, "install": not has_server and port_free(3306)},
+        "db": {"local": socket_root, "install": not has_server and port_free(3306),
+               "postgresql": {"local": pg_local_admin_works(), "install": not pg_server_present()}},
     }
 
 
@@ -770,7 +773,7 @@ DOCKER_STEPS = [
     ("firewall", "Firewall", "Open the website and API ports"),
     ("network", "Network", "Create the Docker network"),
     ("images", "Build images", "Build the API and website images (the longest step)"),
-    ("containers", "Start containers", "Start MariaDB, the API and the website"),
+    ("containers", "Start containers", "Start the database, the API and the website"),
     ("ready", "Ready", "Wait for the CAD to answer"),
 ]
 
@@ -791,8 +794,11 @@ def validate_settings(body):
         client_port, api_port = int(body.get("clientPort")), int(body.get("apiPort"))
     except (TypeError, ValueError):
         client_port = api_port = 0
+    engine = db.get("engine") or "mysql"
     settings = {"address": str(body.get("address", "")).strip(), "clientPort": client_port, "apiPort": api_port,
-                "db": {"mode": db.get("mode")}}
+                "db": {"mode": db.get("mode"), "engine": engine}}
+    if engine not in ("mysql", "postgresql"):
+        errors.append("Choose MySQL / MariaDB or PostgreSQL.")
     if not HOSTNAME.match(settings["address"]):
         errors.append("Enter a valid IP address or domain.")
     for label, port in (("Website", client_port), ("API", api_port)):
@@ -937,8 +943,192 @@ def test_external(db):
     return {"ok": True, "message": f"Connected: {out.strip()}"}
 
 
+# postgresql ------------------------------------------------------------------------------
+# The CAD can also run on PostgreSQL (DB_PROVIDER="postgresql"). Linux: the distribution's
+# postgresql package, administered as the postgres user over its socket (peer auth). Windows: the
+# EDB installer through winget (PostgreSQL.PostgreSQL.17, with pgAdmin), administered as the
+# postgres superuser with the password the wizard generated.
+
+PG_WINGET_ID = "PostgreSQL.PostgreSQL.17"
+PG_SERVICE = "postgresql-x64-17"
+PG_PASSWORD_PATH = os.path.join(INSTALLER_DIR, "postgres-password.txt")
+# a tiny psql for when no psql.exe is installed (an external server on Windows)
+NODE_PG_SCRIPT = """const { Client } = require("pg");
+(async () => {
+  const c = new Client({ host: process.env.DBQ_HOST, port: Number(process.env.DBQ_PORT), user: process.env.DBQ_USER,
+    password: process.env.PGPASSWORD || "", database: process.env.DBQ_DB, connectionTimeoutMillis: 10000 });
+  await c.connect();
+  const result = await c.query(process.env.DBQ_SQL);
+  for (const r of [].concat(result)) for (const row of r.rows || []) console.log(Object.values(row).join("\\t"));
+  await c.end();
+})().catch((e) => { console.error(e.message || String(e)); process.exit(1); });
+"""
+
+
+def pg_quote_ident(name):
+    return '"' + name.replace('"', '""') + '"'
+
+
+def pg_server_present():
+    if IS_WINDOWS:
+        return windows_psql_exe() is not None or not port_free(5432)
+    return bool(glob.glob("/usr/lib/postgresql/*/bin/postgres")) or has_command("postgres") or not port_free(5432)
+
+
+def windows_psql_exe():
+    found = shutil.which("psql", path=env_with()["PATH"])
+    if found:
+        return found
+    root = os.environ.get("ProgramFiles", r"C:\Program Files")
+    candidates = sorted(glob.glob(os.path.join(root, "PostgreSQL", "*", "bin", "psql.exe")), reverse=True)
+    return candidates[0] if candidates else None
+
+
+def windows_pg_password():
+    try:
+        with open(PG_PASSWORD_PATH, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+def pg_admin(sql, database="postgres"):
+    """SQL as the PostgreSQL superuser: over the socket as the postgres user on Linux, with the
+    password the wizard generated on Windows. Prints rows tab-separated like `mysql -N -B`."""
+    if IS_WINDOWS:
+        client = windows_psql_exe()
+        if not client:
+            return False, "psql.exe of PostgreSQL not found"
+        return run([client, "-h", "127.0.0.1", "-p", "5432", "-U", "postgres", "-d", database, "-tAX",
+                    "-F", "\t", "-v", "ON_ERROR_STOP=1", "-c", sql],
+                   env={"PGPASSWORD": windows_pg_password() or ""}, timeout=60)
+    return run(["runuser", "-u", "postgres", "--", "psql", "-d", database, "-tAX", "-F", "\t",
+                "-v", "ON_ERROR_STOP=1", "-c", sql], cwd="/tmp", timeout=60)
+
+
+def pg_local_admin_works():
+    if IS_WINDOWS or not has_command("psql") or not pg_server_present():
+        return False
+    return quiet(["runuser", "-u", "postgres", "--", "psql", "-tAXc", "SELECT 1"])[0]
+
+
+def node_pg(db, sql, database):
+    if not os.path.isdir(os.path.join(DB_CLIENT_DIR, "node_modules", "pg")):
+        if not node_version():
+            return False, "Install the requirements first (Node.js is used to test the connection)."
+        os.makedirs(DB_CLIENT_DIR, exist_ok=True)
+        ok, out = run([*npm_cmd(), "install", "--prefix", DB_CLIENT_DIR, "--no-fund", "--no-audit", "pg@8"], timeout=300)
+        if not ok:
+            return False, out
+    script = os.path.join(DB_CLIENT_DIR, "query-pg.cjs")
+    with open(script, "w", encoding="utf-8") as f:
+        f.write(NODE_PG_SCRIPT)
+    return run([win_node(), script], cwd=DB_CLIENT_DIR, timeout=60,
+               env={"DBQ_HOST": db["host"], "DBQ_PORT": str(db["port"]), "DBQ_USER": db["user"],
+                    "PGPASSWORD": db["password"], "DBQ_DB": database, "DBQ_SQL": sql})
+
+
+def external_pg(db, sql, database=None):
+    database = database or db["name"]
+    if IS_WINDOWS and not windows_psql_exe():
+        return node_pg(db, sql, database)
+    client = windows_psql_exe() if IS_WINDOWS else "psql"
+    return run([client, "-h", db["host"], "-p", str(db["port"]), "-U", db["user"], "-d", database,
+                "-tAX", "-F", "\t", "-v", "ON_ERROR_STOP=1", "-c", sql],
+               env={"PGPASSWORD": db["password"], "PGCONNECT_TIMEOUT": "10"}, timeout=60)
+
+
+def test_external_pg(db):
+    if not IS_WINDOWS and not has_command("psql"):
+        apt_install(["postgresql-client"], "the PostgreSQL client")
+    ok, out = external_pg(db, "SELECT version()")
+    if not ok and "does not exist" in out:
+        # the database isn't there yet: it's created at install, if the user may
+        ok, out = external_pg(db, "SELECT version()", "postgres")
+    if not ok:
+        last = next((l for l in reversed(out.strip().split("\n")) if l.strip()), "Could not connect.")
+        return {"ok": False, "message": last[:200]}
+    return {"ok": True, "message": f"Connected: {out.strip().split(',')[0]}"}
+
+
+def windows_install_postgres():
+    """PostgreSQL 17 with winget (the EDB installer, unattended). It brings pgAdmin 4 and psql;
+    the superuser's password is generated and kept in installer/postgres-password.txt."""
+    password = windows_pg_password()
+    if not (password and manifest_value("WINGET_POSTGRES") == "1" and windows_psql_exe()):
+        password = random_hex(16)
+        with open(os.open(PG_PASSWORD_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w", encoding="utf-8") as f:
+            f.write(password)
+        add_to_manifest("WINGET_POSTGRES", "1")
+        add_to_manifest("POSTGRES_SERVICE", PG_SERVICE)
+        winget_install(PG_WINGET_ID, "PostgreSQL 17 (with pgAdmin)", scope=None, record=False, hide=(password,),
+                       override=("--mode unattended --unattendedmodeui none --serverport 5432 "
+                                 f"--superpassword {password} --servicename {PG_SERVICE} "
+                                 "--enable-components server,pgAdmin,commandlinetools --disable-components stackbuilder"))
+    deadline = time.time() + 180
+    while not windows_service_running(PG_SERVICE):
+        if time.time() > deadline:
+            raise StepError(f"The {PG_SERVICE} service did not start (see services.msc).")
+        run(["sc", "start", PG_SERVICE])
+        time.sleep(3)
+    say(f"PostgreSQL installed and running (service {PG_SERVICE}), with pgAdmin 4. "
+        f"The postgres user's password is in {PG_PASSWORD_PATH}.")
+
+
+def step_database_pg(db):
+    add_to_manifest("DB_ENGINE", "postgresql")
+    if db["mode"] == "external":
+        result = test_external_pg(db)
+        if not result["ok"]:
+            raise StepError(result["message"])
+        say(result["message"])
+        add_to_manifest("DB_NAME", db["name"])
+        add_to_manifest("DB_USER", db["user"])
+        add_to_manifest("DB_ADMIN", "external")
+        exists = external_pg(db, f"SELECT 1 FROM pg_database WHERE datname = '{db['name']}'", "postgres")
+        if exists[0] and not exists[1].strip():
+            # usually allowed (CREATEDB); when it isn't, the database must already exist
+            external_pg(db, f"CREATE DATABASE {pg_quote_ident(db['name'])}", "postgres")
+        return {"host": db["host"], "port": db["port"], "user": db["user"], "password": db["password"], "name": db["name"]}
+
+    if db["mode"] == "install" and IS_WINDOWS:
+        windows_install_postgres()
+    elif db["mode"] == "install":
+        add_to_manifest("APT_POSTGRES", "1")
+        apt_install(["postgresql"], "PostgreSQL")
+        check(run(["systemctl", "enable", "--now", "postgresql"]), "Could not start PostgreSQL")
+        say("PostgreSQL installed and running.")
+
+    check(pg_admin("SELECT 1"), "Cannot log in to PostgreSQL as postgres" if IS_WINDOWS
+          else "Cannot log in to PostgreSQL as the postgres user")
+    # created by an earlier attempt of this wizard: reuse it. Anything else is not ours to touch.
+    ours = manifest_value("DB_NAME") == db["name"] and manifest_value("DB_USER") == db["user"]
+    db_exists = check(pg_admin(f"SELECT 1 FROM pg_database WHERE datname = '{db['name']}'"), "Could not list databases").strip()
+    role_exists = check(pg_admin(f"SELECT 1 FROM pg_roles WHERE rolname = '{db['user']}'"), "Could not list users").strip()
+    if not ours and db_exists:
+        raise StepError(f"A database named {db['name']} already exists. Pick another name.")
+    if not ours and role_exists:
+        raise StepError(f"A user named {db['user']} already exists. Pick another name.")
+    add_to_manifest("DB_NAME", db["name"])
+    add_to_manifest("DB_USER", db["user"])
+    add_to_manifest("DB_ADMIN", "postgres" if IS_WINDOWS else "socket")
+
+    password = random_hex(16)
+    user, name = pg_quote_ident(db["user"]), pg_quote_ident(db["name"])
+    verb = "ALTER" if role_exists else "CREATE"
+    check(pg_admin(f"{verb} ROLE {user} LOGIN PASSWORD '{password}'"), "Could not create the database user")
+    if not db_exists:
+        check(pg_admin(f"CREATE DATABASE {name} OWNER {user} ENCODING 'UTF8' TEMPLATE template0"),
+              "Could not create the database")
+    say(f"Database {db['name']} and user {db['user']} created.")
+    port = check(pg_admin("SHOW port"), "Could not read the database port").strip() or "5432"
+    return {"host": "127.0.0.1", "port": int(port), "user": db["user"], "password": password, "name": db["name"]}
+
+
 def step_database(settings):
     db = settings["db"]
+    if db.get("engine") == "postgresql":
+        return step_database_pg(db)
     if db["mode"] == "external":
         result = test_external(db)
         if not result["ok"]:
@@ -991,6 +1181,7 @@ def write_env(settings, database, extra=None):
     client_url = f"http://{settings['address']}:{settings['clientPort']}"
     api_url = f"http://{settings['address']}:{settings['apiPort']}/v1"
     values = {
+        "DB_PROVIDER": "postgresql" if settings["db"].get("engine") == "postgresql" else "mysql",
         "DB_PASSWORD": quote(database["password"], safe=""),
         "DB_USER": quote(database["user"], safe=""),
         "DB_HOST": database["host"],
@@ -1043,7 +1234,7 @@ def step_service():
     add_to_manifest("CAD_SERVICE", NAME)
     unit = f"""[Unit]
 Description=SnailyCAD ({INSTALL_DIR}, made by the setup wizard)
-After=network.target mariadb.service mysql.service
+After=network.target mariadb.service mysql.service postgresql.service
 StartLimitIntervalSec=600
 StartLimitBurst=5
 
@@ -1085,7 +1276,8 @@ BUILD_ALLOW = [
 
 
 def compose(*args, timeout=600, on_line=None):
-    return run(["docker", "compose", "-p", NAME, "-f", COMPOSE_FILE, *args], cwd=APP_DIR, timeout=timeout, on_line=on_line)
+    compose_file = manifest_value("DOCKER_COMPOSE_FILE") or COMPOSE_FILE
+    return run(["docker", "compose", "-p", NAME, "-f", compose_file, *args], cwd=APP_DIR, timeout=timeout, on_line=on_line)
 
 
 def build_line(line):
@@ -1127,14 +1319,20 @@ def docker_install(settings, deploy_only=False):
         return result
 
     def config():
-        db_port = first_free_port(3306, [settings["clientPort"], settings["apiPort"]])
-        database = {"host": "mariadb", "port": 3306, "user": settings["db"]["user"], "password": random_hex(16),
-                    "name": settings["db"]["name"]}
-        # DB_HOST_PORT: where the MariaDB container is reachable on this server (localhost only)
+        postgres = settings["db"].get("engine") == "postgresql"
+        port = 5432 if postgres else 3306
+        db_port = first_free_port(port, [settings["clientPort"], settings["apiPort"]])
+        database = {"host": "postgres" if postgres else "mariadb", "port": port, "user": settings["db"]["user"],
+                    "password": random_hex(16), "name": settings["db"]["name"]}
+        # DB_HOST_PORT: where the database container is reachable on this server (localhost only)
         url, text = write_env(settings, database, {"DB_HOST_PORT": str(db_port), "DB_BIND": "127.0.0.1"})
         copy_env_for_docker(text, settings["clientPort"])
+        set_in_manifest("DOCKER_COMPOSE_FILE", COMPOSE_FILE_POSTGRES if postgres else COMPOSE_FILE)
+        if postgres:
+            set_in_manifest("DB_ENGINE", "postgresql")
         add_to_manifest("DOCKER_PROJECT", NAME)
-        say(f"MariaDB container will be reachable from this server on 127.0.0.1:{db_port}.")
+        label = "PostgreSQL" if postgres else "MariaDB"
+        say(f"{label} container will be reachable from this server on 127.0.0.1:{db_port}.")
         return url
 
     def network():
@@ -1152,7 +1350,7 @@ def docker_install(settings, deploy_only=False):
 
     def containers():
         check(compose("up", "-d", timeout=900), "Could not start the containers")
-        say("Containers started; MariaDB first, then the API and website.")
+        say("Containers started; the database first, then the API and website.")
 
     def ready():
         deadline = time.time() + 15 * 60
@@ -1362,7 +1560,8 @@ def windows_service():
     if os.path.isfile(bat):
         shutil.copyfile(bat, os.path.join(INSTALL_DIR, "Update SnailyCAD.bat"))
     add_to_manifest("CAD_SERVICE", NAME)
-    depends_on = MARIADB_SERVICE if manifest_value("WINGET_MARIADB") == "1" else None
+    depends_on = (MARIADB_SERVICE if manifest_value("WINGET_MARIADB") == "1"
+                  else manifest_value("POSTGRES_SERVICE") or None if manifest_value("WINGET_POSTGRES") == "1" else None)
     nssm = ensure_nssm()
     if nssm:
         set_in_manifest("WIN_SERVICE", "nssm")
@@ -1742,7 +1941,8 @@ class Handler(BaseHTTPRequestHandler):
                 errors.append("Only an external database server can be tested.")
             if errors:
                 return self.send(400, {"ok": False, "message": errors[0]})
-            return self.send(200, test_external(settings["db"]))
+            db = settings["db"]
+            return self.send(200, test_external_pg(db) if db.get("engine") == "postgresql" else test_external(db))
         if path == "/api/install":
             if JOB["started"] or BUSY:
                 return self.send(409, {"error": "The install is already running."})

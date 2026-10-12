@@ -26,6 +26,7 @@ import { ExtendedNotFound } from "~/exceptions/extended-not-found";
 import { isFeatureEnabled } from "lib/upsert-cad";
 import { handlePanicButtonPressed } from "lib/leo/send-panic-button-webhook";
 import { leoProperties, unitProperties } from "utils/leo/includes";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/dispatch/status")
 @UseBeforeEach(IsAuth)
@@ -106,10 +107,10 @@ export class StatusController {
 
       const [existingOfficer, existingDeputy] = await prisma.$transaction([
         prisma.officer.findFirst({
-          where: { userDefinedCallsign: { equals: data.userDefinedCallsign } },
+          where: { userDefinedCallsign: { equals: data.userDefinedCallsign, ...insensitive() } },
         }),
         prisma.emsFdDeputy.findFirst({
-          where: { userDefinedCallsign: { equals: data.userDefinedCallsign } },
+          where: { userDefinedCallsign: { equals: data.userDefinedCallsign, ...insensitive() } },
         }),
       ]);
 

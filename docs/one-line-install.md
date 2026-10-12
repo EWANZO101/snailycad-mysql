@@ -57,12 +57,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubus
 The `curl … | sudo bash` lines above are for Linux only; they don't work in cmd or PowerShell.
 See [Windows](#windows) below for what the Windows installer does.
 
-> **MySQL / MariaDB edition**
+> **MySQL / MariaDB or PostgreSQL**
 >
-> These commands install the MySQL/MariaDB edition from
-> [github.com/EWANZO101/snailycad-mysql](https://github.com/EWANZO101/snailycad-mysql). See
-> [MySQL / MariaDB edition](../MYSQL-PORT.md) for how it differs from the
-> standard edition.
+> These commands install SnailyCAD from
+> [github.com/EWANZO101/snailycad-mysql](https://github.com/EWANZO101/snailycad-mysql), which runs
+> on **MySQL / MariaDB or PostgreSQL**: you choose in the wizard's Database step. See
+> [MySQL / MariaDB edition](../MYSQL-PORT.md) for how it differs from the standard edition.
 
 ## Requirements
 
@@ -113,16 +113,20 @@ Each step has **Back** and **Next** buttons.
 
    The standalone method never touches a Node.js that is already installed on the server.
 
-4. **Database**
-   - **Docker:** always a MariaDB container. Choose the database name and user; the password is
-     generated for you.
+4. **Database**: first pick **MySQL / MariaDB** or **PostgreSQL**, then where it runs.
+   - **Docker:** a MariaDB 11.4 or PostgreSQL 17 container. Choose the database name and user; the
+     password is generated for you.
    - **Ubuntu:** choose one of
-     - **Use the MySQL/MariaDB server on this machine**: creates a new database and user on it.
-       Your other databases are not touched. Shown when one is installed.
-     - **Install MariaDB for me**: installs MariaDB from Ubuntu, then creates the database. Shown
-       when no database server is installed.
+     - **Use the MySQL/MariaDB (or PostgreSQL) server on this machine**: creates a new database and
+       user on it. Your other databases are not touched. Shown when one is installed.
+     - **Install MariaDB (or PostgreSQL) for me**: installs it from Ubuntu, then creates the
+       database. Shown when that server isn't installed yet.
      - **Connect to another database server**: enter its host, port, user and password, then click
        **Test connection**.
+
+   PostgreSQL can be managed with **pgAdmin** like any PostgreSQL database: connect it to the
+   server with the user and password from the CAD's `.env`.
+
 5. **Website**: the server's IP and two free ports are filled in for you, one for the website and
    one for the API. You see the final URLs as you type.
 6. **Review**: check the settings, then click **Install SnailyCAD**.
@@ -155,6 +159,7 @@ Everything lives in **`/opt/snailycad`**:
 | `/opt/snailycad/app`                    | The CAD's code and its `.env`                          |
 | `/opt/snailycad/runtime`                | Ubuntu: the private Node.js and pnpm                   |
 | `/opt/snailycad/app/.data`              | Docker: the MariaDB data                               |
+| `/opt/snailycad/app/.data-postgres`     | Docker: the PostgreSQL data                            |
 | `/opt/snailycad/app/start.log`          | Ubuntu: the CAD's install, build and run log           |
 | `/opt/snailycad/installer/install.log`  | Every command the wizard ran                           |
 | `/opt/snailycad/installer/manifest.env` | Everything the installer added **outside** this folder |
@@ -180,7 +185,7 @@ For a Docker install, see [managing the CAD](install-docker.md#managing-the-cad)
 
 The easiest way: as the CAD owner, open **Admin → Dashboard → Danger zone** and click **Uninstall
 SnailyCAD**. It lists everything the installer added (the CAD, its database, Node.js and pnpm,
-MariaDB or Docker if the wizard installed them, packages, firewall rules and download caches).
+MariaDB, PostgreSQL or Docker if the wizard installed them, packages, firewall rules and download caches).
 Untick anything you want to keep, for example the database, type the CAD's name and confirm. The
 CAD then removes itself; the page tells you when it's gone. This works on Ubuntu (standalone) and
 Windows installs; for Docker, use the command below on the server.
@@ -196,7 +201,7 @@ Add `--keep=database,runtime` (any of `database`, `db-server`, `docker`, `runtim
 
 It lists what it will remove and asks first. It removes the CAD and **its database (all CAD
 data)**, the `snailycad` service or the Docker containers and images, the firewall rules it opened,
-the packages the wizard installed (Docker or MariaDB included), and the `/opt/snailycad` folder. A
+the packages the wizard installed (Docker, MariaDB or PostgreSQL included), and the `/opt/snailycad` folder. A
 database server or Docker that was already on the server is kept; only the CAD's own database and
 user are removed from it. A database on **another** server is left alone: drop it there yourself.
 
@@ -233,8 +238,14 @@ The steps are the same as on Ubuntu, with these differences:
     `MariaDB`, port 3306) with a random root password, then creates the database. The root
     password is in `C:\SnailyCAD\installer\mariadb-root-password.txt`. Shown when no MySQL/MariaDB is
     on the PC.
-  - **Connect to another database server**: a MySQL 8 / MariaDB 10.6+ you already have, on this
-    PC (`127.0.0.1`) or another one. Enter a user that may create the database.
+  - **Install PostgreSQL for me**: installs PostgreSQL 17 with winget (`PostgreSQL.PostgreSQL.17`,
+    Windows service `postgresql-x64-17`, port 5432) together with **pgAdmin 4**, with a random
+    password for the `postgres` user, then creates the database. That password is in
+    `C:\SnailyCAD\installer\postgres-password.txt`; open pgAdmin from the Start menu and log in
+    with it.
+  - **Connect to another database server**: a MySQL 8 / MariaDB 10.6+ or PostgreSQL 14+ you
+    already have, on this PC (`127.0.0.1`) or another one. Enter a user that may create the
+    database.
 - **Install**: Database → Settings → Firewall → Dependencies → Build → Service → Start. The wizard
   installs and builds the CAD itself, then starts it as a service.
 - **Service**: the CAD runs as the Windows service **`snailycad`**, made with
@@ -285,7 +296,7 @@ powershell -ExecutionPolicy Bypass -File C:\SnailyCAD\uninstall.ps1
 ```
 
 It lists what it will remove and asks first. It removes the `snailycad` service (or scheduled
-task), the firewall rules, the CAD's database, MariaDB if the wizard installed it (with all its
+task), the firewall rules, the CAD's database, MariaDB or PostgreSQL (with pgAdmin) if the wizard installed it (with all its
 data), the programs it installed with winget (Python, Git, NSSM; not ones you already had) and
 `C:\SnailyCAD`. Add `-KeepMariaDB` to keep MariaDB (only the CAD's database and user are dropped;
 the root password is shown), `-Keep "database,runtime"` to keep any of `database`, `db-server`,

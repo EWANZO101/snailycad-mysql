@@ -19,6 +19,7 @@ import type { Prisma, VehicleInspectionStatus, VehicleTaxStatus } from "@prisma/
 import { getLastOfArray, manyToManyHelper } from "lib/data/many-to-many";
 import type * as APITypes from "@snailycad/types/api";
 import { Permissions, UsePermissions } from "middlewares/use-permissions";
+import { insensitive } from "lib/data/db-provider";
 
 const vehiclesInclude = { ...citizenInclude.vehicles.include, citizen: true };
 
@@ -39,10 +40,10 @@ export class ImportVehiclesController {
     const where: Prisma.RegisteredVehicleWhereInput | undefined = query
       ? {
           OR: [
-            { plate: { contains: query } },
-            { model: { value: { value: { contains: query } } } },
-            { color: { contains: query } },
-            { vinNumber: { contains: query } },
+            { plate: { contains: query, ...insensitive() } },
+            { model: { value: { value: { contains: query, ...insensitive() } } } },
+            { color: { contains: query, ...insensitive() } },
+            { vinNumber: { contains: query, ...insensitive() } },
           ],
         }
       : undefined;
@@ -72,7 +73,7 @@ export class ImportVehiclesController {
     const where: Prisma.RegisteredVehicleWhereInput | undefined = {};
 
     if (query) {
-      where.plate = { contains: query };
+      where.plate = { contains: query, ...insensitive() };
     }
 
     if (typeof userRegisteredOnly === "boolean") {

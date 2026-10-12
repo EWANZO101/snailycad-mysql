@@ -22,6 +22,7 @@ import { leoProperties, unitProperties } from "utils/leo/includes";
 import { recordsInclude } from "~/controllers/leo/search/SearchController";
 import { ExtendedBadRequest } from "~/exceptions/extended-bad-request";
 import { getPrismaModelOrderBy } from "~/utils/order-by";
+import { insensitive } from "lib/data/db-provider";
 
 @UseBeforeEach(IsAuth)
 @Controller("/admin/manage/citizens")
@@ -155,12 +156,12 @@ export class AdminManageCitizensController {
     const [isFirstNameBlacklisted, isLastNameBlacklisted] = await Promise.all([
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.name },
+          word: { contains: data.name, ...insensitive() },
         },
       }),
       prisma.blacklistedWord.findFirst({
         where: {
-          word: { contains: data.surname },
+          word: { contains: data.surname, ...insensitive() },
         },
       }),
     ]);

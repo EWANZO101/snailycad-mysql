@@ -595,7 +595,7 @@
     "error_envPathMustBeAbsoluteDotEnv": "Enter the full path to a file called .env.",
     "error_envFileNotFound": "That .env file doesn't exist on this server.",
     "error_envFileHasNoPostgresDatabase": "That .env file has no PostgreSQL database settings.",
-    "error_databaseUrlNotMysql": "This CAD's DATABASE_URL isn't a mysql:// URL.",
+    "error_databaseUrlNotMysql": "This import copies an old PostgreSQL SnailyCAD into a MySQL / MariaDB CAD. This CAD runs on PostgreSQL, so it isn't available here.",
     "error_migrateScriptMissing": "scripts/mysql/migrate-data.mjs is missing from this CAD.",
     "error_onlyOwnerCanImport": "Only the owner can import.",
     "error_importAlreadyRunning": "An import is already running.",

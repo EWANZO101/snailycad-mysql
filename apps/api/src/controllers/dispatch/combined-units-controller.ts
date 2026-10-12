@@ -21,6 +21,7 @@ import { validateSchema } from "lib/data/validate-schema";
 import { MERGE_UNIT_SCHEMA } from "@snailycad/schemas";
 import { isFeatureEnabled } from "lib/upsert-cad";
 import { combinedUnitProperties, combinedEmsFdUnitProperties } from "utils/leo/includes";
+import { insensitive } from "lib/data/db-provider";
 
 @Controller("/dispatch/status")
 @UseBeforeEach(IsAuth)
@@ -99,7 +100,7 @@ export class CombinedUnitsController {
 
     if (isUserDefinedCallsignEnabled) {
       const existing = await prisma.combinedLeoUnit.findFirst({
-        where: { userDefinedCallsign: { equals: data.userDefinedCallsign } },
+        where: { userDefinedCallsign: { equals: data.userDefinedCallsign, ...insensitive() } },
       });
 
       if (existing) {
@@ -212,7 +213,7 @@ export class CombinedUnitsController {
 
     if (isUserDefinedCallsignEnabled) {
       const existing = await prisma.combinedEmsFdUnit.findFirst({
-        where: { userDefinedCallsign: { equals: data.userDefinedCallsign } },
+        where: { userDefinedCallsign: { equals: data.userDefinedCallsign, ...insensitive() } },
       });
 
       if (existing) {

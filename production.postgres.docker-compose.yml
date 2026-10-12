@@ -1,0 +1,86 @@
+# SnailyCAD with PostgreSQL (DB_PROVIDER="postgresql", DB_HOST="postgres", DB_PORT="5432" in .env).
+# production.docker-compose.yml is the same with MariaDB.
+services:
+  postgres:
+    container_name: "snaily-cad-postgres"
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      # localhost only by default; set DB_BIND="0.0.0.0" to reach the database from other machines
+      - "${DB_BIND:-127.0.0.1}:${DB_HOST_PORT:-${DB_PORT}}:5432"
+    networks:
+      - cad_web
+    volumes:
+      - ./.data-postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  api:
+    container_name: "snaily-cad-api"
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: api
+    ports:
+      - "${PORT_API}:${PORT_API}"
+    expose:
+      - ${PORT_API}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cad_web
+    restart: always
+    environment:
+      # keeps the recovery token (shown once on /admin) across image rebuilds
+      RECOVERY_TOKEN_FILE: /snailycad/data/.recovery-token
+    volumes:
+      - ./apps/api/public:/snailycad/apps/api/public
+      - ./.snailycad-data:/snailycad/data
+
+  client:
+    container_name: "snaily-cad-client"
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: client
+    ports:
+      - "${PORT_CLIENT}:${PORT_CLIENT}"
+    expose:
+      - ${PORT_CLIENT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cad_web
+    restart: always
+
+  # Optional LiveKit server for the radio (CAD Settings > Radio > LiveKit server). Start it with:
+  #   cp livekit.example.yaml livekit.yaml   (and change the secret)
+  #   docker compose -f production.docker-compose.yml --profile livekit up -d
+  # then set RADIO_LIVEKIT_URL / _API_KEY / _API_SECRET in .env and rebuild/restart the API.
+  livekit:
+    container_name: "snaily-cad-livekit"
+    image: livekit/livekit-server:v1.13.7
+    profiles: ["livekit"]
+    command: --config /etc/livekit.yaml
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    networks:
+      - cad_web
+    restart: unless-stopped
+
+networks:
+  cad_web:
+    external: true
