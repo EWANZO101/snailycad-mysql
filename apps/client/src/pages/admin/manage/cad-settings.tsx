@@ -100,12 +100,6 @@ const Tabs = {
       (await import("components/admin/manage/cad-settings/misc-features/radio-tab")).RadioTab,
     { ssr: false },
   ),
-  OpsPhoneTab: dynamic(
-    async () =>
-      (await import("components/admin/manage/cad-settings/misc-features/ops-phone-tab"))
-        .OpsPhoneTab,
-    { ssr: false },
-  ),
   FivemFrameworkTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/misc-features/fivem-framework-tab"))
@@ -156,7 +150,6 @@ export default function CadSettings(props: Props) {
       <Tabs.DefaultPermissionsTab />
       <Tabs.LiveMapTab />
       <Tabs.ApiTokenTab />
-      <Tabs.OpsPhoneTab />
       <Tabs.FivemFrameworkTab />
       <Tabs.PhonesTab />
       <Tabs.DangerZoneTab />

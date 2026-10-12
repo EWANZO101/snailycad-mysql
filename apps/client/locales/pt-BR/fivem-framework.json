@@ -33,6 +33,8 @@
     "removedVehiclesDescription": "When a synced vehicle is sold, deleted or otherwise leaves a garage in game (the resource notices within seconds).",
     "removedVehiclesDelete": "Remove them from the CAD",
     "removedVehiclesUnlink": "Keep them without an owner (their records stay)",
-    "removedVehiclesKeep": "Keep them with their owner"
+    "removedVehiclesKeep": "Keep them with their owner",
+    "phoneSetup": "Set up",
+    "phoneSetupHide": "Hide setup"
   }
 }

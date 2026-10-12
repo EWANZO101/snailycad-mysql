@@ -33,7 +33,6 @@ export enum SettingsTabs {
   /** integrations */
   LiveMap = "LIVE_MAP",
   APIToken = "API_TOKEN",
-  OpsPhone = "OPS_PHONE",
   FivemFramework = "FIVEM_FRAMEWORK",
   Phones = "PHONES",
 
@@ -130,7 +129,6 @@ function CadSettingsSidebar() {
       items: [
         SettingsTabs.LiveMap,
         SettingsTabs.APIToken,
-        SettingsTabs.OpsPhone,
         SettingsTabs.FivemFramework,
         SettingsTabs.Phones,
       ],
