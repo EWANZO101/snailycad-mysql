@@ -1312,6 +1312,8 @@ WantedBy=multi-user.target
 
 BUILD_STEP = re.compile(r"^#\d+ \[([\w-]+) +(\w+) +(\d+/\d+)\] (.+)$")
 BUILD_ALLOW = [
+    # the Dockerfile's network fallbacks (scripts/docker/build-network.sh)
+    (re.compile(r"\[snailycad build\] (.+)"), r"\1"),
     (re.compile(r"Creating an optimized production build"), "Compiling the website…"),
     (re.compile(r"Compiled successfully"), "Website compiled"),
     (re.compile(r"Generating static pages \((\d+)/(\d+)\)"), r"Generating pages (\1/\2)"),
@@ -1399,18 +1401,8 @@ def docker_install(settings, deploy_only=False):
 
     def images():
         say("Building images; this takes 10-25 minutes...")
+        # the network fallbacks (public DNS, other mirrors, retries) are in the Dockerfile itself
         ok, output = compose("--progress", "plain", "build", timeout=3 * 60 * 60, on_line=build_line)
-        if not ok and NETWORK_TROUBLE.search(output):
-            # Docker's own network (DNS, IPv6, MTU) is broken while the server's works: build on
-            # the server's network instead
-            say("Docker's network couldn't download packages. Trying again on the server's own network...", "error")
-            override = os.path.join(APP_DIR, "docker-compose.build-host-network.yml")
-            with open(override, "w") as f:
-                f.write("services:\n  api:\n    build:\n      network: host\n"
-                        "  client:\n    build:\n      network: host\n")
-            compose_file = manifest_value("DOCKER_COMPOSE_FILE") or COMPOSE_FILE
-            ok, output = run(["docker", "compose", "-p", NAME, "-f", compose_file, "-f", override,
-                              "--progress", "plain", "build"], cwd=APP_DIR, timeout=3 * 60 * 60, on_line=build_line)
         if not ok:
             trouble = [l.strip() for l in output.split("\n") if NETWORK_TROUBLE.search(l)]
             if trouble:
