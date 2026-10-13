@@ -1322,6 +1322,13 @@ BUILD_ALLOW = [
 ]
 
 
+# a build that failed because the container couldn't reach the internet
+NETWORK_TROUBLE = re.compile(
+    r"Temporary failure resolving|Could not resolve|Failed to fetch|Unable to connect|Could not connect|"
+    r"Connection timed out|Network is unreachable|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|ECONNRESET|"
+    r"Unable to locate package|getaddrinfo", re.I)
+
+
 def compose(*args, timeout=600, on_line=None):
     compose_file = manifest_value("DOCKER_COMPOSE_FILE") or COMPOSE_FILE
     return run(["docker", "compose", "-p", NAME, "-f", compose_file, *args], cwd=APP_DIR, timeout=timeout, on_line=on_line)
@@ -1392,7 +1399,27 @@ def docker_install(settings, deploy_only=False):
 
     def images():
         say("Building images; this takes 10-25 minutes...")
-        check(compose("--progress", "plain", "build", timeout=3 * 60 * 60, on_line=build_line), "Building the images failed")
+        ok, output = compose("--progress", "plain", "build", timeout=3 * 60 * 60, on_line=build_line)
+        if not ok and NETWORK_TROUBLE.search(output):
+            # Docker's own network (DNS, IPv6, MTU) is broken while the server's works: build on
+            # the server's network instead
+            say("Docker's network couldn't download packages. Trying again on the server's own network...", "error")
+            override = os.path.join(APP_DIR, "docker-compose.build-host-network.yml")
+            with open(override, "w") as f:
+                f.write("services:\n  api:\n    build:\n      network: host\n"
+                        "  client:\n    build:\n      network: host\n")
+            compose_file = manifest_value("DOCKER_COMPOSE_FILE") or COMPOSE_FILE
+            ok, output = run(["docker", "compose", "-p", NAME, "-f", compose_file, "-f", override,
+                              "--progress", "plain", "build"], cwd=APP_DIR, timeout=3 * 60 * 60, on_line=build_line)
+        if not ok:
+            trouble = [l.strip() for l in output.split("\n") if NETWORK_TROUBLE.search(l)]
+            if trouble:
+                raise StepError(
+                    "Building the images failed: Docker couldn't download packages from the internet "
+                    f"({trouble[-1][:160]}). Check this server's internet and DNS; if only Docker is "
+                    'affected, add "dns": ["1.1.1.1", "8.8.8.8"] to /etc/docker/daemon.json, run '
+                    "systemctl restart docker, then press Retry.")
+            check((ok, output), "Building the images failed")
         say("Images built.")
 
     def containers():
