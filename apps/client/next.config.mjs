@@ -51,6 +51,11 @@ const nextConfig = {
         hostname: "localhost",
         pathname: "**"
       },
+      {
+        protocol: "http",
+        hostname: "51.89.167.197",
+        pathname: "**"
+      },
     ]
   }, // end images
   // prettier-enable
