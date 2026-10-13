@@ -26,6 +26,11 @@
 #   SNAILY_REPO         git repository (GitHub URL or local folder)
 #   SNAILY_BRANCH       branch to install                                  (default: main)
 #   SNAILY_WIZARD_PORT  port of the setup wizard                           (default: 3100)
+#   SNAILY_ACTION       new or uninstall: what to do when SnailyCAD is already installed
+#                       (default: ask)
+#
+# Running the line again on a PC that already has SnailyCAD asks whether to install another one
+# next to it (C:\SnailyCAD-2, its own service, ports and database) or to uninstall one.
 #
 # Written for Windows PowerShell 5.1 (the one Windows ships): no PowerShell 7-only syntax.
 
@@ -48,6 +53,10 @@ function Install-SnailyCAD {
     $Repo = Get-Setting 'SNAILY_REPO' 'https://github.com/EWANZO101/snailycad-mysql.git'
     $Branch = Get-Setting 'SNAILY_BRANCH' 'main'
     $WizardPort = Get-Setting 'SNAILY_WIZARD_PORT' '3100'
+    $Action = Get-Setting 'SNAILY_ACTION' ''
+    $NameSet = -not [string]::IsNullOrWhiteSpace($env:SNAILY_NAME)
+    $DirSet = -not [string]::IsNullOrWhiteSpace($env:SNAILY_DIR)
+    $PortSet = -not [string]::IsNullOrWhiteSpace($env:SNAILY_WIZARD_PORT)
     $InstallerUrl = Get-Setting 'SNAILY_INSTALLER_URL' "https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/$Branch/scripts/installer"
     $WizardFiles = @('wizard-server.py', 'wizard.html', 'uninstall.ps1')
 
@@ -62,7 +71,7 @@ function Install-SnailyCAD {
         $script = Join-Path $env:TEMP 'snailycad-install.ps1'
         $body = (Invoke-WebRequest -UseBasicParsing -Uri "$InstallerUrl/install.ps1").Content
         $lines = @()
-        foreach ($var in @('SNAILY_NAME', 'SNAILY_DIR', 'SNAILY_REPO', 'SNAILY_BRANCH', 'SNAILY_WIZARD_PORT', 'SNAILY_INSTALLER_URL')) {
+        foreach ($var in @('SNAILY_NAME', 'SNAILY_DIR', 'SNAILY_REPO', 'SNAILY_BRANCH', 'SNAILY_WIZARD_PORT', 'SNAILY_INSTALLER_URL', 'SNAILY_ACTION')) {
             $value = [Environment]::GetEnvironmentVariable($var)
             if ($value) { $lines += ('$env:' + $var + " = '" + $value.Replace("'", "''") + "'") }
         }
@@ -103,15 +112,121 @@ function Install-SnailyCAD {
     if ($freeGb -lt 8) { Fail "At least 8 GB of free disk space is needed on $drive (there is $freeGb GB)." }
     Say "$($os.Caption) (build $build), x64, $freeGb GB free on $drive"
 
+    # --- already installed? ----------------------------------------------------------------
+
+    function Get-ManifestValue([string]$Dir, [string]$Key) {
+        $path = Join-Path $Dir 'installer\manifest.env'
+        foreach ($line in (Get-Content -LiteralPath $path -Encoding UTF8 -ErrorAction SilentlyContinue)) {
+            if ($line -match "^$Key=(.*)$") { return $Matches[1].Trim() }
+        }
+        return ''
+    }
+    function Test-NameTaken([string]$Candidate, [string]$Dir) {
+        return (Test-Path -LiteralPath $Dir) -or [bool](Get-Service -Name $Candidate -ErrorAction SilentlyContinue)
+    }
+    function Get-InstallDirFor([string]$Candidate) {
+        # snailycad -> C:\SnailyCAD, snailycad-2 -> C:\SnailyCAD-2, other -> C:\SnailyCAD-other
+        $root = Join-Path $env:SystemDrive 'SnailyCAD'
+        if ($Candidate -eq 'snailycad') { return $root }
+        if ($Candidate -match '^snailycad-(.+)$') { return "$root-$($Matches[1])" }
+        return "$root-$Candidate"
+    }
+
+    # every install this script made: C:\SnailyCAD* folders with installer\manifest.env
+    $installs = @(Get-ChildItem -LiteralPath "$env:SystemDrive\" -Directory -Filter 'SnailyCAD*' -ErrorAction SilentlyContinue |
+        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'installer\manifest.env') } |
+        ForEach-Object { $_.FullName })
+    if ($DirSet -and (Test-Path -LiteralPath (Join-Path $InstallDir 'installer\manifest.env')) -and ($installs -notcontains $InstallDir)) {
+        $installs += $InstallDir
+    }
+
+    if ($installs.Count -gt 0 -and ((-not $NameSet -and -not $DirSet) -or (Test-Path -LiteralPath $InstallDir))) {
+        Write-Host ''
+        Write-Host 'SnailyCAD is already installed on this PC:' -ForegroundColor White
+        for ($i = 0; $i -lt $installs.Count; $i++) {
+            $dir = $installs[$i]
+            $svcName = Get-ManifestValue $dir 'CAD_SERVICE'
+            $state = 'setup not finished'
+            if ($svcName) {
+                $svc = Get-Service -Name $svcName -ErrorAction SilentlyContinue
+                $state = if ($svc) { "$($svc.Status)".ToLower() } else { 'installed' }
+            }
+            Write-Host ('  {0}) {1,-16} {2,-24} {3}' -f ($i + 1), (Get-ManifestValue $dir 'NAME'), $dir, $state)
+        }
+        Write-Host ''
+        if (-not $Action) {
+            Write-Host 'What would you like to do?'
+            Write-Host '  1) Install another SnailyCAD next to it'
+            Write-Host '  2) Uninstall a SnailyCAD'
+            Write-Host '  3) Cancel'
+            switch ((Read-Host 'Choose [1-3]').Trim()) {
+                '1' { $Action = 'new' }
+                '2' { $Action = 'uninstall' }
+                default { Say 'Cancelled.'; return }
+            }
+        }
+        if ($Action -eq 'uninstall') {
+            $target = $installs[0]
+            if ($installs.Count -gt 1) {
+                $pick = (Read-Host "Which one do you want to uninstall? [1-$($installs.Count)]").Trim()
+                if ($pick -notmatch '^[0-9]+$' -or [int]$pick -lt 1 -or [int]$pick -gt $installs.Count) { Fail "No install number $pick." }
+                $target = $installs[[int]$pick - 1]
+            }
+            $uninstaller = Join-Path $target 'uninstall.ps1'
+            if (-not (Test-Path -LiteralPath $uninstaller)) { Fail "$uninstaller is missing." }
+            Say "Uninstalling $(Get-ManifestValue $target 'NAME') ($target)..."
+            # its own questions (confirm) come from uninstall.ps1
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $uninstaller
+            return
+        }
+        if ($Action -ne 'new') { Fail 'SNAILY_ACTION must be new or uninstall.' }
+
+        # the next free name: snailycad-2, snailycad-3, ...
+        $base = $Name
+        $candidate = $base
+        $n = 2
+        while (Test-NameTaken $candidate (Get-InstallDirFor $candidate)) {
+            $candidate = "$base-$n"
+            $n++
+        }
+        $Name = $candidate
+        if (-not $env:SNAILY_ACTION) {
+            while ($true) {
+                $answer = (Read-Host "Name for the new install (service name) [$Name]").Trim()
+                if (-not $answer) { $answer = $Name }
+                if ($answer -cnotmatch '^[a-z][a-z0-9-]{0,30}$') {
+                    Warn 'Use lowercase letters, numbers and dashes (starting with a letter).'
+                } elseif (Test-NameTaken $answer (Get-InstallDirFor $answer)) {
+                    Warn "$answer is already used on this PC; pick another name."
+                } else {
+                    $Name = $answer
+                    break
+                }
+            }
+        }
+        $InstallDir = Get-InstallDirFor $Name
+        Say "Installing another SnailyCAD as $Name in $InstallDir."
+    }
+
     if (Test-Path -LiteralPath $InstallDir) {
         Fail "$InstallDir already exists. Remove the old install first: powershell -ExecutionPolicy Bypass -File `"$InstallDir\uninstall.ps1`""
     }
     if (Get-Service -Name $Name -ErrorAction SilentlyContinue) {
         Fail "A Windows service named $Name already exists. Pick another name with `$env:SNAILY_NAME = '...'"
     }
-    $listener = New-Object Net.Sockets.TcpListener([Net.IPAddress]::Any, $WizardPort)
-    try { $listener.Start(); $listener.Stop() } catch {
-        Fail "Port $WizardPort is already in use. Pick another one with `$env:SNAILY_WIZARD_PORT = '3200'"
+    function Test-PortFree([int]$Port) {
+        $listener = New-Object Net.Sockets.TcpListener([Net.IPAddress]::Any, $Port)
+        try { $listener.Start(); $listener.Stop(); return $true } catch { return $false }
+    }
+    if (-not (Test-PortFree $WizardPort)) {
+        if ($PortSet) { Fail "Port $WizardPort is already in use. Pick another one with `$env:SNAILY_WIZARD_PORT = '3200'" }
+        # another install's wizard (or anything else) has the default port: take the next free one
+        $free = $null
+        for ($port = $WizardPort + 1; $port -le $WizardPort + 100; $port++) {
+            if (Test-PortFree $port) { $free = $port; break }
+        }
+        if (-not $free) { Fail 'No free port for the setup wizard near 3100. Set $env:SNAILY_WIZARD_PORT.' }
+        $WizardPort = $free
     }
 
     # --- winget -------------------------------------------------------------------------
@@ -257,16 +372,29 @@ function Install-SnailyCAD {
             Sort-Object InterfaceMetric | Select-Object -First 1 -ExpandProperty IPAddress
     } catch { }
 
+    # the public (internet) address, for opening the wizard from outside the network
+    $publicIp = $null
+    foreach ($url in @('https://api.ipify.org', 'https://ifconfig.me/ip', 'https://icanhazip.com')) {
+        try {
+            $value = "$(Invoke-RestMethod -UseBasicParsing -Uri $url -TimeoutSec 4)".Trim()
+            if ($value -match '^[0-9]+(\.[0-9]+){3}$') { $publicIp = $value; break }
+        } catch { }
+    }
+
     $localUrl = "http://localhost:$WizardPort/?token=$token"
     Write-Host ''
+    if ($Name -ne 'snailycad') { Write-Host "Install name: $Name" -ForegroundColor White }
     Write-Host 'Install method: Windows (standalone, Node.js)' -ForegroundColor White
-    Write-Host 'SnailyCAD setup wizard is running. It opens in your browser now; if not, open:' -ForegroundColor White
+    Write-Host 'SnailyCAD setup wizard is running. It opens in your browser now; if not, open one of these:' -ForegroundColor White
     Write-Host ''
-    Write-Host "    $localUrl" -ForegroundColor Green
+    Write-Host "    On this PC:          $localUrl" -ForegroundColor Green
     if ($ip) {
+        Write-Host "    Local network:       http://${ip}:$WizardPort/?token=$token" -ForegroundColor Green
+    }
+    if ($publicIp -and $publicIp -ne $ip) {
+        Write-Host "    Public (internet):   http://${publicIp}:$WizardPort/?token=$token" -ForegroundColor Green
         Write-Host ''
-        Write-Host '  From another PC on your network:' -ForegroundColor White
-        Write-Host "    http://${ip}:$WizardPort/?token=$token" -ForegroundColor Green
+        Write-Host "  The public link needs port $WizardPort forwarded to this PC on your router." -ForegroundColor White
     }
     Write-Host ''
     Write-Host "Everything lives in $InstallDir. To remove it all again (as administrator):"

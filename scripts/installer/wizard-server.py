@@ -297,6 +297,41 @@ def server_ip():
     return "127.0.0.1"
 
 
+_public_ip = {"value": None, "checked": False}
+
+
+def public_ip():
+    """the internet-facing IPv4 address, asked once from a lookup service; None when there's no
+    internet or the lookup fails (the local address still works)"""
+    if _public_ip["checked"]:
+        return _public_ip["value"]
+    for url in ("https://api.ipify.org", "https://ifconfig.me/ip", "https://icanhazip.com"):
+        try:
+            with urllib.request.urlopen(url, timeout=4) as response:
+                value = response.read(64).decode("ascii", "ignore").strip()
+            if re.match(r"^\d+(\.\d+){3}$", value):
+                _public_ip["value"] = value
+                break
+        except (OSError, ValueError, urllib.error.URLError):
+            continue
+    _public_ip["checked"] = True
+    return _public_ip["value"]
+
+
+def address_options():
+    """addresses the CAD can be opened on: public (from the internet), local network, this
+    computer. A VPS usually has one address that's both public and local."""
+    local = server_ip()
+    public = public_ip()
+    options = []
+    if public:
+        options.append({"kind": "public", "address": public})
+    if local and local != "127.0.0.1" and local != public:
+        options.append({"kind": "local", "address": local})
+    options.append({"kind": "this", "address": "localhost"})
+    return options
+
+
 def ufw_active():
     return has_command("ufw") and "Status: active" in quiet(["ufw", "status"])[1]
 
@@ -678,6 +713,9 @@ def windows_checks():
         "platform": "windows",
         "os": os_name,
         "ip": server_ip(),
+        "addresses": address_options(),
+        # the install's name: the default database name / user, so a second install doesn't clash
+        "name": NAME,
         "ports": {"client": client_port, "api": api_port},
         "method": method(),
         "methodPreset": manifest_value("METHOD_PRESET") == "1",
@@ -728,6 +766,9 @@ def checks():
         "platform": "linux",
         "os": os_name,
         "ip": server_ip(),
+        "addresses": address_options(),
+        # the install's name: the default database name / user, so a second install doesn't clash
+        "name": NAME,
         "ports": {"client": client_port, "api": api_port},
         "method": method(),
         # chosen by the install command (install-docker.sh / install-ubuntu.sh)

@@ -64,6 +64,22 @@ main() {
 
     [[ "$INSTALL_DIR" == "$dir" ]] || { echo "Manifest is for $INSTALL_DIR, not $dir. Stopping." >&2; exit 1; }
 
+    # other SnailyCAD installs on this server share what the first one installed: the database
+    # server, Docker, apt packages and download caches stay while any of them is left
+    local -a others=()
+    local other
+    for other in /opt/*/installer/manifest.env; do
+        [[ -f "$other" ]] || continue
+        other="$(dirname "$(dirname "$other")")"
+        [[ "$other" == "$dir" ]] || others+=("$other")
+    done
+    if [[ ${#others[@]} -gt 0 ]]; then
+        echo "Other SnailyCAD installs on this server: ${others[*]}"
+        echo "Keeping what they share: the database server, Docker, packages and caches."
+        keep_list="${keep_list:+$keep_list,}db-server,docker,caches"
+        APT_PACKAGES=()
+    fi
+
     # what to remove. Removing the MariaDB server takes every database in it, so keeping the
     # CAD's database keeps the server too.
     local drop_db="" remove_mariadb="" remove_postgres="" remove_docker="" remove_runtime=1 remove_caches=1 remove_firewall=1

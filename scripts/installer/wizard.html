@@ -184,6 +184,29 @@
         padding: 6px 14px;
         font-size: 0.8125rem;
       }
+      .address-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .address-options button {
+        padding: 5px 10px;
+        font-size: 0.75rem;
+        border-radius: 999px;
+        background: var(--gray-800);
+        color: inherit;
+        border: 1px solid var(--gray-700);
+      }
+      .address-options button.active {
+        border-color: var(--blue-600);
+        background: var(--blue-700);
+        color: var(--white);
+      }
+      .address-options button b {
+        font-weight: 600;
+        margin-right: 4px;
+      }
       .primary {
         background: var(--blue-700);
         color: var(--white);
@@ -793,6 +816,7 @@
         <div class="grid">
           <div class="field full">
             <label for="address">IP address or domain</label><input id="address" />
+            <div id="address-options" class="address-options"></div>
           </div>
           <div class="field">
             <label for="client-port">Website port</label
@@ -959,7 +983,52 @@
         $("method-update-button").classList.toggle("hidden", data.platform === "windows");
         const method = data.method || (dockerReason ? "standalone" : "docker");
         document.querySelector(`input[name=method][value=${method}]`).checked = true;
-        $("address").value = data.ip;
+        // public and local addresses: one click each. The default is the address this wizard
+        // was opened on (so a link opened over the internet suggests the public IP).
+        const kinds = {
+          public: "Public (internet)",
+          local: "Local network",
+          this: "This computer only",
+        };
+        const options = data.addresses?.length
+          ? data.addresses
+          : [{ kind: "local", address: data.ip }];
+        const opened = location.hostname;
+        const openedIsLoopback = opened === "localhost" || opened.startsWith("127.");
+        $("address").value =
+          opened && !openedIsLoopback && /^[A-Za-z0-9.-]+$/.test(opened)
+            ? opened
+            : (options.find((o) => o.kind !== "this") ?? options[0]).address;
+        $("address-options").innerHTML = options
+          .map(
+            (o) =>
+              `<button type="button" data-address="${esc(o.address)}"><b>${esc(kinds[o.kind] ?? o.kind)}</b>${esc(o.address)}</button>`,
+          )
+          .join("");
+        const markAddress = () =>
+          $("address-options")
+            .querySelectorAll("button")
+            .forEach((b) =>
+              b.classList.toggle("active", b.dataset.address === $("address").value.trim()),
+            );
+        $("address-options")
+          .querySelectorAll("button")
+          .forEach((b) =>
+            b.addEventListener("click", () => {
+              $("address").value = b.dataset.address;
+              markAddress();
+              syncUrls();
+            }),
+          );
+        $("address").addEventListener("input", markAddress);
+        markAddress();
+        // each install gets its own database by default (snailycad, snailycad_2, ...)
+        const dbDefault = String(data.name || "snailycad")
+          .replace(/[^A-Za-z0-9_]/g, "_")
+          .slice(0, 32);
+        for (const id of ["db-name", "db-user", "ext-name"]) {
+          if ($(id).value === "snailycad") $(id).value = dbDefault;
+        }
         $("client-port").value = data.ports.client ?? 3000;
         $("api-port").value = data.ports.api ?? 8080;
         syncUrls();

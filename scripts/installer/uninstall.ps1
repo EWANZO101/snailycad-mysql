@@ -67,6 +67,18 @@ if ($installDir -ne $dir) {
     Write-Host "Manifest is for $installDir, not $dir. Stopping." -ForegroundColor Red
     exit 1
 }
+
+# other SnailyCAD installs on this PC share what the first one installed: the database server and
+# the winget programs stay while any of them is left
+$others = @(Get-ChildItem -LiteralPath "$env:SystemDrive\" -Directory -Filter 'SnailyCAD*' -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName.TrimEnd('\') -ne $dir -and (Test-Path -LiteralPath (Join-Path $_.FullName 'installer\manifest.env')) } |
+    ForEach-Object { $_.FullName })
+if ($others.Count -gt 0) {
+    Write-Host "Other SnailyCAD installs on this PC: $($others -join ', ')"
+    Write-Host 'Keeping what they share: the database server and the programs installed with winget.'
+    $keepItems += 'db-server'
+    $packages.Clear()
+}
 $cadService = Get-Value 'CAD_SERVICE'
 $serviceKind = Get-Value 'WIN_SERVICE'
 $dbName = Get-Value 'DB_NAME'
