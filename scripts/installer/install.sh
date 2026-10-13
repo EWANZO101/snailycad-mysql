@@ -286,7 +286,7 @@ port_in_use "$WIZARD_PORT" || fail "The setup wizard did not start. See: $LOGS"
 
 # the wizard answers on every address: from the internet (public IP), from the local network
 # (LAN IP) and on this machine
-LOCAL_IP=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+(\.[0-9]+){3}$' | head -1)
+LOCAL_IP=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+(\.[0-9]+){3}$' | head -1 || true)
 PUBLIC_IP=""
 if command -v curl >/dev/null 2>&1; then
     for url in https://api.ipify.org https://ifconfig.me/ip https://icanhazip.com; do
