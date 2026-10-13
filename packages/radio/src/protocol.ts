@@ -13,7 +13,7 @@ export const AUDIO_FRAME_MS = 20;
 export const AUDIO_FRAME_SAMPLES = (AUDIO_SAMPLE_RATE * AUDIO_FRAME_MS) / 1000;
 export const AUDIO_FRAME_HEADER_BYTES = 6;
 export const FRAME_TYPE_AUDIO = 1;
-/** frames per second a socket may send before frames are dropped */
+/** frames per second a socket may send on one channel before frames are dropped */
 export const MAX_FRAMES_PER_SECOND = 60;
 
 export type RadioTransport = "builtin" | "livekit";

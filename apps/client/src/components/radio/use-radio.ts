@@ -1,9 +1,13 @@
 import * as React from "react";
 
 export interface RadioPreferences {
-  /** channels this browser keeps open */
+  /** channels this browser keeps open (the "selected" ones) */
   channels: string[];
+  /** listen to every channel, or only the selected ones; switching back keeps the selection */
+  listenMode: "all" | "selected";
   transmitChannel: string | null;
+  /** extra channels push-to-talk also goes out on (simulcast) */
+  simulcast: string[];
   volumes: Record<string, number>;
   masterVolume: number;
   /** KeyboardEvent.code of the push-to-talk key */
@@ -19,7 +23,9 @@ const STORAGE_KEY = "snailycad.radio";
 
 export const DEFAULT_RADIO_PREFERENCES: RadioPreferences = {
   channels: [],
+  listenMode: "selected",
   transmitChannel: null,
+  simulcast: [],
   volumes: {},
   masterVolume: 0.8,
   pttKey: "Backquote",

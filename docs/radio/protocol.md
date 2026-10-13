@@ -118,7 +118,9 @@ offset  size  field
   listeners). Frames you receive use the same layout; the `talk` message tells you who is speaking.
 - Payload: G.711 mu-law, 16 000 samples per second, 20 ms (320 samples) per frame. It is cheap to
   encode in any language and sounds like a real radio. At most 60 frames per second are accepted
-  per socket.
+  per socket and channel.
+- Simulcast: a socket can hold the talk on several channels at once (send `ptt on` for each and
+  wait for each `granted`). Send every frame once per granted channel, with that channel's handle.
 
 ## 4. Audio (`transport: "livekit"`)
 

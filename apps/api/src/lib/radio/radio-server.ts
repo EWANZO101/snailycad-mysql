@@ -45,8 +45,9 @@ interface Session {
   nextHandle: number;
   earpiece: boolean;
   speaker: boolean;
-  frameWindow: number;
-  frameCount: number;
+  /** audio frames sent this second, per channel: a dispatcher simulcasting on several
+   * channels sends one stream per channel */
+  frames: Map<string, { second: number; count: number }>;
   alive: boolean;
   /** control messages are handled one after another, in order */
   queue: Promise<void>;
@@ -143,8 +144,7 @@ export class RadioServer {
       nextHandle: 1,
       earpiece: false,
       speaker: false,
-      frameWindow: 0,
-      frameCount: 0,
+      frames: new Map(),
       alive: true,
       queue: Promise.resolve(),
     };
@@ -341,6 +341,7 @@ export class RadioServer {
     if (!joined) return;
     session.joined.delete(channelId);
     session.handles.delete(joined.handle);
+    session.frames.delete(channelId);
     const state = this.#channels.get(channelId);
     if (state) {
       if (state.talker === session) this.#releaseTalker(state);
@@ -426,13 +427,14 @@ export class RadioServer {
     const state = this.#channels.get(channelId);
     if (!state || state.talker !== session) return;
 
-    // rate limit per socket
+    // rate limit per socket and channel
     const second = Math.floor(Date.now() / 1000);
-    if (session.frameWindow !== second) {
-      session.frameWindow = second;
-      session.frameCount = 0;
+    let window = session.frames.get(channelId);
+    if (!window || window.second !== second) {
+      window = { second, count: 0 };
+      session.frames.set(channelId, window);
     }
-    if (++session.frameCount > MAX_FRAMES_PER_SECOND) return;
+    if (++window.count > MAX_FRAMES_PER_SECOND) return;
 
     for (const receiver of state.sessions) {
       if (receiver === session) continue;

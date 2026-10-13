@@ -36,7 +36,14 @@ export interface RadioView {
   channels: RadioChannelInfo[];
   joined: Record<string, { mode: ChannelMode; members: RadioMember[]; talking: string[] }>;
   transmitChannel: string | null;
+  /** extra channels push-to-talk also goes out on */
+  simulcast: string[];
   transmitting: string | null;
+  /** every channel transmitting on right now */
+  transmittingOn: string[];
+  listenMode: RadioPreferences["listenMode"];
+  /** who was last heard on each channel, and when (ms since epoch) */
+  lastHeard: Record<string, { name: string; at: number }>;
   audioReady: boolean;
   volumes: Record<string, number>;
   masterVolume: number;
@@ -48,7 +55,10 @@ type Command =
   | { name: "toggleChannel"; id: string }
   | { name: "listenAll" }
   | { name: "listenNone" }
+  | { name: "setListenMode"; mode: RadioPreferences["listenMode"] }
   | { name: "selectTransmit"; id: string }
+  | { name: "toggleSimulcast"; id: string }
+  | { name: "clearSimulcast" }
   | { name: "setChannelVolume"; id: string; volume: number }
   | { name: "setMasterVolume"; volume: number }
   | { name: "startTransmit" }
@@ -95,11 +105,33 @@ export function useRadioAvailable() {
   return hasPermissions([Permissions.ManageCADSettings, Permissions.Dispatch]);
 }
 
+/**
+ * joins the channels the preferences ask for and leaves the others: every channel in "all" mode,
+ * else the selected ones; the transmit channel and the simulcast are always joined as a member
+ */
+function syncChannels(client: RadioClient, prefs: RadioPreferences) {
+  const visible = new Set(client.channels.map((c) => c.id));
+  const targets = new Set(client.transmitTargets);
+  const wanted = new Set(
+    prefs.listenMode === "all"
+      ? visible
+      : [...prefs.channels, ...targets].filter((id) => visible.has(id)),
+  );
+  for (const id of [...client.joined.keys()]) {
+    if (!wanted.has(id) && !targets.has(id)) client.leave(id);
+  }
+  for (const id of wanted) {
+    if (!client.joined.has(id)) client.join(id, targets.has(id) ? "member" : "listen");
+    client.setChannelVolume(id, prefs.volumes[id] ?? 1);
+  }
+}
+
 function buildView(
   client: RadioClient,
   preferences: RadioPreferences,
   audioReady: boolean,
   leaderIsPopout: boolean,
+  lastHeard: RadioView["lastHeard"] = {},
 ): RadioView {
   const joined: RadioView["joined"] = {};
   for (const [id, channel] of client.joined) {
@@ -114,7 +146,11 @@ function buildView(
     channels: client.channels,
     joined,
     transmitChannel: client.transmitChannel,
+    simulcast: [...client.simulcast],
     transmitting: client.transmitting,
+    transmittingOn: [...client.transmittingOn],
+    listenMode: preferences.listenMode,
+    lastHeard,
     audioReady,
     volumes: preferences.volumes,
     masterVolume: preferences.masterVolume,
@@ -148,6 +184,7 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
   const [level, setLevel] = React.useState(0);
   const [lastError, setLastError] = React.useState<string | null>(null);
   const clientRef = React.useRef<RadioClient | null>(null);
+  const lastHeardRef = React.useRef<RadioView["lastHeard"]>({});
   const busRef = React.useRef<BroadcastChannel | null>(null);
   const runsRadio = role === "leader" || role === "single";
 
@@ -216,10 +253,13 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
         // listening = a silent monitor ("listen" mode: not in the member list); the channel you
         // talk on is joined as a member
         case "toggleChannel": {
+          // in "all" mode every channel is on: the selection is edited in "selected" mode
+          if (prefs.listenMode === "all") break;
           if (client.joined.has(command.id)) {
             client.leave(command.id);
             updatePreferences({
               channels: prefs.channels.filter((id) => id !== command.id),
+              simulcast: prefs.simulcast.filter((id) => id !== command.id),
               transmitChannel:
                 prefs.transmitChannel === command.id
                   ? client.transmitChannel
@@ -232,21 +272,29 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
           }
           break;
         }
+        case "setListenMode": {
+          const next = { ...prefs, listenMode: command.mode };
+          syncChannels(client, next);
+          updatePreferences({ listenMode: command.mode });
+          break;
+        }
         case "listenAll": {
-          for (const channel of client.channels) {
-            if (client.joined.has(channel.id)) continue;
-            client.join(channel.id, "listen");
-            client.setChannelVolume(channel.id, prefs.volumes[channel.id] ?? 1);
-          }
-          updatePreferences({ channels: client.channels.map((c) => c.id) });
+          // selects every channel (in "selected" mode)
+          const next = {
+            ...prefs,
+            listenMode: "selected" as const,
+            channels: client.channels.map((c) => c.id),
+          };
+          syncChannels(client, next);
+          updatePreferences({ listenMode: next.listenMode, channels: next.channels });
           break;
         }
         case "listenNone": {
-          // keeps the channel you talk on
-          for (const id of [...client.joined.keys()]) {
-            if (id !== client.transmitChannel) client.leave(id);
-          }
-          updatePreferences({ channels: client.transmitChannel ? [client.transmitChannel] : [] });
+          // clears the selection; keeps the channels you talk on
+          const targets = client.transmitTargets;
+          const next = { ...prefs, listenMode: "selected" as const, channels: targets };
+          syncChannels(client, next);
+          updatePreferences({ listenMode: next.listenMode, channels: targets });
           break;
         }
         case "selectTransmit": {
@@ -261,8 +309,48 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
           }
           updatePreferences({
             transmitChannel: command.id,
+            simulcast: prefs.simulcast.filter((id) => id !== command.id),
             channels: [...new Set([...prefs.channels, command.id])],
           });
+          break;
+        }
+        // simulcast: push-to-talk also goes out on these channels
+        case "toggleSimulcast": {
+          const channel = client.channels.find((c) => c.id === command.id);
+          if (!channel?.canTransmit) break;
+          if (!client.transmitChannel) {
+            applyCommandRef.current?.({ name: "selectTransmit", id: command.id });
+            break;
+          }
+          if (command.id === client.transmitChannel) {
+            // the main channel hands over to the next simulcast channel, if there's one
+            const [next, ...rest] = [...client.simulcast];
+            if (!next) break;
+            client.setSimulcastChannels([]);
+            client.setTransmitChannel(next);
+            client.setSimulcastChannels(rest);
+            if (prefs.listenMode === "all" || prefs.channels.includes(command.id)) {
+              client.join(command.id, "listen");
+            } else {
+              client.leave(command.id);
+            }
+            updatePreferences({ transmitChannel: next, simulcast: rest });
+            break;
+          }
+          const simulcast = client.simulcast.has(command.id)
+            ? [...client.simulcast].filter((id) => id !== command.id)
+            : [...client.simulcast, command.id];
+          client.setSimulcastChannels(simulcast);
+          for (const id of simulcast) client.setChannelVolume(id, prefs.volumes[id] ?? 1);
+          updatePreferences({
+            simulcast,
+            channels: [...new Set([...prefs.channels, ...simulcast])],
+          });
+          break;
+        }
+        case "clearSimulcast": {
+          client.setSimulcastChannels([]);
+          updatePreferences({ simulcast: [] });
           break;
         }
         case "setChannelVolume": {
@@ -294,6 +382,8 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
     },
     [updatePreferences],
   );
+  const applyCommandRef = React.useRef<((command: Command) => void) | null>(null);
+  applyCommandRef.current = applyCommand;
 
   React.useEffect(() => {
     if (!runsRadio) return;
@@ -305,7 +395,13 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
     const publish = () => {
       if (!client) return;
       const context = client.output.context;
-      const next = buildView(client, preferencesRef.current, context.state === "running", isPopout);
+      const next = buildView(
+        client,
+        preferencesRef.current,
+        context.state === "running",
+        isPopout,
+        lastHeardRef.current,
+      );
       setView(next);
       busRef.current?.postMessage({ type: "state", view: next } satisfies HubMessage);
     };
@@ -333,21 +429,37 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
       const openSaved = () => {
         const prefs = preferencesRef.current;
         const visible = new Set(client!.channels.map((c) => c.id));
-        let wanted = prefs.channels.filter((id) => visible.has(id));
+        let selected = prefs.channels.filter((id) => visible.has(id));
         const unit = unitChannelRef.current;
-        if (!wanted.length && unit && visible.has(unit)) wanted = [unit];
+        if (!selected.length && unit && visible.has(unit)) selected = [unit];
+        const canTransmit = (id: string) =>
+          !!client!.channels.find((c) => c.id === id)?.canTransmit;
         const transmit =
-          prefs.transmitChannel && wanted.includes(prefs.transmitChannel)
+          prefs.transmitChannel && visible.has(prefs.transmitChannel)
             ? prefs.transmitChannel
-            : wanted[0];
-        for (const id of wanted) {
-          if (!client!.joined.has(id)) client!.join(id, id === transmit ? "member" : "listen");
-          client!.setChannelVolume(id, prefs.volumes[id] ?? 1);
-        }
+            : selected.find(canTransmit);
         if (transmit) client!.setTransmitChannel(transmit);
+        client!.setSimulcastChannels(
+          prefs.simulcast.filter((id) => visible.has(id) && canTransmit(id)),
+        );
+        syncChannels(client!, { ...prefs, channels: selected });
         client!.setVolume(prefs.masterVolume);
       };
       cleanups.push(client.on("ready", openSaved));
+      // new channels show up for everyone listening to all of them
+      cleanups.push(
+        client.on("channels", () => {
+          if (preferencesRef.current.listenMode === "all") {
+            syncChannels(client!, preferencesRef.current);
+          }
+        }),
+      );
+      cleanups.push(
+        client.on("talk", ({ channel, name, on }) => {
+          if (!on) return;
+          lastHeardRef.current = { ...lastHeardRef.current, [channel]: { name, at: Date.now() } };
+        }),
+      );
 
       // dispatch moved this unit: remember the new channel
       cleanups.push(
@@ -419,6 +531,7 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
       preferences,
       client.output.context.state === "running",
       isPopout,
+      lastHeardRef.current,
     );
     setView(next);
     busRef.current?.postMessage({ type: "state", view: next } satisfies HubMessage);
@@ -440,6 +553,7 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
               preferencesRef.current,
               client.output.context.state === "running",
               isPopout,
+              lastHeardRef.current,
             ),
           } satisfies HubMessage);
         } else if (message.type === "cmd") {

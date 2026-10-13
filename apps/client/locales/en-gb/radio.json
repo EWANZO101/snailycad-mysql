@@ -81,6 +81,24 @@
     "noChannelsAdmin": "No radio channels yet. Add one above.",
     "everyone": "Everyone",
     "cadOnly": "CAD users only",
-    "confirmDeleteChannel": "Delete the radio channel \"{name}\"?"
+    "confirmDeleteChannel": "Delete the radio channel \"{name}\"?",
+    "holdToTalkMulti": "{channel} +{count}",
+    "transmittingOn": "Transmitting on {channels}",
+    "simulcast": "Simulcast",
+    "monitor": "Which channels you hear",
+    "listenModeAll": "All channels",
+    "listenModeSelected": "Selected",
+    "selectedCount": "Listening to {count} of {total}",
+    "monitoringAll": "Hearing every channel. Switch to Selected to pick which ones.",
+    "simulcastOn": "Simulcast: push-to-talk goes out on {count} channels",
+    "clearSimulcast": "Main only",
+    "channelsHintSimulcast": "Headphones: listen to a channel · Talk: your main talk channel · +: also talk on it (simulcast)",
+    "simulcastAdd": "Also talk on {channel} (simulcast)",
+    "simulcastRemove": "Stop talking on {channel}",
+    "lastHeard": "Last heard: {name} · {time}",
+    "justNow": "just now",
+    "secondsAgo": "{count}s ago",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago"
   }
 }

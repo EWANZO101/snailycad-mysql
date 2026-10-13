@@ -38,7 +38,7 @@ export interface RadioClientEvents {
   left: { channel: string };
   members: { channel: string; members: RadioMember[] };
   talk: { channel: string; id: string; name: string; on: boolean };
-  /** our own transmission: on = audio is going out */
+  /** our own transmission on one channel: on = audio is going out */
   transmit: { channel: string; on: boolean };
   busy: { channel: string; by: string };
   preempted: { channel: string; by: string };
@@ -75,8 +75,12 @@ export class RadioClient extends Emitter<RadioClientEvents> {
   readonly joined = new Map<string, JoinedChannel>();
   /** the channel PTT transmits on */
   transmitChannel: string | null = null;
-  /** channel currently transmitting on (after "granted") */
+  /** extra channels PTT also goes out on (dispatch simulcast), besides `transmitChannel` */
+  readonly simulcast = new Set<string>();
+  /** a channel currently transmitting on (after "granted"); see `transmittingOn` for all */
   transmitting: string | null = null;
+  /** every channel currently transmitting on */
+  readonly transmittingOn = new Set<string>();
   earpiece = false;
 
   readonly output: RadioOutput;
@@ -88,7 +92,8 @@ export class RadioClient extends Emitter<RadioClientEvents> {
   #wanted = new Map<string, ChannelMode>();
   #handles = new Map<number, string>();
   #volumes = new Map<string, number>();
-  #pttWanted: string | null = null;
+  /** channels push-to-talk is held for (granted or still waiting) */
+  #pttWanted = new Set<string>();
   #seq = 0;
   #retry = 0;
   #retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -210,7 +215,9 @@ export class RadioClient extends Emitter<RadioClientEvents> {
 
   leave(channel: string) {
     this.#wanted.delete(channel);
-    if (this.transmitting === channel) this.stopTransmit();
+    this.simulcast.delete(channel);
+    if (this.#pttWanted.delete(channel)) this.#send({ t: "ptt", channel, on: false });
+    this.#stopTransmitting(false, channel);
     if (this.transmitChannel === channel) {
       this.transmitChannel = [...this.#wanted].find(([, mode]) => mode === "member")?.[0] ?? null;
     }
@@ -219,7 +226,32 @@ export class RadioClient extends Emitter<RadioClientEvents> {
 
   setTransmitChannel(channel: string) {
     if (this.#wanted.get(channel) !== "member") this.join(channel, "member");
+    this.simulcast.delete(channel);
     this.transmitChannel = channel;
+  }
+
+  /**
+   * channels push-to-talk also goes out on, besides the transmit channel (dispatch simulcast).
+   * They're joined as a member; channels taken out of the list keep being listened to.
+   */
+  setSimulcastChannels(channels: string[]) {
+    const next = new Set(channels.filter((id) => id !== this.transmitChannel));
+    for (const id of this.simulcast) {
+      if (next.has(id)) continue;
+      this.simulcast.delete(id);
+      if (this.#wanted.get(id) === "member") this.join(id, "listen");
+    }
+    for (const id of next) {
+      this.simulcast.add(id);
+      if (this.#wanted.get(id) !== "member") this.join(id, "member");
+    }
+  }
+
+  /** every channel push-to-talk goes out on: the transmit channel first, then the simulcast */
+  get transmitTargets(): string[] {
+    return [
+      ...new Set([this.transmitChannel, ...this.simulcast].filter((id): id is string => !!id)),
+    ];
   }
 
   /** 0..1 */
@@ -244,50 +276,65 @@ export class RadioClient extends Emitter<RadioClientEvents> {
 
   // --- push to talk -------------------------------------------------------------------------
 
-  /** starts transmitting on `channel` (default: the transmit channel) */
-  async startTransmit(channel = this.transmitChannel) {
-    if (!channel || this.#pttWanted) return;
+  /**
+   * starts transmitting on `channel`, or (without one) on every transmit target: the transmit
+   * channel and the simulcast channels
+   */
+  async startTransmit(channel?: string | null) {
+    const targets = channel === undefined ? this.transmitTargets : channel ? [channel] : [];
+    if (!targets.length || this.#pttWanted.size) return;
     void this.output.resume();
-    this.#pttWanted = channel;
+    const wanted = new Set(targets);
+    this.#pttWanted = wanted;
     try {
       if (this.transport === "builtin") await this.microphone.open();
     } catch (error) {
-      this.#pttWanted = null;
+      this.#pttWanted = new Set();
       this.emit("error", { code: "microphone", message: errorMessage(error) });
       this.#tone("error");
       return;
     }
-    if (this.#pttWanted !== channel) return; // released while the microphone was opening
-    this.#send({ t: "ptt", channel, on: true });
+    if (this.#pttWanted !== wanted) return; // released while the microphone was opening
+    for (const id of wanted) this.#send({ t: "ptt", channel: id, on: true });
   }
 
   stopTransmit() {
-    const channel = this.#pttWanted;
-    this.#pttWanted = null;
-    if (!channel) return;
-    this.#send({ t: "ptt", channel, on: false });
+    const wanted = this.#pttWanted;
+    this.#pttWanted = new Set();
+    if (!wanted.size) return;
+    for (const id of wanted) this.#send({ t: "ptt", channel: id, on: false });
     this.#stopTransmitting(true);
   }
 
-  #stopTransmitting(roger: boolean) {
-    const channel = this.transmitting;
-    if (!channel) return;
-    this.transmitting = null;
-    this.microphone.transmitting = false;
-    void this.#livekit?.setTransmitting(channel, false);
-    if (roger) this.#tone("roger");
-    this.emit("transmit", { channel, on: false });
+  /** stops sending on `only` (or every channel); the roger beep once the last one stops */
+  #stopTransmitting(roger: boolean, only?: string) {
+    const channels = only
+      ? [only].filter((id) => this.transmittingOn.has(id))
+      : [...this.transmittingOn];
+    if (!channels.length) return;
+    for (const id of channels) {
+      this.transmittingOn.delete(id);
+      void this.#livekit?.setTransmitting(id, false);
+    }
+    this.transmitting = this.transmittingOn.values().next().value ?? null;
+    if (!this.transmittingOn.size) {
+      this.microphone.transmitting = false;
+      if (roger) this.#tone("roger");
+    }
+    for (const id of channels) this.emit("transmit", { channel: id, on: false });
   }
 
   #sendAudio(frame: Float32Array) {
-    const channel = this.transmitting;
-    const joined = channel ? this.joined.get(channel) : null;
     const socket = this.#socket;
-    if (!joined || !socket || socket.readyState !== WebSocket.OPEN) return;
+    if (!this.transmittingOn.size || !socket || socket.readyState !== WebSocket.OPEN) return;
     // drop audio rather than queue it when the connection can't keep up
-    if (socket.bufferedAmount > 64 * 1024) return;
+    if (socket.bufferedAmount > 64 * 1024 * this.transmittingOn.size) return;
     this.#seq = (this.#seq + 1) & 0xffff;
-    socket.send(encodeAudioFrame(joined.handle, this.#seq, mulawEncode(frame)));
+    const payload = mulawEncode(frame);
+    for (const id of this.transmittingOn) {
+      const joined = this.joined.get(id);
+      if (joined) socket.send(encodeAudioFrame(joined.handle, this.#seq, payload));
+    }
   }
 
   // --- incoming -------------------------------------------------------------------------------
@@ -361,7 +408,8 @@ export class RadioClient extends Emitter<RadioClientEvents> {
         this.joined.delete(message.channel);
         this.output.remove(message.channel);
         void this.#livekit?.leave(message.channel);
-        if (this.transmitting === message.channel) this.#stopTransmitting(false);
+        this.#pttWanted.delete(message.channel);
+        this.#stopTransmitting(false, message.channel);
         this.emit("left", { channel: message.channel });
         break;
       }
@@ -381,13 +429,17 @@ export class RadioClient extends Emitter<RadioClientEvents> {
         break;
       }
       case "granted": {
-        if (this.#pttWanted !== message.channel) {
+        if (!this.#pttWanted.has(message.channel)) {
           this.#send({ t: "ptt", channel: message.channel, on: false });
           break;
         }
-        this.transmitting = message.channel;
-        this.#seq = 0;
-        this.#tone("permit");
+        const first = !this.transmittingOn.size;
+        this.transmittingOn.add(message.channel);
+        this.transmitting ??= message.channel;
+        if (first) {
+          this.#seq = 0;
+          this.#tone("permit");
+        }
         if (this.transport === "livekit") {
           void this.#livekit?.setTransmitting(message.channel, true);
         } else {
@@ -398,14 +450,15 @@ export class RadioClient extends Emitter<RadioClientEvents> {
         break;
       }
       case "busy": {
-        if (this.#pttWanted === message.channel) this.#pttWanted = null;
+        // with a simulcast the other channels keep going
+        this.#pttWanted.delete(message.channel);
         this.#tone("busy");
         this.emit("busy", message);
         break;
       }
       case "preempted": {
-        if (this.#pttWanted === message.channel) this.#pttWanted = null;
-        this.#stopTransmitting(false);
+        this.#pttWanted.delete(message.channel);
+        this.#stopTransmitting(false, message.channel);
         this.#tone("busy");
         this.emit("preempted", message);
         break;
@@ -413,7 +466,9 @@ export class RadioClient extends Emitter<RadioClientEvents> {
       case "switch": {
         const from = this.transmitChannel;
         if (this.#options.followSwitch && from !== message.channel) {
-          if (from && this.#wanted.get(from) === "member") this.leave(from);
+          if (from && this.#wanted.get(from) === "member" && !this.simulcast.has(from)) {
+            this.leave(from);
+          }
           this.join(message.channel, "member");
           this.transmitChannel = message.channel;
           this.#tone("beep");

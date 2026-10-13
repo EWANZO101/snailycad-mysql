@@ -12,6 +12,7 @@ import {
   Headphones,
   MicFill,
   People,
+  Plus,
   VolumeUpFill,
   XLg,
 } from "react-bootstrap-icons";
@@ -26,13 +27,14 @@ interface RadioConsoleProps {
   canPlayTones?: boolean;
 }
 
-const METER_SEGMENTS = 16;
+const METER_SEGMENTS = 20;
 
 export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
   const t = useTranslations("Radio");
   const hub = useRadioHub();
   const [isEditing, setIsEditing] = React.useState(false);
   const dock = useDockDrag(hub, variant === "dock");
+  const now = useNow(variant === "dock" && hub?.preferences.minimized ? 0 : 10_000);
 
   if (!hub || hub.role === "off") return null;
   const { view, preferences } = hub;
@@ -53,24 +55,40 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
 
   const channels = view?.channels ?? [];
   const transmitChannel = view?.transmitChannel ?? null;
-  const transmitting = view?.transmitting ?? null;
+  const simulcast = view?.simulcast ?? [];
+  const transmittingOn = view?.transmittingOn ?? [];
+  const transmitting = transmittingOn.length > 0;
   const transmitInfo = channels.find((c) => c.id === transmitChannel) ?? null;
+  const targets = [transmitChannel, ...simulcast]
+    .map((id) => channels.find((c) => c.id === id))
+    .filter((c): c is RadioChannelInfo => !!c);
   const talking = activeTalkers(view);
+  const listenMode = view?.listenMode ?? preferences.listenMode;
+  const listeningCount = view ? Object.keys(view.joined).length : 0;
 
+  const targetText = targets.length
+    ? targets.length > 1
+      ? t("holdToTalkMulti", { channel: targets[0]!.name, count: targets.length - 1 })
+      : targets[0]!.name
+    : null;
   const pttLabel = transmitting
-    ? t("transmitting")
-    : transmitInfo
-      ? t("holdToTalk", { channel: transmitInfo.name, key: keyLabel(preferences.pttKey) })
+    ? t("transmittingOn", { channels: channelNames(channels, transmittingOn) })
+    : targetText
+      ? t("holdToTalk", { channel: targetText, key: keyLabel(preferences.pttKey) })
       : t("pickChannel");
-  const pttText =
-    transmitInfo && !transmitting ? t("holdToTalkOn", { channel: transmitInfo.name }) : pttLabel;
+  const pttText = transmitting
+    ? t("transmittingOn", { channels: channelNames(channels, transmittingOn) })
+    : targetText
+      ? t("holdToTalkOn", { channel: targetText })
+      : t("pickChannel");
 
   const header = (
     <header
       {...(isDock ? dock.handlers : {})}
       title={isDock ? t("dragHint") : undefined}
       className={classNames(
-        "flex items-center justify-between gap-2 px-3 py-2.5 border-b border-gray-200 dark:border-quaternary",
+        "flex items-center justify-between gap-2 px-3 py-2 border-b",
+        "border-gray-200 dark:border-quaternary bg-gray-50/80 dark:bg-black/20",
         isDock && "select-none touch-none",
         isDock && (dock.dragging ? "cursor-grabbing" : "cursor-grab"),
       )}
@@ -78,23 +96,23 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
       <div className="flex items-center gap-2.5 min-w-0">
         <span
           className={classNames(
-            "grid place-items-center w-7 h-7 rounded-md shrink-0 transition-colors",
+            "relative grid place-items-center w-8 h-8 rounded-lg shrink-0 transition-colors",
             transmitting
-              ? "bg-red-600 text-white"
-              : "bg-gray-100 text-neutral-700 dark:bg-secondary dark:text-gray-200",
+              ? "bg-red-600 text-white shadow-[0_0_0_3px_rgba(220,38,38,0.25)]"
+              : "bg-neutral-900 text-emerald-400 dark:bg-black/60",
           )}
           aria-hidden
         >
-          <Broadcast className="w-3.5 h-3.5" />
+          <Broadcast className="w-4 h-4" />
         </span>
         <div className="min-w-0 leading-tight">
-          <h2 className="font-semibold text-sm">{t("radio")}</h2>
+          <h2 className="font-semibold text-sm tracking-tight">{t("radio")}</h2>
           <p className="flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-gray-400">
             <span
               className={classNames(
                 "inline-block w-1.5 h-1.5 rounded-full shrink-0",
                 connected
-                  ? "bg-emerald-500"
+                  ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.9)]"
                   : status === "closed"
                     ? "bg-red-500"
                     : "bg-amber-500 animate-pulse",
@@ -103,6 +121,7 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
             />
             <span className="truncate">
               {statusLabel}
+              {connected ? ` · ${t("listeningCount", { count: listeningCount })}` : ""}
               {!runsHere && view?.leaderIsPopout && !hub.isPopout ? ` · ${t("inPopout")}` : ""}
             </span>
           </p>
@@ -139,7 +158,7 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
         <button
           type="button"
           className={classNames(
-            "w-full mb-3 rounded-md px-3 py-2 text-sm text-left flex items-center gap-2",
+            "w-full mb-3 rounded-lg px-3 py-2 text-sm text-left flex items-center gap-2",
             "bg-amber-100 text-amber-900 hover:bg-amber-200",
             "dark:bg-amber-500/15 dark:text-amber-200 dark:hover:bg-amber-500/25",
           )}
@@ -153,7 +172,7 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
       {hub.lastError ? (
         <div
           role="alert"
-          className="mb-3 rounded-md px-3 py-2 text-sm flex items-start justify-between gap-2 bg-red-100 text-red-900 dark:bg-red-500/15 dark:text-red-200"
+          className="mb-3 rounded-lg px-3 py-2 text-sm flex items-start justify-between gap-2 bg-red-100 text-red-900 dark:bg-red-500/15 dark:text-red-200"
         >
           <span>{hub.lastError}</span>
           <button
@@ -169,58 +188,105 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
     </>
   );
 
+  // the "screen" of the console: always dark, like the radio's display
   const display = (
     <div
       className={classNames(
-        "rounded-lg border px-3 py-2.5 mb-3 transition-colors",
+        "rounded-xl px-3.5 py-3 mb-3 font-mono text-neutral-100 transition-shadow",
+        "bg-gradient-to-b from-neutral-900 to-neutral-950 ring-1",
         transmitting
-          ? "border-red-500/60 bg-red-50 dark:bg-red-500/10"
-          : "border-gray-200 bg-gray-50 dark:border-quaternary dark:bg-black/20",
+          ? "ring-red-500/70 shadow-[0_0_24px_-6px_rgba(239,68,68,0.6)]"
+          : talking.length
+            ? "ring-emerald-500/50"
+            : "ring-black/40 dark:ring-white/10",
       )}
     >
-      <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-gray-400">
-        <span>{t("talkChannel")}</span>
-        {transmitting ? (
-          <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-            {t("tx")}
-          </span>
-        ) : view ? (
-          <span>{t("listeningCount", { count: Object.keys(view.joined).length })}</span>
-        ) : null}
+      <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
+        <span>{simulcast.length ? t("simulcast") : t("talkChannel")}</span>
+        <span className="flex items-center gap-1.5">
+          <StatusLamp label="RX" on={talking.length > 0} color="emerald" />
+          <StatusLamp label={t("tx")} on={transmitting} color="red" />
+        </span>
       </div>
-      <div className="mt-1 flex items-baseline justify-between gap-2 min-w-0">
-        <p className="font-semibold text-base truncate">
+
+      <div className="mt-1.5 flex items-baseline justify-between gap-2 min-w-0">
+        <p className="font-semibold text-lg truncate tracking-tight text-white">
           {transmitInfo ? transmitInfo.name : t("noTalkChannel")}
         </p>
         {transmitInfo?.frequency ? (
-          <span className="font-mono text-sm tabular-nums text-neutral-600 dark:text-gray-300 shrink-0">
+          <span className="text-sm tabular-nums text-emerald-300/90 shrink-0">
             {transmitInfo.frequency}
           </span>
         ) : null}
       </div>
+      {simulcast.length ? (
+        <p className="mt-0.5 flex flex-wrap gap-1">
+          {simulcast.map((id) => {
+            const channel = channels.find((c) => c.id === id);
+            if (!channel) return null;
+            return (
+              <span
+                key={id}
+                className={classNames(
+                  "rounded px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide",
+                  transmittingOn.includes(id)
+                    ? "bg-red-600 text-white"
+                    : "bg-white/10 text-neutral-200",
+                )}
+              >
+                + {channel.name}
+              </span>
+            );
+          })}
+        </p>
+      ) : null}
+
       <p
         className={classNames(
-          "mt-0.5 text-xs truncate h-4",
-          talking.length ? "text-red-600 dark:text-red-400" : "text-neutral-500 dark:text-gray-400",
+          "mt-2 text-xs truncate h-4 flex items-center gap-1.5",
+          talking.length ? "text-emerald-300" : "text-neutral-500",
         )}
       >
-        {talking.length
-          ? talking.map((entry) => `${entry.name} · ${entry.channel}`).join(", ")
-          : t("quiet")}
+        {talking.length ? (
+          <>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="truncate">
+              {talking.map((entry) => `${entry.name} · ${entry.channel}`).join("  |  ")}
+            </span>
+          </>
+        ) : (
+          t("quiet")
+        )}
       </p>
-      <LevelMeter level={hub.level} transmitting={!!transmitting} />
+      <LevelMeter level={hub.level} transmitting={transmitting} />
     </div>
   );
 
   const channelList = (
     <>
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <h3 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-gray-400">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500 dark:text-gray-400">
           {t("channels")}
         </h3>
         {channels.length > 1 ? (
-          <span className="flex gap-0.5 shrink-0 text-xs">
+          <span className="flex items-center gap-1.5 shrink-0 text-xs">
+            <Segmented
+              label={t("monitor")}
+              value={listenMode}
+              options={[
+                { value: "all", label: t("listenModeAll") },
+                { value: "selected", label: t("listenModeSelected") },
+              ]}
+              onChange={(mode) => hub.send({ name: "setListenMode", mode })}
+            />
+          </span>
+        ) : null}
+      </div>
+
+      {listenMode === "selected" && channels.length > 1 ? (
+        <div className="mb-2 flex items-center justify-between gap-2 text-xs text-neutral-500 dark:text-gray-400">
+          <span>{t("selectedCount", { count: listeningCount, total: channels.length })}</span>
+          <span className="flex gap-0.5">
             <TextButton onClick={() => hub.send({ name: "listenAll" })}>
               {t("listenAll")}
             </TextButton>
@@ -228,8 +294,19 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
               {t("listenNone")}
             </TextButton>
           </span>
-        ) : null}
-      </div>
+        </div>
+      ) : listenMode === "all" && channels.length > 1 ? (
+        <p className="mb-2 text-xs text-neutral-500 dark:text-gray-400">{t("monitoringAll")}</p>
+      ) : null}
+
+      {simulcast.length ? (
+        <div className="mb-2 flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-xs bg-blue-50 text-blue-900 dark:bg-blue-500/10 dark:text-blue-200">
+          <span className="truncate">{t("simulcastOn", { count: targets.length })}</span>
+          <TextButton onClick={() => hub.send({ name: "clearSimulcast" })}>
+            {t("clearSimulcast")}
+          </TextButton>
+        </div>
+      ) : null}
 
       {channels.length <= 0 ? (
         <p className="text-sm text-neutral-600 dark:text-gray-400 py-2">
@@ -238,7 +315,7 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
       ) : (
         <ul
           className={classNames(
-            "flex flex-col gap-1",
+            "flex flex-col gap-1.5",
             variant === "page" && "md:grid md:grid-cols-2 md:gap-2 md:items-start",
           )}
         >
@@ -247,14 +324,18 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
               key={channel.id}
               hub={hub}
               view={view!}
+              now={now}
               channel={channel}
               isTransmitChannel={transmitChannel === channel.id}
+              isSimulcast={simulcast.includes(channel.id)}
               canPlayTones={!!canPlayTones}
             />
           ))}
         </ul>
       )}
-      <p className="mt-2 text-[11px] text-neutral-500 dark:text-gray-400">{t("channelsHint")}</p>
+      <p className="mt-2.5 text-[11px] leading-relaxed text-neutral-500 dark:text-gray-400">
+        {t("channelsHintSimulcast")}
+      </p>
     </>
   );
 
@@ -262,7 +343,7 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
     <PushToTalkButton
       hub={hub}
       disabled={!connected || !transmitChannel}
-      transmitting={!!transmitting}
+      transmitting={transmitting}
       label={pttLabel}
       text={pttText}
       keyName={transmitInfo ? keyLabel(preferences.pttKey) : null}
@@ -295,8 +376,8 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
         <div className="p-4">
           {notices}
           {settings}
-          <div className="md:grid md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] md:gap-4">
-            <div>
+          <div className="md:grid md:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] md:gap-5">
+            <div className="md:sticky md:top-4 md:self-start">
               {display}
               {ptt}
             </div>
@@ -313,8 +394,8 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
       aria-label={t("radio")}
       style={dock.position ? { left: dock.position.x, top: dock.position.y } : undefined}
       className={classNames(
-        "fixed z-40 w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl overflow-hidden",
-        "bg-white/95 dark:bg-tertiary/95 backdrop-blur border shadow-2xl shadow-black/20 transition-colors",
+        "fixed z-40 w-[23rem] max-w-[calc(100vw-2rem)] rounded-2xl overflow-hidden",
+        "bg-white/95 dark:bg-tertiary/95 backdrop-blur-md border shadow-2xl shadow-black/25 transition-colors",
         transmitting ? "border-red-500/70" : "border-gray-200 dark:border-quaternary",
         dock.dragging && "shadow-black/40 ring-2 ring-blue-500/40",
         !dock.position && "bottom-4",
@@ -323,16 +404,16 @@ export function RadioConsole({ variant, canPlayTones }: RadioConsoleProps) {
     >
       {header}
       {preferences.minimized ? (
-        <MinimizedBar hub={hub} label={pttLabel} channelName={transmitInfo?.name ?? null} />
+        <MinimizedBar hub={hub} label={pttLabel} channelName={targetText} />
       ) : (
         <>
-          <div className="p-3 max-h-[min(60vh,32rem)] overflow-y-auto thin-scrollbar">
+          <div className="p-3 max-h-[min(62vh,34rem)] overflow-y-auto thin-scrollbar">
             {notices}
             {settings}
             {display}
             {channelList}
           </div>
-          <div className="px-3 pb-3 pt-2.5 border-t border-gray-200 dark:border-quaternary">
+          <div className="px-3 pb-3 pt-2.5 border-t border-gray-200 dark:border-quaternary bg-gray-50/80 dark:bg-black/20">
             {ptt}
           </div>
         </>
@@ -435,6 +516,24 @@ function useDockDrag(hub: RadioHub | null, enabled: boolean) {
   };
 }
 
+/** re-renders every `interval` ms (0 = never), for the "last heard 2m ago" labels */
+function useNow(interval: number) {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (!interval) return;
+    const timer = setInterval(() => setNow(Date.now()), interval);
+    return () => clearInterval(timer);
+  }, [interval]);
+  return now;
+}
+
+function channelNames(channels: RadioChannelInfo[], ids: string[]) {
+  return ids
+    .map((id) => channels.find((c) => c.id === id)?.name)
+    .filter(Boolean)
+    .join(", ");
+}
+
 function activeTalkers(view: RadioView | null) {
   if (!view) return [];
   return Object.entries(view.joined).flatMap(([id, joined]) =>
@@ -443,6 +542,17 @@ function activeTalkers(view: RadioView | null) {
       channel: view.channels.find((c) => c.id === id)?.name ?? "",
     })),
   );
+}
+
+function useAgo() {
+  const t = useTranslations("Radio");
+  return (at: number, now: number) => {
+    const seconds = Math.max(0, Math.round((now - at) / 1000));
+    if (seconds < 15) return t("justNow");
+    if (seconds < 60) return t("secondsAgo", { count: seconds });
+    if (seconds < 3600) return t("minutesAgo", { count: Math.floor(seconds / 60) });
+    return t("hoursAgo", { count: Math.floor(seconds / 3600) });
+  };
 }
 
 const focusRing = "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
@@ -462,9 +572,9 @@ function IconButton(props: {
       onClick={props.onClick}
       className={classNames(
         "grid place-items-center w-7 h-7 rounded-md text-neutral-600 dark:text-gray-300 transition-colors",
-        "hover:bg-gray-100 dark:hover:bg-secondary [&>svg]:w-3.5 [&>svg]:h-3.5",
+        "hover:bg-gray-200/70 dark:hover:bg-secondary [&>svg]:w-3.5 [&>svg]:h-3.5",
         focusRing,
-        props.pressed && "bg-gray-100 dark:bg-secondary",
+        props.pressed && "bg-gray-200/70 dark:bg-secondary",
       )}
     >
       {props.children}
@@ -479,7 +589,7 @@ function TextButton(props: { onClick(): void; children: React.ReactNode }) {
       onClick={props.onClick}
       className={classNames(
         "rounded px-1.5 py-0.5 font-medium text-blue-600 dark:text-blue-400 transition-colors",
-        "hover:bg-blue-50 dark:hover:bg-blue-500/10",
+        "hover:bg-blue-100/70 dark:hover:bg-blue-500/10",
         focusRing,
       )}
     >
@@ -488,22 +598,77 @@ function TextButton(props: { onClick(): void; children: React.ReactNode }) {
   );
 }
 
+function Segmented<T extends string>(props: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange(value: T): void;
+}) {
+  return (
+    <span
+      role="radiogroup"
+      aria-label={props.label}
+      title={props.label}
+      className="inline-flex rounded-md p-0.5 bg-gray-100 dark:bg-black/30 ring-1 ring-inset ring-gray-200 dark:ring-quaternary"
+    >
+      {props.options.map((option) => {
+        const active = option.value === props.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => props.onChange(option.value)}
+            className={classNames(
+              "rounded px-2 py-0.5 text-[11px] font-semibold transition-colors",
+              focusRing,
+              active
+                ? "bg-white text-neutral-900 shadow-sm dark:bg-secondary dark:text-white"
+                : "text-neutral-500 hover:text-neutral-800 dark:text-gray-400 dark:hover:text-gray-200",
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </span>
+  );
+}
+
+function StatusLamp(props: { label: string; on: boolean; color: "emerald" | "red" }) {
+  return (
+    <span
+      className={classNames(
+        "rounded px-1.5 py-px text-[9px] font-bold tracking-wider transition-colors",
+        props.on
+          ? props.color === "red"
+            ? "bg-red-600 text-white shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+            : "bg-emerald-500 text-black shadow-[0_0_8px_rgba(16,185,129,0.8)]"
+          : "bg-white/5 text-neutral-500",
+      )}
+    >
+      {props.label}
+    </span>
+  );
+}
+
 function LevelMeter({ level, transmitting }: { level: number; transmitting: boolean }) {
   const lit = Math.round(Math.min(1, Math.max(0, level)) * METER_SEGMENTS);
   return (
-    <div className="mt-2 flex gap-0.5 h-1.5" aria-hidden>
+    <div className="mt-2.5 flex gap-[3px] h-2" aria-hidden>
       {Array.from({ length: METER_SEGMENTS }, (_, index) => (
         <span
           key={index}
           className={classNames(
-            "flex-1 rounded-sm transition-colors duration-75",
+            "flex-1 rounded-[2px] transition-colors duration-75",
             index >= lit
-              ? "bg-gray-200 dark:bg-white/10"
+              ? "bg-white/[0.07]"
               : transmitting || index >= METER_SEGMENTS - 3
                 ? "bg-red-500"
-                : index >= METER_SEGMENTS - 6
+                : index >= METER_SEGMENTS - 7
                   ? "bg-amber-400"
-                  : "bg-emerald-500",
+                  : "bg-emerald-400",
           )}
         />
       ))}
@@ -515,28 +680,34 @@ function MinimizedBar(props: { hub: RadioHub; label: string; channelName: string
   const t = useTranslations("Radio");
   const view = props.hub.view;
   const talking = activeTalkers(view);
+  const transmitting = !!view?.transmittingOn.length;
   return (
-    <div className="px-3 py-2 flex items-center gap-2">
+    <div className="px-3 py-2 flex items-center gap-2.5">
       <div className="flex-1 min-w-0 leading-tight">
-        <p className="text-sm font-medium truncate">{props.channelName ?? t("noTalkChannel")}</p>
+        <p className="text-sm font-semibold truncate">{props.channelName ?? t("noTalkChannel")}</p>
         <p
           className={classNames(
-            "text-xs truncate",
+            "text-xs truncate flex items-center gap-1",
             talking.length
-              ? "text-red-600 dark:text-red-400"
+              ? "text-emerald-600 dark:text-emerald-400"
               : "text-neutral-500 dark:text-gray-400",
           )}
         >
-          {talking.length
-            ? talking.map((entry) => `${entry.name} · ${entry.channel}`).join(", ")
-            : t("quiet")}
+          {talking.length ? (
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+          ) : null}
+          <span className="truncate">
+            {talking.length
+              ? talking.map((entry) => `${entry.name} · ${entry.channel}`).join(", ")
+              : t("quiet")}
+          </span>
         </p>
       </div>
       <PushToTalkButton
         hub={props.hub}
         compact
         disabled={view?.status !== "connected" || !view.transmitChannel}
-        transmitting={!!view?.transmitting}
+        transmitting={transmitting}
         label={props.label}
         keyName={null}
       />
@@ -547,13 +718,24 @@ function MinimizedBar(props: { hub: RadioHub; label: string; channelName: string
 interface ChannelRowProps {
   hub: RadioHub;
   view: RadioView;
+  now: number;
   channel: RadioChannelInfo;
   isTransmitChannel: boolean;
+  isSimulcast: boolean;
   canPlayTones: boolean;
 }
 
-function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: ChannelRowProps) {
+function ChannelRow({
+  hub,
+  view,
+  now,
+  channel,
+  isTransmitChannel,
+  isSimulcast,
+  canPlayTones,
+}: ChannelRowProps) {
   const t = useTranslations("Radio");
+  const ago = useAgo();
   const { execute } = useFetch();
   const [showMembers, setShowMembers] = React.useState(false);
   const joined = view.joined[channel.id];
@@ -561,6 +743,10 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
   const members = joined?.members ?? [];
   const volume = view.volumes[channel.id] ?? 1;
   const isBusy = talking.length > 0;
+  const isTarget = isTransmitChannel || isSimulcast;
+  const isSending = view.transmittingOn.includes(channel.id);
+  const lockedOn = view.listenMode === "all";
+  const lastHeard = view.lastHeard[channel.id];
 
   async function playTone(tone: "alert" | "panic") {
     await execute({ path: `/radio/channels/${channel.id}/tone`, method: "POST", data: { tone } });
@@ -569,30 +755,51 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
   return (
     <li
       className={classNames(
-        "rounded-lg border text-sm transition-colors",
-        isBusy
-          ? "border-red-400/70 bg-red-50 dark:bg-red-500/10 dark:border-red-500/50"
-          : isTransmitChannel
-            ? "border-blue-500/60 bg-blue-50/60 dark:bg-blue-500/10"
-            : joined
-              ? "border-gray-200 dark:border-quaternary"
-              : "border-transparent bg-gray-50 dark:bg-white/[0.03]",
+        "relative rounded-xl border text-sm transition-colors overflow-hidden",
+        isSending
+          ? "border-red-500/70 bg-red-50 dark:bg-red-500/10"
+          : isBusy
+            ? "border-emerald-500/60 bg-emerald-50/70 dark:bg-emerald-500/10"
+            : isTarget
+              ? "border-blue-500/50 bg-blue-50/50 dark:bg-blue-500/[0.07]"
+              : joined
+                ? "border-gray-200 bg-white dark:border-quaternary dark:bg-black/10"
+                : "border-dashed border-gray-200 bg-gray-50/60 dark:border-quaternary dark:bg-white/[0.02]",
       )}
     >
-      <div className="flex items-center gap-2 px-2 py-1.5">
+      {/* left edge: the channel's state at a glance */}
+      <span
+        aria-hidden
+        className={classNames(
+          "absolute inset-y-0 left-0 w-1",
+          isSending
+            ? "bg-red-500"
+            : isBusy
+              ? "bg-emerald-500 animate-pulse"
+              : isTransmitChannel
+                ? "bg-blue-600"
+                : isSimulcast
+                  ? "bg-blue-400"
+                  : "bg-transparent",
+        )}
+      />
+      <div className="flex items-center gap-2 pl-3 pr-2 py-2">
         <button
           type="button"
           role="switch"
           aria-checked={!!joined}
+          disabled={lockedOn}
           onClick={() => hub.send({ name: "toggleChannel", id: channel.id })}
           aria-label={t("listenTo", { channel: channel.name })}
-          title={t("listenTo", { channel: channel.name })}
+          title={lockedOn ? t("monitoringAll") : t("listenTo", { channel: channel.name })}
           className={classNames(
-            "grid place-items-center w-7 h-7 rounded-md shrink-0 transition-colors",
+            "grid place-items-center w-7 h-7 rounded-lg shrink-0 transition-colors",
             focusRing,
             joined
-              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25"
+              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
               : "text-neutral-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-secondary",
+            joined && !lockedOn && "hover:bg-emerald-500/25",
+            lockedOn && "cursor-default",
           )}
         >
           <Headphones className="w-3.5 h-3.5" aria-hidden />
@@ -602,8 +809,8 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
           <div className="flex items-baseline gap-1.5 min-w-0">
             <span
               className={classNames(
-                "text-sm font-medium truncate",
-                !joined && "text-neutral-600 dark:text-gray-400",
+                "text-sm font-semibold truncate",
+                !joined && "text-neutral-500 dark:text-gray-400 font-medium",
               )}
             >
               {channel.name}
@@ -615,9 +822,13 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
             ) : null}
           </div>
           {isBusy ? (
-            <div className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1 min-w-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-              <span className="truncate">{talking.join(", ")}</span>
+            <div className="text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1 min-w-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="truncate font-medium">{talking.join(", ")}</span>
+            </div>
+          ) : lastHeard ? (
+            <div className="text-[11px] text-neutral-500 dark:text-gray-400 truncate">
+              {t("lastHeard", { name: lastHeard.name, time: ago(lastHeard.at, now) })}
             </div>
           ) : null}
         </div>
@@ -626,7 +837,7 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
           <button
             type="button"
             className={classNames(
-              "flex items-center gap-1 rounded px-1 py-0.5 text-xs text-neutral-500 dark:text-gray-400",
+              "flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs tabular-nums text-neutral-500 dark:text-gray-400",
               "hover:bg-gray-200 dark:hover:bg-secondary",
               focusRing,
               showMembers && "bg-gray-200 dark:bg-secondary",
@@ -641,30 +852,58 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
         ) : null}
 
         {channel.canTransmit ? (
-          <button
-            type="button"
-            onClick={() => hub.send({ name: "selectTransmit", id: channel.id })}
-            title={t("selectTransmit")}
-            aria-pressed={isTransmitChannel}
-            className={classNames(
-              "rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide shrink-0 transition-colors",
-              focusRing,
-              isTransmitChannel
-                ? "bg-blue-600 text-white"
-                : "border border-gray-300 text-neutral-600 hover:border-blue-500 hover:text-blue-600 dark:border-quaternary dark:text-gray-300 dark:hover:text-blue-300",
-            )}
-          >
-            {isTransmitChannel ? t("tx") : t("talk")}
-          </button>
+          <span className="flex shrink-0 rounded-md ring-1 ring-inset ring-gray-300 dark:ring-quaternary overflow-hidden">
+            <button
+              type="button"
+              onClick={() => hub.send({ name: "selectTransmit", id: channel.id })}
+              title={t("selectTransmit")}
+              aria-pressed={isTransmitChannel}
+              className={classNames(
+                "px-2 py-1 text-[11px] font-bold uppercase tracking-wide transition-colors",
+                focusRing,
+                isTransmitChannel
+                  ? "bg-blue-600 text-white"
+                  : "text-neutral-600 hover:bg-blue-50 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-blue-500/10 dark:hover:text-blue-300",
+              )}
+            >
+              {isTransmitChannel ? t("tx") : t("talk")}
+            </button>
+            {!isTransmitChannel ? (
+              <button
+                type="button"
+                onClick={() => hub.send({ name: "toggleSimulcast", id: channel.id })}
+                aria-pressed={isSimulcast}
+                aria-label={
+                  isSimulcast
+                    ? t("simulcastRemove", { channel: channel.name })
+                    : t("simulcastAdd", { channel: channel.name })
+                }
+                title={
+                  isSimulcast
+                    ? t("simulcastRemove", { channel: channel.name })
+                    : t("simulcastAdd", { channel: channel.name })
+                }
+                className={classNames(
+                  "grid place-items-center w-6 border-l border-gray-300 dark:border-quaternary transition-colors",
+                  focusRing,
+                  isSimulcast
+                    ? "bg-blue-500 text-white"
+                    : "text-neutral-500 hover:bg-blue-50 hover:text-blue-700 dark:text-gray-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-300",
+                )}
+              >
+                <Plus className="w-3.5 h-3.5" aria-hidden />
+              </button>
+            ) : null}
+          </span>
         ) : (
-          <span className="rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-gray-400 bg-gray-100 dark:bg-secondary shrink-0">
+          <span className="rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-neutral-500 dark:text-gray-400 bg-gray-100 dark:bg-secondary shrink-0">
             {t("rxOnly")}
           </span>
         )}
       </div>
 
       {joined ? (
-        <div className="flex items-center gap-2 pr-2 pb-1.5 pl-11">
+        <div className="flex items-center gap-2 pr-2 pb-2 pl-12">
           <VolumeUpFill className="w-3 h-3 text-neutral-400 shrink-0" aria-hidden />
           <input
             type="range"
@@ -682,6 +921,9 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
             className="flex-1 h-1 accent-blue-600 cursor-pointer"
             aria-label={t("volumeOf", { channel: channel.name })}
           />
+          <span className="w-8 text-right font-mono text-[10px] tabular-nums text-neutral-500 dark:text-gray-400">
+            {Math.round(volume * 100)}
+          </span>
           {canPlayTones ? (
             <span className="flex gap-0.5 shrink-0">
               <button
@@ -714,7 +956,7 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
       ) : null}
 
       {joined && showMembers ? (
-        <ul className="flex flex-wrap gap-1 pr-2 pb-2 pl-11">
+        <ul className="flex flex-wrap gap-1 pr-2 pb-2 pl-12">
           {members.length ? (
             members.map((member) => (
               <li
@@ -722,7 +964,7 @@ function ChannelRow({ hub, view, channel, isTransmitChannel, canPlayTones }: Cha
                 className={classNames(
                   "rounded-full px-2 py-0.5 text-xs",
                   member.talking
-                    ? "bg-red-500 text-white"
+                    ? "bg-emerald-500 text-white"
                     : "bg-gray-100 dark:bg-secondary text-neutral-700 dark:text-gray-300",
                 )}
                 title={member.earpiece ? t("earpiece") : undefined}
@@ -778,13 +1020,13 @@ function PushToTalkButton(props: {
       aria-label={props.label}
       aria-pressed={props.transmitting}
       className={classNames(
-        "select-none touch-none rounded-lg font-semibold flex items-center justify-center gap-2 transition-all",
+        "select-none touch-none rounded-xl font-semibold flex items-center justify-center gap-2 transition-all",
         focusRing,
-        "disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-neutral-500 dark:disabled:bg-secondary dark:disabled:text-gray-400",
-        props.compact ? "shrink-0 w-10 h-10" : "w-full py-3 px-3 text-sm",
+        "disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-neutral-500 disabled:shadow-none dark:disabled:bg-secondary dark:disabled:text-gray-400",
+        props.compact ? "shrink-0 w-11 h-11" : "w-full py-3.5 px-3 text-sm",
         props.transmitting
-          ? "bg-red-600 text-white ring-4 ring-red-500/30"
-          : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm",
+          ? "bg-red-600 text-white ring-4 ring-red-500/30 scale-[0.99]"
+          : "bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-500 hover:to-blue-800 active:to-blue-900 text-white shadow-md shadow-blue-900/20",
       )}
     >
       <MicFill
@@ -795,7 +1037,7 @@ function PushToTalkButton(props: {
         <>
           <span className="truncate">{props.text ?? props.label}</span>
           {props.keyName && !props.transmitting ? (
-            <kbd className="ml-1 rounded border border-white/30 bg-white/15 px-1.5 py-px font-mono text-[11px] font-medium">
+            <kbd className="ml-1 rounded-md border border-white/30 bg-white/15 px-1.5 py-px font-mono text-[11px] font-medium">
               {props.keyName}
             </kbd>
           ) : null}
