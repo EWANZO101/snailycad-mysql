@@ -19,9 +19,12 @@ fix_dns() {
 apt_install() {
     # IPv4 only, short timeouts and retries: broken IPv6 or a flaky mirror would otherwise hang apt
     # for minutes before failing
-    printf 'Acquire::ForceIPv4 "true";\nAcquire::Retries "3";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' \
+    printf 'Acquire::ForceIPv4 "true";\nAcquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' \
         > /etc/apt/apt.conf.d/99snailycad-network
-    apt_try() { apt-get update && apt-get install -y --no-install-recommends "$@"; }
+    # a stalled connection can trickle along without ever hitting apt's timeouts: cap each attempt
+    apt_try() {
+        timeout 150 apt-get update && timeout 300 apt-get install -y --no-install-recommends "$@"
+    }
 
     apt_try "$@" && return 0
     # other official mirrors (http: ca-certificates isn't installed yet)

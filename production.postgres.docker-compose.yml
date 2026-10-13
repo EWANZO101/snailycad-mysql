@@ -28,6 +28,9 @@ services:
       context: .
       dockerfile: ./Dockerfile
       target: api
+      # build on the server's own network: on hosts where Docker's bridge network stalls (MTU,
+      # provider firewalls) the package downloads would hang and fail the build
+      network: host
     ports:
       - "${PORT_API}:${PORT_API}"
     expose:
@@ -51,6 +54,9 @@ services:
       context: .
       dockerfile: ./Dockerfile
       target: client
+      # build on the server's own network: on hosts where Docker's bridge network stalls (MTU,
+      # provider firewalls) the package downloads would hang and fail the build
+      network: host
     ports:
       - "${PORT_CLIENT}:${PORT_CLIENT}"
     expose:
