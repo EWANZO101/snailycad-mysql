@@ -113,7 +113,7 @@ class ErlcService {
     const wait = Math.max(delayMs, this.#blockedUntil - Date.now(), 0);
     this.#nextPollAt = new Date(Date.now() + wait);
     this.#timer = setTimeout(() => void this.#tick(), wait);
-    this.#timer.unref?.();
+    this.#timer.unref();
   }
 
   async #tick() {

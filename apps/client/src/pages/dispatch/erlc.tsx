@@ -92,7 +92,8 @@ export default function ErlcPage() {
     enabled: ERLC,
     queryFn: async () => {
       const { json } = await execute<ErlcData>({ path: "/erlc", noToast: true });
-      return json.status ? json : null;
+      // a failed request resolves to an empty object
+      return "status" in json ? json : null;
     },
     refetchInterval: 10_000,
   });
@@ -107,7 +108,7 @@ export default function ErlcPage() {
       data: { type: commandType, text: commandText },
       noToast: true,
     });
-    if (typeof json === "object" && json && "ok" in json) {
+    if (typeof json === "object" && "ok" in json) {
       setCommandResult(json);
       if (json.ok) setCommandText("");
     }

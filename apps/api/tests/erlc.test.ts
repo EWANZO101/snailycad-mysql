@@ -17,15 +17,20 @@ function signed(body: string, timestamp: string) {
 
 test("Should accept an ER:LC webhook signed over timestamp + raw body", () => {
   const now = 1_760_000_000_000;
-  const request = signed('{"event":"EmergencyCall"}', String(now / 1000));
+  const request = signed(JSON.stringify({ event: "EmergencyCall" }), String(now / 1000));
   expect(verifyErlcSignature({ ...request, key: publicKey, now })).toBe(true);
 });
 
 test("Should refuse a changed body, a wrong key or an old timestamp", () => {
   const now = 1_760_000_000_000;
-  const request = signed('{"a":1}', String(now / 1000));
+  const request = signed(JSON.stringify({ a: 1 }), String(now / 1000));
   expect(
-    verifyErlcSignature({ ...request, rawBody: Buffer.from('{"a":2}'), key: publicKey, now }),
+    verifyErlcSignature({
+      ...request,
+      rawBody: Buffer.from(JSON.stringify({ a: 2 })),
+      key: publicKey,
+      now,
+    }),
   ).toBe(false);
   expect(verifyErlcSignature({ ...request, now })).toBe(false);
   expect(verifyErlcSignature({ ...request, key: publicKey, now: now + 10 * 60 * 1000 })).toBe(
