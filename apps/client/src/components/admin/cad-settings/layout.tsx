@@ -35,6 +35,7 @@ export enum SettingsTabs {
   APIToken = "API_TOKEN",
   FivemFramework = "FIVEM_FRAMEWORK",
   Phones = "PHONES",
+  Erlc = "ERLC",
 
   /** danger zone */
   DangerZone = "DANGER_ZONE",
@@ -131,6 +132,7 @@ function CadSettingsSidebar() {
         SettingsTabs.APIToken,
         SettingsTabs.FivemFramework,
         SettingsTabs.Phones,
+        SettingsTabs.Erlc,
       ],
     },
     {

@@ -17,7 +17,7 @@ export function DispatchDropdown() {
   const t = useTranslations("Nav");
   const isActive = (route: string) => router.pathname.startsWith(route);
   const { hasPermissions } = usePermission();
-  const { RADIO } = useFeatureEnabled();
+  const { RADIO, ERLC } = useFeatureEnabled();
 
   return (
     <DropdownMenu>
@@ -48,6 +48,10 @@ export function DispatchDropdown() {
 
         {RADIO && hasPermissions([Permissions.Dispatch]) ? (
           <DropdownMenuLinkItem href="/radio">{t("radio")}</DropdownMenuLinkItem>
+        ) : null}
+
+        {ERLC && hasPermissions([Permissions.Dispatch]) ? (
+          <DropdownMenuLinkItem href="/dispatch/erlc">{t("erlc")}</DropdownMenuLinkItem>
         ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
