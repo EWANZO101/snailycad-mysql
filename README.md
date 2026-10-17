@@ -10,8 +10,7 @@
   <a href="https://discord.gg/eGnrPqEH7U"><img src="https://img.shields.io/badge/chat-discord-blue?style=flat&logo=discord" alt="discord chat"></a>
 </p>
 <br/>
-
-# SnailyCAD
+SnailyCAD Community Edition by opslabs
 
 > **This is the MySQL / MariaDB edition** of SnailyCADv4, with one-line installers for Ubuntu and
 > Windows.
