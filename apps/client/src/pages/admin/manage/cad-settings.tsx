@@ -100,6 +100,11 @@ const Tabs = {
       (await import("components/admin/manage/cad-settings/misc-features/radio-tab")).RadioTab,
     { ssr: false },
   ),
+  ErlcTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/erlc-tab")).ErlcTab,
+    { ssr: false },
+  ),
   OpsPhoneTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/misc-features/ops-phone-tab"))
@@ -134,6 +139,7 @@ export default function CadSettings(props: Props) {
       <Tabs.LiveMapTab />
       <Tabs.ApiTokenTab />
       <Tabs.OpsPhoneTab />
+      <Tabs.ErlcTab />
       <Tabs.DiscordRolesTab />
       <Tabs.DiscordWebhooksTab />
       <Tabs.RawWebhooksTab />
@@ -160,7 +166,7 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, res, req 
       session: user,
       messages: {
         ...(await getTranslations(
-          ["admin", "values", "common", "cad-settings", "radio", "ops-phone"],
+          ["admin", "values", "common", "cad-settings", "radio", "ops-phone", "erlc"],
           user?.locale ?? locale,
         )),
       },

@@ -166,6 +166,8 @@
     "UNIT_PRIVATE_MESSAGES-description": "When enabled, on-duty officers and EMS-FD deputies can send each other private messages from their dashboard. Only the two units can read them.",
     "RADIO": "Radio",
     "RADIO-description": "When enabled, dispatchers, units and FiveM players can talk on push-to-talk radio channels: in the browser (Dispatch, LEO, EMS-FD and the Radio page) and in game with the SnailyCAD Radio resource. Set up channels in CAD Settings > Radio.",
+    "ERLC": "ER:LC (Roblox)",
+    "ERLC-description": "When enabled, the CAD connects to your ER:LC (Roblox) private server: in-game 911 calls become CAD calls and dispatch sees every player on the Dispatch > ER:LC page. Set the server key in CAD Settings > ER:LC.",
     "featuresIntro": "Turn parts of the CAD on or off. Pick a category or search to find a feature, then save when you are done.",
     "filterByStatus": "Filter by status",
     "status_all": "All",
