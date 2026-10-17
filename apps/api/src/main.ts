@@ -16,6 +16,8 @@ import { areRequiredCommandsInstalled } from "./utils/validate-requirements";
 import { ensureRecoveryToken } from "lib/recovery/recovery-token";
 import { startDemoMode } from "lib/demo/demo-mode";
 import { radioServer } from "lib/radio/radio-server";
+import { erlcService } from "lib/erlc/erlc-service";
+import { Socket } from "services/socket-service";
 
 const rootDir = __dirname;
 
@@ -39,6 +41,8 @@ async function bootstrap() {
     // the built-in radio shares the API's port: WebSocket upgrades on /v1/radio/ws
     const httpServer = platform.injector.get<http.Server>(http.Server);
     if (httpServer) radioServer.attach(httpServer);
+    // polls the ER:LC private server (does nothing until the ERLC feature is on and a key is set)
+    erlcService.start(platform.injector.get<Socket>(Socket)!);
     await startDemoMode();
     const versions = await getCADVersion();
     const versionStr = versions
