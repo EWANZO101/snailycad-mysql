@@ -90,6 +90,7 @@
     "dispatch": "Control",
     "liveMap": "Live Map",
     "radio": "Radio console",
+    "erlc": "ER:LC",
     "officer": "Officer",
     "dashboard": "Dashboard",
     "myOfficers": "My Officers",

@@ -117,6 +117,11 @@ const Tabs = {
       (await import("components/admin/manage/cad-settings/misc-features/phones-tab")).PhonesTab,
     { ssr: false },
   ),
+  ErlcTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/erlc-tab")).ErlcTab,
+    { ssr: false },
+  ),
   ImportPostgresTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/misc-features/import-postgres-tab"))
@@ -152,6 +157,7 @@ export default function CadSettings(props: Props) {
       <Tabs.ApiTokenTab />
       <Tabs.FivemFrameworkTab />
       <Tabs.PhonesTab />
+      <Tabs.ErlcTab />
       <Tabs.DangerZoneTab />
       <Tabs.DiscordRolesTab />
       <Tabs.DiscordWebhooksTab />
@@ -180,7 +186,16 @@ export const getServerSideProps: GetServerSideProps = async ({ locale, res, req 
       session: user,
       messages: {
         ...(await getTranslations(
-          ["admin", "values", "common", "cad-settings", "radio", "ops-phone", "fivem-framework"],
+          [
+            "admin",
+            "values",
+            "common",
+            "cad-settings",
+            "radio",
+            "ops-phone",
+            "fivem-framework",
+            "erlc",
+          ],
           user?.locale ?? locale,
         )),
       },

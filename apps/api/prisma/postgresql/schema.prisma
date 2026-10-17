@@ -1939,6 +1939,43 @@ model FivemFrameworkSettings {
   removedVehicles String    @default("delete") @db.VarChar(16)
 }
 
+// ER:LC (Roblox, Police Roleplay Community) private server integration, API v2 (api.erlc.gg).
+// The keys never go back to the client.
+model ErlcSettings {
+  id             String    @id @default(cuid())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+  enabled        Boolean   @default(false)
+  serverKey      String?   @db.Text
+  // global API key, only for public applications (Authorization header)
+  apiKey         String?   @db.Text
+  pollSeconds    Int       @default(15)
+  create911Calls Boolean   @default(true)
+  // { [ER:LC team]: "CALL_911_LEO" | "CALL_911_EMS_FD" | "TOW" | "IGNORE" }
+  teamMap        Json?
+  // set when ER:LC keeps rejecting the key; polling stops until a new key is saved
+  pausedReason   String?   @db.VarChar(64)
+  pausedAt       DateTime?
+}
+
+// links an ER:LC emergency call to the CAD call it created (one CAD call per in-game call)
+model ErlcEmergencyCall {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+  callNumber Int
+  // StartedAt (epoch seconds): call numbers restart with the server
+  startedAt  Int
+  team       String   @db.VarChar(64)
+  callerId   String?  @db.VarChar(32)
+  target     String   @db.VarChar(32)
+  call911Id  String?
+  towCallId  String?
+
+  @@unique([callNumber, startedAt])
+  @@index([call911Id])
+}
+
 enum RadioTransport {
   BUILTIN
   LIVEKIT
@@ -2233,6 +2270,7 @@ enum Feature {
   API_TOKEN_REMINDER
   UNIT_PRIVATE_MESSAGES
   RADIO
+  ERLC
 }
 
 enum DashboardLayoutCardType {

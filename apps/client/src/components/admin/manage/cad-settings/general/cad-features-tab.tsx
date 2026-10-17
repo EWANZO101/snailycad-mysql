@@ -100,6 +100,7 @@ const FEATURE_CATEGORIES: Record<Exclude<FeatureCategory, "other">, Feature[]> =
     Feature.UNIT_PRIVATE_MESSAGES,
     Feature.RADIO_CHANNEL_MANAGEMENT,
     Feature.RADIO,
+    Feature.ERLC,
     Feature.TONES,
     Feature.AOP,
   ],
