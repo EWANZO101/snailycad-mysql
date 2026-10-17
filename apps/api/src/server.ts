@@ -57,7 +57,15 @@ if (process.env.NODE_ENV === "development") {
   middlewares: [
     cookieParser(),
     compress(),
-    json({ limit: "500kb" }),
+    json({
+      limit: "500kb",
+      // ER:LC signs the exact bytes it sends, so its webhook needs the raw body to verify them
+      verify(req, _res, buf) {
+        if (req.url?.startsWith("/v1/integrations/erlc/")) {
+          (req as typeof req & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+        }
+      },
+    }),
     cors({
       origin: allowedCorsOrigins,
       credentials: true,

@@ -59,6 +59,7 @@ export const Feature = {
   API_TOKEN_REMINDER: "API_TOKEN_REMINDER",
   UNIT_PRIVATE_MESSAGES: "UNIT_PRIVATE_MESSAGES",
   RADIO: "RADIO",
+  ERLC: "ERLC",
 } as const;
 
 export type Feature = (typeof Feature)[keyof typeof Feature];

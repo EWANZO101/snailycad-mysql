@@ -37,6 +37,7 @@ export const DEFAULT_DISABLED_FEATURES: Partial<
   CITIZEN_RECORD_PAYMENTS: { isEnabled: false },
   API_TOKEN_REMINDER: { isEnabled: false },
   RADIO: { isEnabled: false },
+  ERLC: { isEnabled: false },
 };
 
 export type CadFeatures = Record<TypesFeature | DatabaseFeature, boolean> & {
