@@ -3,7 +3,7 @@ import { LICENSE_SCHEMA } from "@snailycad/schemas";
 import { UseBeforeEach, Context, BodyParams, PathParams } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { Forbidden, NotFound } from "@tsed/exceptions";
-import { ContentType, Description, Put } from "@tsed/schema";
+import { ContentType, Description, Put, Tags } from "@tsed/schema";
 import { canManageInvariant } from "lib/auth/getSessionUser";
 import { prisma } from "lib/data/prisma";
 import { validateSchema } from "lib/data/validate-schema";
@@ -15,6 +15,7 @@ import type * as APITypes from "@snailycad/types/api";
 import { citizenInclude } from "./CitizenController";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
 
+@Tags("Citizens")
 @Controller("/licenses")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

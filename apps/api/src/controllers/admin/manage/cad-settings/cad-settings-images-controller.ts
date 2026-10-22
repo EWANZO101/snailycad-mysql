@@ -1,6 +1,6 @@
 import { Controller } from "@tsed/di";
 import { Context } from "@tsed/platform-params";
-import { ContentType, Post } from "@tsed/schema";
+import { ContentType, Post, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { CAD_SELECT, IsAuth } from "middlewares/auth/is-auth";
 import { BadRequest } from "@tsed/exceptions";
@@ -18,6 +18,7 @@ import { resolve } from "node:path";
 import { existsSync } from "node:fs";
 import sharp from "sharp";
 
+@Tags("Admin: Manage")
 @Controller("/admin/manage/cad-settings/image")
 @ContentType("application/json")
 export class ManageCitizensController {

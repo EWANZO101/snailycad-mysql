@@ -1,6 +1,6 @@
 import { Context, UseBeforeEach } from "@tsed/common";
 import { Controller } from "@tsed/di";
-import { ContentType, Delete, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Tags } from "@tsed/schema";
 import { BodyParams, PathParams } from "@tsed/platform-params";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { User } from "@prisma/client";
@@ -20,6 +20,7 @@ export const CITIZEN_ALIAS_SCHEMA = z.object({
 /** the maximum amount of aliases a single citizen can have */
 const MAX_ALIASES_PER_CITIZEN = 25;
 
+@Tags("Citizens")
 @Controller("/citizen/:citizenId/aliases")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

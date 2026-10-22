@@ -1,7 +1,7 @@
 import { Controller } from "@tsed/di";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { BodyParams, Context, PathParams } from "@tsed/platform-params";
-import { ContentType, Delete, Hidden, Put } from "@tsed/schema";
+import { ContentType, Delete, Hidden, Put, Tags } from "@tsed/schema";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UPDATE_EMPLOYEE_SCHEMA, FIRE_EMPLOYEE_SCHEMA } from "@snailycad/schemas";
 import { NotFound } from "@tsed/exceptions";
@@ -14,6 +14,7 @@ import type * as APITypes from "@snailycad/types/api";
 import { Feature, IsFeatureEnabled } from "middlewares/is-enabled";
 
 @UseBeforeEach(IsAuth)
+@Tags("Businesses")
 @Controller("/businesses/employees")
 @Hidden()
 @ContentType("application/json")

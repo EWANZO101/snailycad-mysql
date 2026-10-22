@@ -6,7 +6,7 @@ import { URL } from "node:url";
 import { prisma } from "lib/data/prisma";
 import { Rank, type User, WhitelistStatus } from "@prisma/client";
 import { IsAuth } from "middlewares/auth/is-auth";
-import { ContentType, Description } from "@tsed/schema";
+import { ContentType, Description, Tags } from "@tsed/schema";
 import { request } from "undici";
 import { findRedirectURL } from "./discord-auth-controller";
 import { getSessionUser } from "lib/auth/getSessionUser";
@@ -20,6 +20,7 @@ const callbackUrl = makeCallbackURL(getAPIUrl());
 const STEAM_API_KEY = process.env.STEAM_API_KEY;
 export const STEAM_API_URL = "https://api.steampowered.com";
 
+@Tags("Authentication")
 @Controller("/auth/steam")
 @ContentType("application/json")
 @IsFeatureEnabled({ feature: [Feature.STEAM_OAUTH] })

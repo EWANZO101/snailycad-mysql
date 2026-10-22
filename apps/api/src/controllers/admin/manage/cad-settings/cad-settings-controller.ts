@@ -8,7 +8,7 @@ import {
 } from "@snailycad/schemas";
 import { Controller } from "@tsed/di";
 import { BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-params";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { CAD_SELECT, IsAuth, setCADFeatures } from "middlewares/auth/is-auth";
 import { BadRequest, NotFound } from "@tsed/exceptions";
@@ -40,6 +40,7 @@ import { getPrismaModelOrderBy } from "~/utils/order-by";
 import { radioServer } from "lib/radio/radio-server";
 import { insensitive, jsonPath } from "lib/data/db-provider";
 
+@Tags("Admin: Manage")
 @Controller("/admin/manage/cad-settings")
 @ContentType("application/json")
 export class CADSettingsController {

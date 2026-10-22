@@ -5,7 +5,7 @@ import { authenticator } from "otplib";
 import { BodyParams, Context, UseBeforeEach } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { BadRequest } from "@tsed/exceptions";
-import { ContentType, Delete, Description, Post } from "@tsed/schema";
+import { ContentType, Delete, Description, Post, Tags } from "@tsed/schema";
 import { compareSync } from "bcrypt";
 import qrcode from "qrcode";
 import { prisma } from "lib/data/prisma";
@@ -15,6 +15,7 @@ import { encryptValue } from "lib/auth/crypto";
 import { validateUser2FA } from "lib/auth/2fa";
 import type * as APITypes from "@snailycad/types/api";
 
+@Tags("Authentication")
 @Controller("/2fa")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

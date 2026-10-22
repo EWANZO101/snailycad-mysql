@@ -1,7 +1,7 @@
 import { Controller } from "@tsed/di";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-params";
-import { ContentType, Delete, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Tags } from "@tsed/schema";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import {
   type User,
@@ -35,6 +35,7 @@ export const claimableCitizenSelect = {
 } satisfies Prisma.CitizenSelect;
 
 @UseBeforeEach(IsAuth)
+@Tags("Citizens")
 @Controller("/citizen-claims")
 @ContentType("application/json")
 export class CitizenClaimsController {

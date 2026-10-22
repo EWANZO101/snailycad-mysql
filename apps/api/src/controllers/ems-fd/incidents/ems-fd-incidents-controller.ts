@@ -1,5 +1,5 @@
 import { Controller, UseBefore, UseBeforeEach } from "@tsed/common";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { NotFound, InternalServerError, BadRequest } from "@tsed/exceptions";
 import { QueryParams, BodyParams, Context, PathParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
@@ -58,6 +58,7 @@ function reportFields(data: z.infer<typeof EMS_FD_INCIDENT_SCHEMA>) {
   };
 }
 
+@Tags("EMS & Fire")
 @Controller("/ems-fd/incidents")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

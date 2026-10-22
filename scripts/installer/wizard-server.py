@@ -790,6 +790,7 @@ def checks():
 
 # --- install job ------------------------------------------------------------------------
 
+CONTROL_STEP = ("control", "Control Panel", "Set up the background service behind the desktop Control Panel")
 STANDALONE_STEPS = [
     ("database", "Database", "Create the database and its user"),
     ("config", "Settings", "Write the CAD's .env file"),
@@ -798,6 +799,7 @@ STANDALONE_STEPS = [
     ("dependencies", "Dependencies", "Download the packages the CAD needs"),
     ("build", "Build", "Compile the website and API (the longest step)"),
     ("start", "Start", "Run database migrations and start the CAD"),
+    CONTROL_STEP,
 ]
 # Windows: no start.sh, so the wizard installs and builds before the service starts the CAD
 WINDOWS_STEPS = [
@@ -808,6 +810,7 @@ WINDOWS_STEPS = [
     ("build", "Build", "Compile the website and API (the longest step)"),
     ("service", "Service", "Start the CAD as a Windows service"),
     ("start", "Start", "Run database migrations and wait for the CAD to answer"),
+    CONTROL_STEP,
 ]
 DOCKER_STEPS = [
     ("config", "Settings", "Write the CAD's .env file"),
@@ -816,6 +819,7 @@ DOCKER_STEPS = [
     ("images", "Build images", "Build the API and website images (the longest step)"),
     ("containers", "Start containers", "Start the database, the API and the website"),
     ("ready", "Ready", "Wait for the CAD to answer"),
+    CONTROL_STEP,
 ]
 
 JOB = {"started": False, "failed": None, "startedAt": None, "cadUrl": None, "steps": {}, "method": None}
@@ -1308,6 +1312,51 @@ WantedBy=multi-user.target
     say(f"Service {NAME} started; it installs, builds and starts the CAD.")
 
 
+CONTROL_NAME_SUFFIX = "-control"
+
+
+def control_service_name():
+    return f"{NAME}{CONTROL_NAME_SUFFIX}"
+
+
+def step_control_service():
+    """A second, small systemd service running control-server.py: the always-on HTTP API the
+    desktop Control Panel talks to (start/stop/restart/rebuild/rebuild+restart). Works for both
+    standalone and docker installs — it drives systemctl or docker compose depending on METHOD,
+    which it reads from the same manifest.env this wizard already writes to."""
+    control_name = control_service_name()
+    add_to_manifest("CONTROL_SERVICE", control_name)
+    script_path = os.path.join(INSTALLER_DIR, "control-server.py")
+    control_log = os.path.join(INSTALLER_DIR, "control.log")
+    unit = f"""[Unit]
+Description=SnailyCAD Control Panel service for {NAME}
+After=network.target {NAME}.service
+
+[Service]
+Type=simple
+WorkingDirectory={INSTALLER_DIR}
+Environment=SNAILY_INSTALL_DIR={INSTALL_DIR}
+Environment=SNAILY_CAD_SERVICE={NAME}
+ExecStart={sys.executable} {script_path}
+StandardOutput=append:{control_log}
+StandardError=append:{control_log}
+Restart=on-failure
+RestartSec=10
+User=root
+
+[Install]
+WantedBy=multi-user.target
+"""
+    with open(f"/etc/systemd/system/{control_name}.service", "w") as f:
+        f.write(unit)
+    check(run(["systemctl", "daemon-reload"]), "systemctl daemon-reload failed")
+    check(run(["systemctl", "enable", "--now", control_name]), "Could not start the Control Panel service")
+    control_port = os.environ.get("SNAILY_CONTROL_PORT", "3101")
+    say(f"Control Panel service {control_name} started on 127.0.0.1:{control_port} (loopback only). "
+        f"From your own PC: ssh -L {control_port}:127.0.0.1:{control_port} this-server, then open "
+        f"http://127.0.0.1:{control_port}/ — or open it directly if you're on this machine.")
+
+
 # docker -------------------------------------------------------------------------------
 
 BUILD_STEP = re.compile(r"^#\d+ \[([\w-]+) +(\w+) +(\d+/\d+)\] (.+)$")
@@ -1455,6 +1504,7 @@ def docker_install(settings, deploy_only=False):
     step("images", images)
     step("containers", containers)
     step("ready", ready)
+    step("control", step_control_service)
     JOB["phase"] = "running"
     say("SnailyCAD is running.")
 
@@ -1644,6 +1694,80 @@ def windows_service():
     say(f"Scheduled task {TASK_PATH}{NAME} started (runs as SYSTEM at startup); logs in {CAD_LOG}.")
 
 
+def control_task_script(control_cmd_path):
+    """PowerShell that registers the control daemon as a scheduled task, the same fallback used
+    for the CAD itself when NSSM can't be had."""
+    control_name = control_service_name()
+    action_args = f'/d /c "{control_cmd_path}"'
+    return "; ".join([
+        "$ErrorActionPreference = 'Stop'",
+        f"$a = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument {ps_quote(action_args)} -WorkingDirectory {ps_quote(INSTALLER_DIR)}",
+        "$t = New-ScheduledTaskTrigger -AtStartup",
+        "$p = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest",
+        "$s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable "
+        "-ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)",
+        f"Register-ScheduledTask -TaskName {ps_quote(control_name)} -TaskPath {ps_quote(TASK_PATH)} -Action $a -Trigger $t "
+        "-Principal $p -Settings $s -Force | Out-Null",
+        f"Start-ScheduledTask -TaskName {ps_quote(control_name)} -TaskPath {ps_quote(TASK_PATH)}",
+    ])
+
+
+def control_service_windows():
+    """The Windows twin of step_control_service(): registers control-server.py as its own service
+    (NSSM, or a scheduled task when NSSM isn't available — whichever the CAD's own service used),
+    the always-on HTTP API the desktop Control Panel talks to."""
+    control_name = control_service_name()
+    control_log = os.path.join(LOGS_DIR, "control.log")
+    add_to_manifest("CONTROL_SERVICE", control_name)
+    win_service = manifest_value("WIN_SERVICE") or "nssm"
+    control_port = os.environ.get("SNAILY_CONTROL_PORT", "3101")
+    # "Control Panel.url": double-click to open the popup controller, the same convenience as
+    # "Update SnailyCAD.bat" above — no command line needed
+    with open(os.path.join(INSTALL_DIR, "Control Panel.url"), "w", encoding="utf-8", newline="\r\n") as f:
+        f.write(f"[InternetShortcut]\nURL=http://127.0.0.1:{control_port}/\n")
+    script_path = os.path.join(INSTALLER_DIR, "control-server.py")
+    env = {"SNAILY_INSTALL_DIR": INSTALL_DIR, "SNAILYCAD_SERVICE_NAME": NAME}
+    if win_service == "nssm":
+        nssm = ensure_nssm()
+        if nssm:
+            if quiet([nssm, "status", control_name])[0]:  # an earlier attempt
+                run([nssm, "stop", control_name], timeout=60)
+                run([nssm, "remove", control_name, "confirm"])
+            env_list = [f"{k}={v}" for k, v in env.items()]
+            commands = [
+                [nssm, "install", control_name, sys.executable, script_path],
+                [nssm, "set", control_name, "AppDirectory", INSTALLER_DIR],
+                [nssm, "set", control_name, "DisplayName", f"SnailyCAD Control Panel ({NAME})"],
+                [nssm, "set", control_name, "Description", f"Background service for the {NAME} desktop Control Panel"],
+                [nssm, "set", control_name, "Start", "SERVICE_DELAYED_AUTO_START"],
+                [nssm, "set", control_name, "AppEnvironmentExtra", *env_list],
+                [nssm, "set", control_name, "AppStdout", control_log],
+                [nssm, "set", control_name, "AppStderr", control_log],
+                [nssm, "set", control_name, "AppRotateFiles", "1"],
+                [nssm, "set", control_name, "AppRotateOnline", "1"],
+                [nssm, "set", control_name, "AppRotateBytes", "10485760"],
+                [nssm, "set", control_name, "AppExit", "Default", "Restart"],
+                [nssm, "set", control_name, "AppRestartDelay", "10000"],
+                [nssm, "set", control_name, "DependOnService", NAME],
+                [nssm, "start", control_name],
+            ]
+            for cmd in commands:
+                check(run(cmd, timeout=120), f"Could not set up the {control_name} service")
+            say(f"Control Panel service {control_name} started; logs in {control_log}.")
+            return
+        say("NSSM is not available for the Control Panel service; using a scheduled task instead.", "error")
+    # scheduled-task fallback: a tiny .cmd wrapper (tasks have no environment settings of their own)
+    os.makedirs(LOGS_DIR, exist_ok=True)
+    control_cmd_path = os.path.join(INSTALL_DIR, "runtime", "start-control.cmd")
+    lines = ["@echo off", f'cd /d "{INSTALLER_DIR}"']
+    lines += [f'set "{k}={v}"' for k, v in env.items()]
+    lines.append(f'"{sys.executable}" "{script_path}" >> "{control_log}" 2>&1')
+    with open(control_cmd_path, "w", encoding="utf-8", newline="\r\n") as f:
+        f.write("\n".join(lines) + "\n")
+    check(powershell(control_task_script(control_cmd_path)), "Could not create the Control Panel scheduled task")
+    say(f"Control Panel scheduled task {TASK_PATH}{control_name} started; logs in {control_log}.")
+
+
 def windows_wait_started():
     deadline = time.time() + 20 * 60
     api_ok = client_ok = False
@@ -1698,13 +1822,14 @@ def windows_install(settings, deploy_only=False):
     step("build", windows_build)
     step("service", windows_service)
     step("start", windows_wait_started)
+    step("control", control_service_windows)
     JOB["phase"] = "running"
     say("SnailyCAD is running.")
 
 
 def run_windows_retry():
     JOB.update(failed=None, phase=None)
-    for step_id in ("dependencies", "build", "service", "start"):
+    for step_id in ("dependencies", "build", "service", "start", "control"):
         JOB["steps"][step_id] = "pending"
     try:
         say("Retrying: installing, building and starting the CAD again (finished parts are quick)...")
@@ -1730,6 +1855,7 @@ def standalone_install(settings):
     JOB["cadUrl"] = step("config", lambda: write_env(settings, database)[0])
     step("firewall", lambda: step_firewall(settings))
     step("service", step_service)
+    step("control", step_control_service)
 
 
 def save_state():
@@ -1793,7 +1919,7 @@ def run_install(settings):
 
 def run_docker_retry():
     JOB.update(failed=None, phase=None)
-    for step_id in ("images", "containers", "ready"):
+    for step_id in ("images", "containers", "ready", "control"):
         JOB["steps"][step_id] = "pending"
     try:
         say("Retrying: rebuilding the images (cached steps are skipped) and restarting the containers...")

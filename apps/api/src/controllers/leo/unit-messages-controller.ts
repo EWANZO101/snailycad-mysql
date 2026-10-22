@@ -1,6 +1,6 @@
 import { Context, Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams, PathParams } from "@tsed/platform-params";
-import { ContentType, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { Feature, type User } from "@snailycad/types";
 import { z } from "zod";
@@ -48,6 +48,7 @@ async function assertOwnUnit(unitId: string, user: Pick<User, "id">) {
   }
 }
 
+@Tags("Law Enforcement")
 @Controller("/unit-messages")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

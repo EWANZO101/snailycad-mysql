@@ -1,6 +1,6 @@
 import { Controller } from "@tsed/di";
 import { BodyParams, HeaderParams, Req } from "@tsed/common";
-import { ContentType, Description, Post } from "@tsed/schema";
+import { ContentType, Description, Post, Tags } from "@tsed/schema";
 import { Unauthorized } from "@tsed/exceptions";
 import { API_TOKEN_HEADER } from "@snailycad/config";
 import { Feature } from "@prisma/client";
@@ -38,6 +38,7 @@ import { Socket } from "services/socket-service";
  * characters, their vehicles and duty changes. No session: every request needs the CAD API token
  * (CAD Settings > API Token) in the snaily-cad-api-token header.
  */
+@Tags("Integrations")
 @Controller("/integrations/fivem")
 @ContentType("application/json")
 export class FivemFrameworkController {

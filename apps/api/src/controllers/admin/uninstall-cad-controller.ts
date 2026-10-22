@@ -4,7 +4,7 @@ import { copyFileSync, existsSync, readFileSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 import { Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams, Context } from "@tsed/platform-params";
-import { ContentType, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import { BadRequest, Forbidden } from "@tsed/exceptions";
 import { Rank, type User } from "@prisma/client";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -294,6 +294,7 @@ function describeInstall(install: Install | null) {
   };
 }
 
+@Tags("Admin")
 @Controller("/admin/uninstall")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

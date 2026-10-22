@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import { Controller, UseBeforeEach, type PlatformMulterFile, MultipartFile } from "@tsed/common";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { QueryParams, BodyParams, Context, PathParams } from "@tsed/platform-params";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { prisma } from "lib/data/prisma";
@@ -18,6 +18,7 @@ import { hasPermission } from "@snailycad/permissions";
 import { getImageWebPPath } from "lib/images/get-image-webp-path";
 import { createWhere } from "../create-where-obj";
 
+@Tags("Law Enforcement")
 @Controller("/leo")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

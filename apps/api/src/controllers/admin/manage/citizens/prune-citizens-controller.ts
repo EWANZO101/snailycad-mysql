@@ -1,7 +1,7 @@
 import { Controller } from "@tsed/di";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { BodyParams, Context } from "@tsed/platform-params";
-import { ContentType, Description, Post } from "@tsed/schema";
+import { ContentType, Description, Post, Tags } from "@tsed/schema";
 import { BadRequest } from "@tsed/exceptions";
 import { type Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -106,6 +106,7 @@ function filtersSummary(filters: PruneCitizensFilters) {
 }
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/citizens/prune")
 @ContentType("application/json")
 export class AdminPruneCitizensController {

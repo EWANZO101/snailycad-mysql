@@ -4,7 +4,7 @@ import { CUSTOM_FIELDS_SCHEMA } from "@snailycad/schemas";
 import { BodyParams, Context, PathParams, QueryParams, UseBeforeEach } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { NotFound } from "@tsed/exceptions";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { validateSchema } from "lib/data/validate-schema";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -12,6 +12,7 @@ import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import type * as APITypes from "@snailycad/types/api";
 import { insensitive } from "lib/data/db-provider";
 
+@Tags("Admin: Manage")
 @Controller("/admin/manage/custom-fields")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

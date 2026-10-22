@@ -13,7 +13,7 @@ import {
   MultipartFile,
 } from "@tsed/common";
 import { BadRequest, Forbidden, NotFound } from "@tsed/exceptions";
-import { ContentType, Delete, Description, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { validateSchema } from "lib/data/validate-schema";
@@ -30,6 +30,7 @@ import { sendDiscordWebhook } from "~/lib/discord/webhooks";
 import { defaultPermissions, hasPermission } from "@snailycad/permissions";
 
 @UseBeforeEach(IsAuth)
+@Tags("Bleeter")
 @Controller("/bleeter")
 @ContentType("application/json")
 @IsFeatureEnabled({ feature: Feature.BLEETER })

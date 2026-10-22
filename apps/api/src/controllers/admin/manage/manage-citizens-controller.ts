@@ -2,7 +2,7 @@ import { Controller } from "@tsed/di";
 import { NotFound } from "@tsed/exceptions";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { QueryParams, BodyParams, PathParams, Context } from "@tsed/platform-params";
-import { ContentType, Delete, Description, Get, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { CREATE_CITIZEN_SCHEMA } from "@snailycad/schemas";
@@ -25,6 +25,7 @@ import { getPrismaModelOrderBy } from "~/utils/order-by";
 import { insensitive } from "lib/data/db-provider";
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/citizens")
 @ContentType("application/json")
 export class AdminManageCitizensController {

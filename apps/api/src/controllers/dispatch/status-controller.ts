@@ -12,7 +12,7 @@ import { Req, UseBeforeEach } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { BodyParams, Context, PathParams } from "@tsed/platform-params";
-import { ContentType, Description, Put } from "@tsed/schema";
+import { ContentType, Description, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { Socket } from "services/socket-service";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -28,6 +28,7 @@ import { handlePanicButtonPressed } from "lib/leo/send-panic-button-webhook";
 import { leoProperties, unitProperties } from "utils/leo/includes";
 import { insensitive } from "lib/data/db-provider";
 
+@Tags("Dispatch")
 @Controller("/dispatch/status")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

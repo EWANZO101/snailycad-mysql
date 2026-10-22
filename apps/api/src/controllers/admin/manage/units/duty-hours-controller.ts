@@ -3,7 +3,7 @@ import { BodyParams, Context, PathParams, QueryParams } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { NotFound } from "@tsed/exceptions";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
-import { ContentType, Description, Get, Put } from "@tsed/schema";
+import { ContentType, Description, Get, Put, Tags } from "@tsed/schema";
 import { type AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 import { prisma } from "lib/data/prisma";
 import { ident, isPostgres } from "lib/data/db-provider";
@@ -127,6 +127,7 @@ function mapSession(
 }
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/units/duty-hours")
 @ContentType("application/json")
 export class AdminDutyHoursController {

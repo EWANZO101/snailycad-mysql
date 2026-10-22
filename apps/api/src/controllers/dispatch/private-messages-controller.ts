@@ -1,6 +1,6 @@
 import { Context, Req } from "@tsed/common";
 import { Controller } from "@tsed/di";
-import { ContentType, Get, Post } from "@tsed/schema";
+import { ContentType, Get, Post, Tags } from "@tsed/schema";
 import { BodyParams, PathParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
 import { Socket } from "services/socket-service";
@@ -39,6 +39,7 @@ const dispatchChatIncludes = Prisma.validator<Prisma.DispatchChatSelect>()({
   },
 });
 
+@Tags("Dispatch")
 @Controller("/dispatch/private-message")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

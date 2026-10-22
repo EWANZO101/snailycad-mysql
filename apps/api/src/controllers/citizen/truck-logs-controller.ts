@@ -3,7 +3,7 @@ import { CREATE_TRUCK_LOG_SCHEMA } from "@snailycad/schemas";
 import { Controller } from "@tsed/di";
 import { NotFound } from "@tsed/exceptions";
 import { BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-params";
-import { ContentType, Delete, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
@@ -13,6 +13,7 @@ import type * as APITypes from "@snailycad/types/api";
 import { citizenInclude } from "./CitizenController";
 import { Feature, IsFeatureEnabled } from "middlewares/is-enabled";
 
+@Tags("Citizens")
 @Controller("/truck-logs")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

@@ -1,6 +1,6 @@
 import { Controller } from "@tsed/di";
 import { Context, UseBeforeEach } from "@tsed/common";
-import { ContentType, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import { Forbidden } from "@tsed/exceptions";
 import { Rank, type User } from "@prisma/client";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -18,6 +18,7 @@ function assertOwner(user: Pick<User, "rank" | "id">) {
   }
 }
 
+@Tags("Admin")
 @Controller("/admin/recovery-token")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

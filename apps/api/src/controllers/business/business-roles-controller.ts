@@ -1,7 +1,7 @@
 import { Controller } from "@tsed/di";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-params";
-import { ContentType, Delete, Description, Get, Hidden, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Hidden, Post, Put, Tags } from "@tsed/schema";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { NotFound } from "@tsed/exceptions";
 import { prisma } from "lib/data/prisma";
@@ -12,6 +12,7 @@ import { validateSchema } from "lib/data/validate-schema";
 import { BUSINESSES_BUSINESS_ROLE_SCHEMA } from "@snailycad/schemas";
 
 @UseBeforeEach(IsAuth)
+@Tags("Businesses")
 @Controller("/businesses/roles")
 @Hidden()
 @ContentType("application/json")

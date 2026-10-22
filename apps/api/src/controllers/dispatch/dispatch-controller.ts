@@ -1,5 +1,5 @@
 import { Controller } from "@tsed/di";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { BodyParams, PathParams, Context } from "@tsed/platform-params";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { prisma } from "lib/data/prisma";
@@ -31,6 +31,7 @@ import {
 } from "utils/leo/includes";
 import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 
+@Tags("Dispatch")
 @Controller("/dispatch")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

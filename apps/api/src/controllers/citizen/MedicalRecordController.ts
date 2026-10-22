@@ -4,7 +4,7 @@ import { MEDICAL_RECORD_SCHEMA } from "@snailycad/schemas";
 import { UseBeforeEach, Context, BodyParams, PathParams } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { NotFound } from "@tsed/exceptions";
-import { ContentType, Delete, Description, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Post, Put, Tags } from "@tsed/schema";
 import { canManageInvariant } from "lib/auth/getSessionUser";
 import { shouldCheckCitizenUserId } from "lib/citizen/has-citizen-access";
 import { prisma } from "lib/data/prisma";
@@ -12,6 +12,7 @@ import { validateSchema } from "lib/data/validate-schema";
 import { IsAuth } from "middlewares/auth/is-auth";
 import type * as APITypes from "@snailycad/types/api";
 
+@Tags("Citizens")
 @Controller("/medical-records")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

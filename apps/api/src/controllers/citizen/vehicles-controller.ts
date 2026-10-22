@@ -23,7 +23,7 @@ import {
 } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { BadRequest, NotFound } from "@tsed/exceptions";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { canManageInvariant } from "lib/auth/getSessionUser";
 import { isFeatureEnabled } from "lib/upsert-cad";
 import { shouldCheckCitizenUserId } from "lib/citizen/has-citizen-access";
@@ -42,6 +42,7 @@ import fs from "node:fs/promises";
 import { ExtendedNotFound } from "~/exceptions/extended-not-found";
 import { insensitive } from "lib/data/db-provider";
 
+@Tags("Citizens")
 @Controller("/vehicles")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

@@ -1,6 +1,6 @@
 import { Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams } from "@tsed/platform-params";
-import { ContentType, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { z } from "zod";
 import { prisma } from "lib/data/prisma";
 import { validateSchema } from "lib/data/validate-schema";
@@ -26,6 +26,7 @@ const ERLC_SETTINGS_SCHEMA = z.object({
   teamMap: ERLC_TEAM_MAP.optional(),
 });
 
+@Tags("Admin: Manage")
 @Controller("/admin/manage/cad-settings/erlc")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

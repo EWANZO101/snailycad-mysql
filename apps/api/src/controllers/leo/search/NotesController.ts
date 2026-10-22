@@ -1,6 +1,6 @@
 import { BodyParams, Controller, PathParams, UseBeforeEach } from "@tsed/common";
 import { IsAuth } from "middlewares/auth/is-auth";
-import { ContentType, Delete, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Post, Put, Tags } from "@tsed/schema";
 import { validateSchema } from "lib/data/validate-schema";
 import { NOTE_SCHEMA } from "@snailycad/schemas";
 import { prisma } from "lib/data/prisma";
@@ -10,6 +10,7 @@ import type { Citizen, RegisteredVehicle } from "@prisma/client";
 import type * as APITypes from "@snailycad/types/api";
 import type { z } from "zod";
 
+@Tags("Law Enforcement")
 @Controller("/notes")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

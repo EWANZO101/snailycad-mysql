@@ -1,5 +1,5 @@
 import { User } from "@prisma/client";
-import { ContentType, Get, Post } from "@tsed/schema";
+import { ContentType, Get, Post, Tags } from "@tsed/schema";
 import { BodyParams, Context, UseBeforeEach } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -11,6 +11,7 @@ import { ExtendedBadRequest } from "~/exceptions/extended-bad-request";
 import type * as APITypes from "@snailycad/types/api";
 import { Feature, IsFeatureEnabled } from "middlewares/is-enabled";
 
+@Tags("Court")
 @Controller("/name-change")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

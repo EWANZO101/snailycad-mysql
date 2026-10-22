@@ -12,7 +12,7 @@ import {
 import { join, resolve as resolvePath } from "node:path";
 import { Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams, Context, PathParams } from "@tsed/platform-params";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { User } from "@prisma/client";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -141,6 +141,7 @@ function validateCode(code: unknown): string {
   return code.trim();
 }
 
+@Tags("Admin: Manage")
 @Controller("/admin/manage/locales")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

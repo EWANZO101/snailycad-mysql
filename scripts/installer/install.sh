@@ -42,7 +42,7 @@ INSTALL_DIR="${SNAILY_DIR:-/opt/$NAME}"
 REPO="${SNAILY_REPO:-https://github.com/EWANZO101/snailycad-mysql.git}"
 BRANCH="${SNAILY_BRANCH:-main}"
 WIZARD_PORT="${SNAILY_WIZARD_PORT:-3100}"
-WIZARD_FILES=(wizard-server.py wizard.html uninstall.sh)
+WIZARD_FILES=(wizard-server.py wizard.html control-server.py control.html uninstall.sh)
 METHOD="${SNAILY_METHOD:-}"
 ACTION="${SNAILY_ACTION:-}"
 

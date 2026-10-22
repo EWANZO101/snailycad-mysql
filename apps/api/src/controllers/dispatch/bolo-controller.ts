@@ -1,5 +1,5 @@
 import { Controller } from "@tsed/di";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { CREATE_BOLO_SCHEMA } from "@snailycad/schemas";
 import { BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-params";
 import { BadRequest, NotFound } from "@tsed/exceptions";
@@ -30,6 +30,7 @@ import { getTranslator } from "utils/get-translator";
 import { HandleInactivity } from "middlewares/handle-inactivity";
 import { insensitive } from "lib/data/db-provider";
 
+@Tags("Dispatch")
 @Controller("/bolos")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

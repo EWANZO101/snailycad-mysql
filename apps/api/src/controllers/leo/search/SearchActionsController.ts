@@ -29,7 +29,7 @@ import {
   type CombinedLeoUnit,
 } from "@prisma/client";
 import { UseBeforeEach, Context, UseBefore } from "@tsed/common";
-import { ContentType, Description, Post, Put } from "@tsed/schema";
+import { ContentType, Description, Post, Put, Tags } from "@tsed/schema";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { validateSchema } from "lib/data/validate-schema";
 import { manyToManyHelper } from "lib/data/many-to-many";
@@ -51,6 +51,7 @@ import { ActiveOfficer } from "middlewares/active-officer";
 import { IsFeatureEnabled } from "~/middlewares/is-enabled";
 import { validateSocialSecurityNumber } from "~/lib/citizen/validate-ssn";
 
+@Tags("Law Enforcement")
 @Controller("/search/actions")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
