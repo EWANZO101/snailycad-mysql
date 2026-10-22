@@ -2,7 +2,7 @@ import { type Prisma } from "@prisma/client";
 import { QueryParams } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
-import { ContentType, Description, Get } from "@tsed/schema";
+import { ContentType, Description, Get, Tags } from "@tsed/schema";
 import { createWhere } from "controllers/leo/create-where-obj";
 import differenceInHours from "date-fns/differenceInHours";
 import type * as APITypes from "@snailycad/types/api";
@@ -16,6 +16,7 @@ export const ACCEPT_DECLINE_TYPES = ["ACCEPT", "DECLINE"] as const;
 export type AcceptDeclineType = (typeof ACCEPT_DECLINE_TYPES)[number];
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/units/department-time-logs")
 @ContentType("application/json")
 export class AdminManageUnitsController {

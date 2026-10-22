@@ -1,5 +1,5 @@
 import { Controller } from "@tsed/di";
-import { Get, Post, Description, ContentType } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import { type Prisma } from "@prisma/client";
 import { prisma } from "lib/data/prisma";
 import {
@@ -22,6 +22,7 @@ import type * as APITypes from "@snailycad/types/api";
 import { Permissions, UsePermissions } from "middlewares/use-permissions";
 import { citizenInclude } from "controllers/citizen/CitizenController";
 
+@Tags("Admin: Import")
 @Controller("/admin/import/citizens")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

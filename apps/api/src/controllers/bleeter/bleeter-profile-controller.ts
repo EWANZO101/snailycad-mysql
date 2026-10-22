@@ -1,6 +1,6 @@
 import { Controller, Get, UseBeforeEach, PathParams, Post, Context } from "@tsed/common";
 import { BadRequest, NotFound } from "@tsed/exceptions";
-import { ContentType, Description } from "@tsed/schema";
+import { ContentType, Description, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { User } from "@prisma/client";
@@ -10,6 +10,7 @@ import { UsePermissions } from "middlewares/use-permissions";
 import { defaultPermissions } from "@snailycad/permissions";
 
 @UseBeforeEach(IsAuth)
+@Tags("Bleeter")
 @Controller("/bleeter/profiles")
 @ContentType("application/json")
 @IsFeatureEnabled({ feature: Feature.BLEETER })

@@ -1,6 +1,6 @@
 import { Controller } from "@tsed/di";
 import { BodyParams, Context, PathParams, UseBeforeEach } from "@tsed/common";
-import { ContentType, Description, Post } from "@tsed/schema";
+import { ContentType, Description, Post, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import {
@@ -23,6 +23,7 @@ import { isFeatureEnabled } from "lib/upsert-cad";
 import { combinedUnitProperties, combinedEmsFdUnitProperties } from "utils/leo/includes";
 import { insensitive } from "lib/data/db-provider";
 
+@Tags("Dispatch")
 @Controller("/dispatch/status")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

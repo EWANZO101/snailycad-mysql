@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 const currentDir = process.cwd();
 const templatesDir = resolve(currentDir, "src/templates");
+const swaggerThemeDir = resolve(currentDir, "src/swagger-theme");
 
-// The templates directory isn't copied over by SWC. Therefore, we have to do this manually.
+// Neither directory is copied over by SWC (it only compiles .ts/.js). Therefore, we have to do this manually.
 cp(templatesDir, resolve(currentDir, "dist/templates"), { recursive: true });
+cp(swaggerThemeDir, resolve(currentDir, "dist/swagger-theme"), { recursive: true });

@@ -10,7 +10,7 @@ import {
 } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { NotFound } from "@tsed/exceptions";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import type * as APITypes from "@snailycad/types/api";
@@ -22,6 +22,7 @@ import { getImageWebPPath } from "~/lib/images/get-image-webp-path";
 import fs from "node:fs/promises";
 import { validateImageURL } from "~/lib/images/validate-image-url";
 
+@Tags("Citizens")
 @Controller("/pets")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

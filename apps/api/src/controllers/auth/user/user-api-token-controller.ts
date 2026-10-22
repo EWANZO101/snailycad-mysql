@@ -3,7 +3,7 @@ import { BodyParams, Context } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { BadRequest } from "@tsed/exceptions";
 import { UseBefore } from "@tsed/platform-middlewares";
-import { ContentType, Delete, Description, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Post, Put, Tags } from "@tsed/schema";
 import { userProperties } from "lib/auth/getSessionUser";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -12,6 +12,7 @@ import type * as APITypes from "@snailycad/types/api";
 import { validateSchema } from "~/lib/data/validate-schema";
 import { z } from "zod";
 
+@Tags("Authentication")
 @Controller("/user/api-token")
 @ContentType("application/json")
 export class AccountController {

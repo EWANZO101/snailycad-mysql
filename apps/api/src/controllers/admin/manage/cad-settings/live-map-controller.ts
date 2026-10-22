@@ -1,7 +1,7 @@
 import { LIVE_MAP_SETTINGS } from "@snailycad/schemas";
 import { Controller } from "@tsed/di";
 import { BodyParams, Context } from "@tsed/platform-params";
-import { ContentType, Put } from "@tsed/schema";
+import { ContentType, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { MultipartFile, type PlatformMulterFile, UseBefore } from "@tsed/common";
@@ -17,6 +17,7 @@ import { allowedFileExtensions } from "@snailycad/config";
 import { ExtendedBadRequest } from "~/exceptions/extended-bad-request";
 import { captureException } from "@sentry/node";
 
+@Tags("Admin: Manage")
 @Controller("/admin/manage/cad-settings/live-map")
 @ContentType("application/json")
 export class CADSettingsLiveMapController {

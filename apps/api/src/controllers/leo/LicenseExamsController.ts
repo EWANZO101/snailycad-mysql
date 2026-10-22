@@ -9,7 +9,7 @@ import { LicenseExamPassType, LicenseExamStatus } from "@snailycad/types";
 import { LICENSE_EXAM_SCHEMA } from "@snailycad/schemas";
 import { UseBeforeEach, Controller, BodyParams, PathParams, QueryParams } from "@tsed/common";
 import { NotFound } from "@tsed/exceptions";
-import { ContentType, Delete, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { validateSchema } from "lib/data/validate-schema";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -25,6 +25,7 @@ const licenseExamIncludes = {
   categories: { include: { value: true } },
 };
 
+@Tags("Law Enforcement")
 @Controller("/leo/license-exams")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

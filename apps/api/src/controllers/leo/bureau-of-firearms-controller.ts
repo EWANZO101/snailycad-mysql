@@ -2,7 +2,7 @@ import { Prisma, WhitelistStatus } from "@prisma/client";
 import { BodyParams, PathParams, QueryParams, UseBeforeEach } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { BadRequest, NotFound } from "@tsed/exceptions";
-import { ContentType, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import {
   type AcceptDeclineType,
   ACCEPT_DECLINE_TYPES,
@@ -19,6 +19,7 @@ const includes = Prisma.validator<Prisma.WeaponSelect>()({
   citizen: true,
 });
 
+@Tags("Law Enforcement")
 @Controller("/leo/bureau-of-firearms")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

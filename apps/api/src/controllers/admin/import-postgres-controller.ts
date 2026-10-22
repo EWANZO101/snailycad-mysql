@@ -4,7 +4,7 @@ import { basename, isAbsolute, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams, Context } from "@tsed/platform-params";
-import { ContentType, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import { BadRequest, Forbidden } from "@tsed/exceptions";
 import { Rank, type User } from "@prisma/client";
 import { z } from "zod";
@@ -202,6 +202,7 @@ async function assertOwner(user: User) {
   }
 }
 
+@Tags("Admin")
 @Controller("/admin/import-postgres")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

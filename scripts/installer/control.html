@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SnailyCAD Control Panel</title>
+    <style>
+      /* Flowbite dark palette, same as wizard.html / scripts/status-page */
+      :root {
+        --gray-900: #111827;
+        --gray-800: #1f2937;
+        --gray-700: #374151;
+        --gray-600: #4b5563;
+        --gray-400: #9ca3af;
+        --gray-300: #d1d5db;
+        --white: #ffffff;
+        --blue-700: #1a56db;
+        --blue-600: #1c64f2;
+        --blue-500: #3f83f8;
+        --blue-900: #233876;
+        --blue-300: #a4cafe;
+        --green-500: #0e9f6e;
+        --green-900: #014737;
+        --green-300: #84e1bc;
+        --yellow-300: #fac15d;
+        --yellow-900: #633112;
+        --red-600: #e02424;
+        --red-900: #771d1d;
+        --red-300: #f8b4b4;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        background: var(--gray-900);
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        padding: 28px 16px;
+        color: var(--white);
+        font:
+          15px/1.5 Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      .shell {
+        width: 100%;
+        max-width: 640px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+        color: var(--gray-400);
+        font-size: 0.875rem;
+      }
+      .brand b {
+        color: var(--white);
+      }
+      .card {
+        background: var(--gray-800);
+        border: 1px solid var(--gray-700);
+        border-radius: 14px;
+        padding: 20px 22px;
+        margin-bottom: 16px;
+      }
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 4px;
+      }
+      .head h1 {
+        font-size: 1.15rem;
+        margin: 0;
+        flex: 1;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 4px 11px;
+        border-radius: 999px;
+      }
+      .pill::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .pill.running {
+        background: var(--green-900);
+        color: var(--green-300);
+      }
+      .pill.stopped {
+        background: var(--gray-700);
+        color: var(--gray-300);
+      }
+      .pill.error {
+        background: var(--red-900);
+        color: var(--red-300);
+      }
+      .pill.unknown {
+        background: var(--gray-700);
+        color: var(--gray-400);
+      }
+      .pill.busy {
+        background: var(--yellow-900);
+        color: var(--yellow-300);
+      }
+      .sub {
+        color: var(--gray-400);
+        font-size: 0.85rem;
+        margin: 2px 0 16px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      button {
+        appearance: none;
+        border: 1px solid var(--gray-600);
+        background: var(--gray-700);
+        color: var(--white);
+        padding: 9px 14px;
+        border-radius: 9px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.875rem;
+      }
+      button:hover:not(:disabled) {
+        background: var(--gray-600);
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      button.primary {
+        background: var(--blue-600);
+        border-color: var(--blue-700);
+      }
+      button.primary:hover:not(:disabled) {
+        background: var(--blue-700);
+      }
+      button.danger {
+        background: var(--red-600);
+        border-color: var(--red-900);
+      }
+      button.danger:hover:not(:disabled) {
+        filter: brightness(1.1);
+      }
+      button.ghost {
+        background: transparent;
+      }
+      .spinner {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 2px solid var(--gray-600);
+        border-top-color: var(--blue-500);
+        display: inline-block;
+        animation: spin 0.8s linear infinite;
+        vertical-align: -3px;
+        margin-right: 6px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .banner {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 12px 14px;
+        border-radius: 10px;
+        margin-top: 14px;
+        font-size: 0.85rem;
+      }
+      .banner.error {
+        background: var(--red-900);
+        color: var(--red-300);
+      }
+      .banner.progress {
+        background: var(--blue-900);
+        color: var(--blue-300);
+      }
+      .log {
+        background: #0b0f17;
+        border: 1px solid var(--gray-700);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-top: 14px;
+        font:
+          12.5px/1.6 ui-monospace,
+          "SF Mono",
+          Menlo,
+          monospace;
+        color: var(--gray-300);
+        max-height: 260px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .log .err {
+        color: var(--red-300);
+      }
+      .muted {
+        color: var(--gray-400);
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="brand"><b>SnailyCAD</b> &middot; Control Panel</div>
+
+      <div class="card">
+        <div class="head">
+          <h1 id="service-name">—</h1>
+          <span class="pill unknown" id="status-pill">checking…</span>
+        </div>
+        <p class="sub">
+          Closing this page doesn't stop the service — it keeps running until you ask it to stop.
+        </p>
+
+        <div class="row">
+          <button class="primary" id="btn-start">Start</button>
+          <button class="danger" id="btn-stop">Stop</button>
+          <button id="btn-restart">Restart</button>
+          <button id="btn-rebuild">Rebuild</button>
+          <button id="btn-rebuild-restart">Rebuild &amp; Restart</button>
+          <button class="ghost" id="btn-refresh" title="Refresh status">⟳ Refresh</button>
+        </div>
+
+        <div class="banner progress" id="progress-banner" hidden>
+          <span class="spinner"></span>
+          <span id="progress-text">Working…</span>
+        </div>
+        <div class="banner error" id="error-banner" hidden>
+          <span id="error-text"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head">
+          <h1 style="font-size: 1rem">Logs</h1>
+          <button class="ghost" id="btn-logs" style="margin-left: auto">Load recent logs</button>
+        </div>
+        <p class="sub" style="margin-bottom: 0">
+          Service output and the last rebuild's output, for troubleshooting.
+        </p>
+        <div class="log" id="log-box" hidden></div>
+      </div>
+    </div>
+
+    <script>
+      const TOKEN = "__CONTROL_TOKEN__";
+
+      async function api(path, opts) {
+        const res = await fetch(
+          path,
+          Object.assign(
+            { headers: { "X-Control-Token": TOKEN, "Content-Type": "application/json" } },
+            opts,
+          ),
+        );
+        let body = {};
+        try {
+          body = await res.json();
+        } catch (e) {}
+        if (!res.ok) throw new Error(body.error || `Request failed (${res.status})`);
+        return body;
+      }
+
+      const pill = document.getElementById("status-pill");
+      const name = document.getElementById("service-name");
+      const progressBanner = document.getElementById("progress-banner");
+      const progressText = document.getElementById("progress-text");
+      const errorBanner = document.getElementById("error-banner");
+      const errorText = document.getElementById("error-text");
+      const logBox = document.getElementById("log-box");
+      const buttons = {
+        start: document.getElementById("btn-start"),
+        stop: document.getElementById("btn-stop"),
+        restart: document.getElementById("btn-restart"),
+        rebuild: document.getElementById("btn-rebuild"),
+        "rebuild-restart": document.getElementById("btn-rebuild-restart"),
+      };
+
+      let pollTimer = null;
+
+      function renderStatus(data) {
+        name.textContent = data.service;
+        const busy = !!data.operation;
+        const cls = busy ? "busy" : data.status;
+        pill.className = `pill ${cls}`;
+        pill.textContent = busy ? `${data.operation}…` : data.status;
+
+        buttons.start.disabled = busy || data.status === "running";
+        buttons.stop.disabled = busy || data.status === "stopped";
+        buttons.restart.disabled = busy;
+        buttons.rebuild.disabled = busy;
+        buttons["rebuild-restart"].disabled = busy;
+
+        if (busy) {
+          progressBanner.hidden = false;
+          const last = (data.lines || []).slice(-1)[0];
+          progressText.textContent = last ? last.text : `Running: ${data.operation}…`;
+        } else {
+          progressBanner.hidden = true;
+        }
+
+        if (!busy && data.lastError) {
+          errorBanner.hidden = false;
+          errorText.textContent = data.lastError;
+        } else {
+          errorBanner.hidden = true;
+        }
+      }
+
+      async function refresh() {
+        try {
+          const data = await api("/api/status");
+          renderStatus(data);
+          schedulePoll(!!data.operation);
+        } catch (e) {
+          pill.className = "pill error";
+          pill.textContent = "unreachable";
+        }
+      }
+
+      function schedulePoll(busy) {
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(refresh, busy ? 1200 : 6000);
+      }
+
+      async function runOp(kind) {
+        errorBanner.hidden = true;
+        try {
+          await api(`/api/${kind}`, { method: "POST" });
+          refresh();
+        } catch (e) {
+          errorBanner.hidden = false;
+          errorText.textContent = e.message;
+        }
+      }
+
+      buttons.start.addEventListener("click", () => runOp("start"));
+      buttons.stop.addEventListener("click", () => runOp("stop"));
+      buttons.restart.addEventListener("click", () => runOp("restart"));
+      buttons.rebuild.addEventListener("click", () => runOp("rebuild"));
+      buttons["rebuild-restart"].addEventListener("click", () => runOp("rebuild-restart"));
+      document.getElementById("btn-refresh").addEventListener("click", refresh);
+
+      document.getElementById("btn-logs").addEventListener("click", async () => {
+        logBox.hidden = false;
+        logBox.textContent = "Loading…";
+        try {
+          const data = await api("/api/logs");
+          logBox.textContent = (data.lines || []).join("\n") || "No log output yet.";
+        } catch (e) {
+          logBox.textContent = "Could not load logs: " + e.message;
+        }
+      });
+
+      refresh();
+    </script>
+  </body>
+</html>

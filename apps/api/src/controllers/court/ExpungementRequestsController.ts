@@ -2,7 +2,7 @@ import { ExpungementRequestStatus, Feature, type User, WhitelistStatus } from "@
 import { BodyParams, Context, PathParams, UseBeforeEach } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { BadRequest, NotFound } from "@tsed/exceptions";
-import { ContentType, Delete, Get, Post } from "@tsed/schema";
+import { ContentType, Delete, Get, Post, Tags } from "@tsed/schema";
 import { citizenIncludeWithRecords } from "controllers/citizen/CitizenController";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -17,6 +17,7 @@ export const expungementRequestInclude = {
   records: { include: { violations: { include: { penalCode: true } } } },
 };
 
+@Tags("Court")
 @Controller("/expungement-requests")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

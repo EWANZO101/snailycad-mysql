@@ -1,6 +1,6 @@
 import { Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams } from "@tsed/platform-params";
-import { ContentType, Description, Get, Put } from "@tsed/schema";
+import { ContentType, Description, Get, Put, Tags } from "@tsed/schema";
 import { z } from "zod";
 import { prisma } from "lib/data/prisma";
 import { validateSchema } from "lib/data/validate-schema";
@@ -31,6 +31,7 @@ async function getSettingsWithStats() {
   return { ...settings, stats, phones: describeFivemPhones(settings) };
 }
 
+@Tags("Admin: Manage")
 @Controller("/admin/manage/cad-settings/fivem-framework")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

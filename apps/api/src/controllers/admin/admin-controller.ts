@@ -1,5 +1,5 @@
 import { Controller } from "@tsed/di";
-import { Get, Description, ContentType } from "@tsed/schema";
+import { ContentType, Description, Get, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { glob } from "glob";
 import { join } from "node:path";
@@ -15,6 +15,7 @@ import { getCADVersion } from "@snailycad/utils/version";
 
 export const ONE_DAY = 60 * 60 * 24;
 
+@Tags("Admin")
 @Controller("/admin")
 @ContentType("application/json")
 export class AdminController {

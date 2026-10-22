@@ -36,7 +36,7 @@ main() {
     manifest="$dir/installer/manifest.env"
     [[ -f "$manifest" ]] || { echo "No installer manifest in $dir; is this a SnailyCAD install folder?" >&2; exit 1; }
 
-    local NAME="" INSTALL_DIR="" SERVICE="" CAD_SERVICE="" DB_NAME="" DB_USER="" DB_ADMIN="" APT_MARIADB=""
+    local NAME="" INSTALL_DIR="" SERVICE="" CAD_SERVICE="" CONTROL_SERVICE="" DB_NAME="" DB_USER="" DB_ADMIN="" APT_MARIADB=""
     local DOCKER_PROJECT="" DOCKER_NETWORK="" APT_DOCKER="" DB_ENGINE="" APT_POSTGRES=""
     local DOCKER_COMPOSE_FILE="production.docker-compose.yml"
     local -a UFW_PORTS=() APT_PACKAGES=()
@@ -47,6 +47,7 @@ main() {
             INSTALL_DIR) INSTALL_DIR="$value" ;;
             SERVICE) SERVICE="$value" ;;
             CAD_SERVICE) CAD_SERVICE="$value" ;;
+            CONTROL_SERVICE) CONTROL_SERVICE="$value" ;;
             DB_NAME) DB_NAME="$value" ;;
             DB_USER) DB_USER="$value" ;;
             DB_ADMIN) DB_ADMIN="$value" ;;
@@ -111,6 +112,7 @@ main() {
         echo "  - $INSTALL_DIR except runtime/ (Node.js + pnpm are kept)"
     fi
     [[ -n "$CAD_SERVICE" ]] && echo "  - systemd service $CAD_SERVICE"
+    [[ -n "$CONTROL_SERVICE" ]] && echo "  - systemd service $CONTROL_SERVICE (the Control Panel)"
     [[ -n "$DOCKER_PROJECT" ]] && echo "  - Docker containers, images and data of project $DOCKER_PROJECT"
     [[ -n "$DOCKER_NETWORK" ]] && echo "  - Docker network $DOCKER_NETWORK"
     [[ -n "$remove_docker" ]] && echo "  - Docker itself (it was installed by the wizard), with all its data"
@@ -137,10 +139,18 @@ main() {
         systemctl daemon-reload
         systemctl reset-failed "$CAD_SERVICE" 2>/dev/null
     fi
+    if [[ -n "$CONTROL_SERVICE" ]]; then
+        echo "[*] Removing service $CONTROL_SERVICE..."
+        systemctl disable --now "$CONTROL_SERVICE" 2>/dev/null
+        rm -f "/etc/systemd/system/$CONTROL_SERVICE.service"
+        systemctl daemon-reload
+        systemctl reset-failed "$CONTROL_SERVICE" 2>/dev/null
+    fi
     # the CAD's start script also runs a status page server from the install folder; without
     # systemd the wizard runs under nohup
     pkill -f "$INSTALL_DIR/app/" 2>/dev/null
     pkill -f "$INSTALL_DIR/installer/wizard-server.py" 2>/dev/null
+    pkill -f "$INSTALL_DIR/installer/control-server.py" 2>/dev/null
 
     if [[ -n "$DOCKER_PROJECT" ]] && command -v docker >/dev/null 2>&1; then
         echo "[*] Removing Docker containers, images and volumes of $DOCKER_PROJECT..."

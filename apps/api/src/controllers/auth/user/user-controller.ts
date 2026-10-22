@@ -2,7 +2,7 @@ import { assertNotDemoAccount } from "lib/demo/demo-mode";
 import { Context, Res, BodyParams, QueryParams } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { UseBefore } from "@tsed/platform-middlewares";
-import { ContentType, Delete, Description, Patch, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Patch, Post, Put, Tags } from "@tsed/schema";
 import { Cookie } from "@snailycad/config";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -32,6 +32,7 @@ import { User } from "@snailycad/types";
 import { getActiveOfficer } from "~/lib/leo/activeOfficer";
 import { getActiveDeputy } from "~/lib/get-active-ems-fd-deputy";
 
+@Tags("Authentication")
 @Controller("/user")
 @UseBefore(IsAuth)
 @ContentType("application/json")

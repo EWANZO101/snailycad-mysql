@@ -3,7 +3,7 @@ import { Controller } from "@tsed/di";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { BodyParams, Context, PathParams } from "@tsed/platform-params";
-import { ContentType, Description, Get, Put } from "@tsed/schema";
+import { ContentType, Description, Get, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
@@ -12,6 +12,7 @@ import { AuditLogActionType } from "@snailycad/audit-logger";
 import { createAuditLogEntry } from "@snailycad/audit-logger/server";
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/name-change-requests")
 @ContentType("application/json")
 export class AdminNameChangeController {

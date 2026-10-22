@@ -80,6 +80,7 @@ if ($others.Count -gt 0) {
     $packages.Clear()
 }
 $cadService = Get-Value 'CAD_SERVICE'
+$controlService = Get-Value 'CONTROL_SERVICE'
 $serviceKind = Get-Value 'WIN_SERVICE'
 $dbName = Get-Value 'DB_NAME'
 $dbUser = Get-Value 'DB_USER'
@@ -103,6 +104,8 @@ if ($removeRuntime) { Write-Host "  - $dir (the CAD, its build, Node.js + pnpm a
 else { Write-Host "  - $dir except runtime\ (Node.js + pnpm are kept)" }
 if ($cadService -and $serviceKind -eq 'task') { Write-Host "  - scheduled task \SnailyCAD\$cadService" }
 elseif ($cadService) { Write-Host "  - Windows service $cadService" }
+if ($controlService -and $serviceKind -eq 'task') { Write-Host "  - scheduled task \SnailyCAD\$controlService (the Control Panel)" }
+elseif ($controlService) { Write-Host "  - Windows service $controlService (the Control Panel)" }
 if ($dropDatabase) { Write-Host "  - database $dbName and database user $dbUser (all CAD data)" }
 if ($rules.Count -gt 0) { Write-Host "  - Windows Firewall rule(s) $($rules -join ', ')" }
 if ($removeMariaDB) { Write-Host '  - the MariaDB server it installed (and every database in it)' }
@@ -143,6 +146,27 @@ if ($cadService) {
         }
     }
 }
+
+# --- the Control Panel's background service ---
+if ($controlService) {
+    Say "Removing $controlService..."
+    $nssm = Join-Path $dir 'runtime\nssm.exe'
+    if ($serviceKind -eq 'task') {
+        Stop-ScheduledTask -TaskPath '\SnailyCAD\' -TaskName $controlService -ErrorAction SilentlyContinue
+        Unregister-ScheduledTask -TaskPath '\SnailyCAD\' -TaskName $controlService -Confirm:$false -ErrorAction SilentlyContinue
+    } elseif (Get-Service -Name $controlService -ErrorAction SilentlyContinue) {
+        if (Test-Path -LiteralPath $nssm) {
+            & $nssm stop $controlService 2>&1 | Out-Null
+            & $nssm remove $controlService confirm 2>&1 | Out-Null
+        }
+        if (Get-Service -Name $controlService -ErrorAction SilentlyContinue) {
+            & sc.exe stop $controlService | Out-Null
+            & sc.exe delete $controlService | Out-Null
+        }
+    }
+}
+Remove-Item -LiteralPath (Join-Path $dir 'Control Panel.url') -ErrorAction SilentlyContinue
+
 # anything still running from the install folder (node.exe, Prisma's engine): by PID, checked by path
 Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
     Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith("$dir\", [StringComparison]::OrdinalIgnoreCase) } |

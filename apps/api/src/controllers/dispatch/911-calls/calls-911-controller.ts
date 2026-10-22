@@ -1,5 +1,5 @@
 import { Controller } from "@tsed/di";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import {
   UPDATE_ASSIGNED_UNIT_SCHEMA,
   CALL_911_SCHEMA,
@@ -46,6 +46,7 @@ import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger
 import { _leoProperties, assignedUnitsInclude, callInclude } from "utils/leo/includes";
 import { insensitive } from "lib/data/db-provider";
 
+@Tags("Dispatch")
 @Controller("/911-calls")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

@@ -1,4 +1,4 @@
-import { ContentType, Delete, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Get, Post, Put, Tags } from "@tsed/schema";
 import { BodyParams, PathParams, QueryParams, UseBeforeEach } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -11,6 +11,7 @@ import type * as APITypes from "@snailycad/types/api";
 import { Feature } from "@snailycad/types";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
 
+@Tags("Court")
 @Controller("/court-entries")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

@@ -1,6 +1,6 @@
 import { Context, UseBefore, UseBeforeEach } from "@tsed/common";
 import { Controller } from "@tsed/di";
-import { ContentType, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import { BodyParams, PathParams } from "@tsed/platform-params";
 import { NotFound } from "@tsed/exceptions";
 import { User } from "@prisma/client";
@@ -28,6 +28,7 @@ const drugTestInclude = {
   officer: { include: leoProperties },
 };
 
+@Tags("Law Enforcement")
 @Controller("/leo/drug-tests")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

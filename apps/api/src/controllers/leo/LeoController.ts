@@ -1,5 +1,5 @@
 import { QueryParams, Controller, UseBeforeEach, UseBefore, UseAfter } from "@tsed/common";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { LEO_PANIC_BUTTON_SCHEMA, SWITCH_CALLSIGN_SCHEMA } from "@snailycad/schemas";
 import { BodyParams, Context, PathParams } from "@tsed/platform-params";
 import { BadRequest, NotFound } from "@tsed/exceptions";
@@ -28,6 +28,7 @@ import { userProperties } from "~/lib/auth/getSessionUser";
 import { recordsLogsInclude } from "../admin/manage/citizens/records-logs-controller";
 import { insensitive } from "lib/data/db-provider";
 
+@Tags("Law Enforcement")
 @Controller("/leo")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

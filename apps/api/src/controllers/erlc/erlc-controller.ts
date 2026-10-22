@@ -1,6 +1,6 @@
 import { Context, Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams } from "@tsed/platform-params";
-import { ContentType, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import { Forbidden } from "@tsed/exceptions";
 import { Feature, type User } from "@snailycad/types";
 import { hasPermission } from "@snailycad/permissions";
@@ -25,6 +25,7 @@ const COMMAND_SCHEMA = z.object({
     .transform((value) => value.replace(/[\r\n]+/g, " ")),
 });
 
+@Tags("ER:LC Integration")
 @Controller("/erlc")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

@@ -58,7 +58,7 @@ function Install-SnailyCAD {
     $DirSet = -not [string]::IsNullOrWhiteSpace($env:SNAILY_DIR)
     $PortSet = -not [string]::IsNullOrWhiteSpace($env:SNAILY_WIZARD_PORT)
     $InstallerUrl = Get-Setting 'SNAILY_INSTALLER_URL' "https://raw.githubusercontent.com/EWANZO101/snailycad-mysql/$Branch/scripts/installer"
-    $WizardFiles = @('wizard-server.py', 'wizard.html', 'uninstall.ps1')
+    $WizardFiles = @('wizard-server.py', 'wizard.html', 'control-server.py', 'control.html', 'uninstall.ps1')
 
     # --- administrator ------------------------------------------------------------------
 

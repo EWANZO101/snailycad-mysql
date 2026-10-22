@@ -19,7 +19,7 @@ import {
 import { Controller } from "@tsed/di";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { validateMaxDivisionsPerUnit } from "controllers/leo/my-officers/MyOfficersController";
 import { findUnit } from "lib/leo/findUnit";
 import { updateOfficerDivisionsCallsigns } from "lib/leo/utils";
@@ -64,6 +64,7 @@ export const ACCEPT_DECLINE_TYPES = ["ACCEPT", "DECLINE"] as const;
 export type AcceptDeclineType = (typeof ACCEPT_DECLINE_TYPES)[number];
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/units")
 @ContentType("application/json")
 export class AdminManageUnitsController {
