@@ -1392,7 +1392,12 @@ NETWORK_TROUBLE = re.compile(
 
 def compose(*args, timeout=600, on_line=None):
     compose_file = manifest_value("DOCKER_COMPOSE_FILE") or COMPOSE_FILE
-    return run(["docker", "compose", "-p", NAME, "-f", compose_file, *args], cwd=APP_DIR, timeout=timeout, on_line=on_line)
+    # Force BuildKit: the Dockerfile's --mount=type=cache layers and this function's own build_line
+    # progress parser (BUILD_STEP, above) both assume BuildKit's build output, which isn't always
+    # the host Docker Engine's default builder.
+    env = {"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"}
+    return run(["docker", "compose", "-p", NAME, "-f", compose_file, *args], cwd=APP_DIR, timeout=timeout,
+               on_line=on_line, env=env)
 
 
 def build_line(line):
@@ -1553,8 +1558,11 @@ def windows_build_env():
 
 def windows_dependencies():
     say("Installing the CAD's packages with pnpm (a few minutes)...")
-    check(run([*pnpm_cmd(), "install", "--prefer-offline", "--store-dir", PNPM_STORE], cwd=APP_DIR,
-              env=windows_build_env(), timeout=3600, on_line=build_line), "Could not install the dependencies")
+    # --frozen-lockfile: trust pnpm-lock.yaml as-is instead of re-resolving it against the
+    # registry, same as the Docker image's install - faster and still reproducible on a fresh clone.
+    check(run([*pnpm_cmd(), "install", "--frozen-lockfile", "--prefer-offline", "--store-dir", PNPM_STORE],
+              cwd=APP_DIR, env=windows_build_env(), timeout=3600, on_line=build_line),
+          "Could not install the dependencies")
     say("Dependencies installed.")
 
 
