@@ -840,12 +840,20 @@ def validate_settings(body):
     except (TypeError, ValueError):
         client_port = api_port = 0
     engine = db.get("engine") or "mysql"
-    settings = {"address": str(body.get("address", "")).strip(), "clientPort": client_port, "apiPort": api_port,
+    # apiAddress is optional: blank/absent means "same host as the website", which is also the only
+    # choice the wizard offered before this field existed - existing callers of this endpoint that
+    # don't send it at all keep working exactly as before.
+    api_address = str(body.get("apiAddress", "")).strip()
+    website_address = str(body.get("address", "")).strip()
+    settings = {"address": website_address, "apiAddress": api_address or website_address,
+                "clientPort": client_port, "apiPort": api_port,
                 "db": {"mode": db.get("mode"), "engine": engine}}
     if engine not in ("mysql", "postgresql"):
         errors.append("Choose MySQL / MariaDB or PostgreSQL.")
     if not HOSTNAME.match(settings["address"]):
         errors.append("Enter a valid IP address or domain.")
+    if not HOSTNAME.match(settings["apiAddress"]):
+        errors.append("Enter a valid IP address or domain for the API.")
     for label, port in (("Website", client_port), ("API", api_port)):
         if not 1024 <= port <= 65535:
             errors.append(f"{label} port must be 1024-65535.")
@@ -1229,7 +1237,9 @@ def step_database(settings):
 
 def write_env(settings, database, extra=None):
     client_url = f"http://{settings['address']}:{settings['clientPort']}"
-    api_url = f"http://{settings['address']}:{settings['apiPort']}/v1"
+    # .get(...) with a fallback to settings['address']: any caller built before apiAddress existed
+    # (or a settings dict assembled elsewhere without it) still gets the old same-host behavior.
+    api_url = f"http://{settings.get('apiAddress') or settings['address']}:{settings['apiPort']}/v1"
     values = {
         "DB_PROVIDER": "postgresql" if settings["db"].get("engine") == "postgresql" else "mysql",
         "DB_PASSWORD": quote(database["password"], safe=""),
