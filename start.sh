@@ -250,10 +250,14 @@ maybe_install() {
 
     write_status installing
     log "Installing dependencies with pnpm..."
-    NODE_OPTIONS="$BUILD_NODE_OPTIONS" pnpm install --prefer-offline \
+    # --frozen-lockfile: trust pnpm-lock.yaml as committed instead of re-resolving it against the
+    # registry (faster on a fresh clone, where it always matches package.json anyway) - the same
+    # flag the Docker image's install already uses. If pnpm-lock.yaml and package.json ever drift
+    # (e.g. a hand edit), this now fails loudly instead of silently rewriting the lockfile; run
+    # `pnpm install` manually (or ./start.sh --force-install) to repair it.
+    NODE_OPTIONS="$BUILD_NODE_OPTIONS" pnpm install --frozen-lockfile --prefer-offline \
         || error_exit "Failed to install dependencies."
 
-    # pnpm may rewrite the lockfile, so hash it after the install.
     install_hash > "$INSTALL_STAMP"
 }
 
