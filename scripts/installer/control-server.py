@@ -208,14 +208,43 @@ def service_start():
     return run(["systemctl", "start", NAME])
 
 
+def windows_force_stop(name, timeout=60):
+    """Stop a Windows service unconditionally: stops it (and anything that declares itself a
+    dependent of it) the normal way, then force-kills whatever's still running. A plain
+    `nssm stop` / `sc stop` goes through the same Windows SCM call either way, so it fails outright
+    with "Cannot stop service ... because it has dependent services" whenever anything else is set
+    up to depend on this one — the same error the Control Panel must never show a user clicking
+    Stop. This also clears a service stuck in StopPending, which a plain stop can't."""
+    ps = (
+        "$ErrorActionPreference = 'SilentlyContinue';"
+        f"$svc = Get-Service -Name '{name}';"
+        "if (-not $svc) { Write-Output 'service not found'; exit 1 }"
+        f"$all = @($svc) + (Get-Service -Name '{name}' -DependentServices);"
+        "foreach ($s in $all) { if ($s.Status -ne 'Stopped') { Stop-Service -Name $s.Name -Force } }"
+        "Start-Sleep -Milliseconds 500;"
+        "foreach ($s in $all) {"
+        "  $cur = Get-Service -Name $s.Name -ErrorAction SilentlyContinue;"
+        "  if ($cur -and $cur.Status -ne 'Stopped') {"
+        "    $wmi = Get-CimInstance Win32_Service -Filter (\"Name='\" + $s.Name + \"'\");"
+        "    if ($wmi -and $wmi.ProcessId -gt 0) { Stop-Process -Id $wmi.ProcessId -Force }"
+        "  }"
+        "}"
+        "Start-Sleep -Milliseconds 500;"
+        f"foreach ($s in $all) {{ Stop-Service -Name $s.Name -Force }};"
+        f"$final = Get-Service -Name '{name}';"
+        "if ($final.Status -ne 'Stopped') { Write-Output ('still ' + $final.Status); exit 1 }"
+        "Write-Output 'stopped'"
+    )
+    return run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps], timeout=timeout)
+
+
 def service_stop():
     if METHOD == "docker":
         return run(compose_cmd("stop"), cwd=APP_DIR, timeout=120)
     if WINDOWS:
         if WIN_SERVICE == "task":
             return run(["schtasks", "/end", "/tn", f"{TASK_PATH}{NAME}"])
-        nssm = find_nssm()
-        return run([nssm, "stop", NAME] if nssm else ["sc", "stop", NAME])
+        return windows_force_stop(NAME)
     return run(["systemctl", "stop", NAME])
 
 

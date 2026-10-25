@@ -1894,7 +1894,12 @@ def control_service_windows():
                 [nssm, "set", control_name, "AppRotateBytes", "10485760"],
                 [nssm, "set", control_name, "AppExit", "Default", "Restart"],
                 [nssm, "set", control_name, "AppRestartDelay", "10000"],
-                [nssm, "set", control_name, "DependOnService", NAME],
+                # Deliberately NOT DependOnService=NAME: Windows SCM refuses to stop a service
+                # that has a running dependent ("Cannot stop service ... because it has dependent
+                # services") unless -Force is used. That would make every "Stop" click/command
+                # against NAME fail while this control panel is up, which defeats its purpose. The
+                # control panel already tolerates NAME being stopped/unknown (see service_status()
+                # in control-server.py), so it doesn't need a hard SCM dependency on it to work.
                 [nssm, "start", control_name],
             ]
             for cmd in commands:
