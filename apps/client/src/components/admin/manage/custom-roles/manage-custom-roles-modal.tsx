@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Button, Loader, SelectField, TextField } from "@snailycad/ui";
+import { Button, Loader, SelectField, SwitchField, TextField } from "@snailycad/ui";
 import { Modal } from "components/modal/Modal";
 import { Form, Formik, type FormikHelpers } from "formik";
 import { handleValidate } from "lib/handleValidate";
@@ -9,9 +9,10 @@ import type { CustomRole, DiscordRole } from "@snailycad/types";
 import { useTranslations } from "use-intl";
 import { ModalIds } from "types/modal-ids";
 import { CUSTOM_ROLE_SCHEMA } from "@snailycad/schemas";
-import { Permissions, toPermissionList } from "@snailycad/permissions";
+import { type Permissions, toPermissionList } from "@snailycad/permissions";
 import { ImageSelectInput, validateFile } from "components/form/inputs/ImageSelectInput";
 import { usePermission } from "hooks/usePermission";
+import { usePermissionsModal } from "hooks/use-permissions-modal";
 import type {
   GetCADDiscordRolesData,
   PostCustomRolesData,
@@ -28,6 +29,7 @@ interface Props {
 export function ManageCustomRolesModal({ role, onClose, onCreate, onUpdate }: Props) {
   const [image, setImage] = React.useState<File | string | null>(null);
   const [discordRoles, setDiscordRoles] = React.useState<DiscordRole[]>([]);
+  const [search, setSearch] = React.useState("");
 
   const { state, execute } = useFetch();
   const modalState = useModal();
@@ -35,6 +37,25 @@ export function ManageCustomRolesModal({ role, onClose, onCreate, onUpdate }: Pr
   const t = useTranslations("Management");
   const tPermission = useTranslations("Permissions");
   const { hasPermissions } = usePermission();
+
+  // users can only add/remove permissions they have themselves (enforced by the API)
+  function canManagePermission(permission: Permissions) {
+    return hasPermissions([permission]);
+  }
+
+  const { DEPRECATED_PERMISSIONS, groups } = usePermissionsModal({ canManagePermission });
+
+  function handleToggleGroup(group: (typeof groups)[number], permissions: string[]) {
+    const managable = group.permissions.filter(canManagePermission);
+    const allChecked = managable.every((permission) => permissions.includes(permission));
+
+    if (allChecked) {
+      return permissions.filter((permission) => !managable.includes(permission as Permissions));
+    }
+
+    const toAdd = managable.filter((permission) => !permissions.includes(permission));
+    return [...permissions, ...toAdd];
+  }
 
   function handleClose() {
     onClose?.();
@@ -126,7 +147,7 @@ export function ManageCustomRolesModal({ role, onClose, onCreate, onUpdate }: Pr
   const validate = handleValidate(CUSTOM_ROLE_SCHEMA);
   return (
     <Modal
-      className="w-[600px]"
+      className="w-[1200px]"
       title={role ? t("editCustomRole") : t("createCustomRole")}
       onClose={handleClose}
       isOpen={modalState.isOpen(ModalIds.ManageCustomRole)}
@@ -143,19 +164,75 @@ export function ManageCustomRolesModal({ role, onClose, onCreate, onUpdate }: Pr
               value={values.name}
             />
 
-            <SelectField
-              label={t("permissions")}
-              errorMessage={typeof errors.permissions === "string" ? errors.permissions : undefined}
-              selectionMode="multiple"
-              selectedKeys={values.permissions}
-              options={Object.keys(Permissions).map((permission) => ({
-                value: permission,
-                label: tPermission(permission),
-                // users can only add/remove permissions they have themselves (enforced by the API)
-                isDisabled: !hasPermissions([permission as Permissions]),
-              }))}
-              onSelectionChange={(keys) => setFieldValue("permissions", keys)}
-            />
+            <div className="mt-4">
+              <label className="block font-semibold text-sm mb-1">{t("permissions")}</label>
+              {typeof errors.permissions === "string" ? (
+                <span className="mt-1 font-medium text-red-500 block">{errors.permissions}</span>
+              ) : null}
+
+              <TextField
+                label={common("search")}
+                className="my-2"
+                name="search"
+                value={search}
+                onChange={(value) => setSearch(value)}
+                placeholder={common("search")}
+              />
+
+              {groups.map((group) => {
+                const filtered = group.permissions.filter(
+                  (permission) =>
+                    !DEPRECATED_PERMISSIONS.includes(permission) &&
+                    permission.toLowerCase().includes(search.toLowerCase()),
+                );
+
+                if (filtered.length <= 0) {
+                  return null;
+                }
+
+                return (
+                  <div className="mb-5" key={group.name}>
+                    <header className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-semibold">{group.name}</h3>
+
+                      <Button
+                        type="button"
+                        size="xs"
+                        onPress={() =>
+                          setFieldValue("permissions", handleToggleGroup(group, values.permissions))
+                        }
+                      >
+                        Toggle all
+                      </Button>
+                    </header>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3">
+                      {filtered.map((permission) => {
+                        const isDisabled = !canManagePermission(permission);
+
+                        return (
+                          <SwitchField
+                            key={permission}
+                            isSelected={values.permissions.includes(permission)}
+                            onChange={(isSelected) =>
+                              setFieldValue(
+                                "permissions",
+                                isSelected
+                                  ? [...values.permissions, permission]
+                                  : values.permissions.filter((p: string) => p !== permission),
+                              )
+                            }
+                            isDisabled={isDisabled}
+                          >
+                            {tPermission(permission)}
+                          </SwitchField>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
             <SelectField
               errorMessage={errors.discordRoleId}
