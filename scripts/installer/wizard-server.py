@@ -78,7 +78,42 @@ if IS_WINDOWS:
 
 SAFE_NAME = re.compile(r"^[A-Za-z0-9_]{1,32}$")
 HOSTNAME = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
+PORT_RANGE = re.compile(r"^(\d{1,5})(?:-(\d{1,5}))?$")
 APT_ENV = {"DEBIAN_FRONTEND": "noninteractive"}
+
+
+def parse_port_ranges(raw):
+    """raw: a list of '9123' / '3000-3500' strings (wizard.html's firewall presets + custom
+    field). Returns (ranges, errors): ranges is a deduplicated list of (start, end) ints, each
+    1-65535 with start<=end; errors describes anything that didn't parse or validate."""
+    ranges, errors, seen = [], [], set()
+    for item in raw or []:
+        item = str(item).strip()
+        if not item:
+            continue
+        m = PORT_RANGE.match(item)
+        if not m:
+            errors.append(f"'{item}' isn't a port or port range (e.g. 9123 or 3000-3500).")
+            continue
+        start = int(m.group(1))
+        end = int(m.group(2)) if m.group(2) else start
+        if end < start:
+            errors.append(f"'{item}': the range is backwards.")
+            continue
+        if not (1 <= start <= 65535 and 1 <= end <= 65535):
+            errors.append(f"'{item}': ports must be 1-65535.")
+            continue
+        if end - start > 5000:
+            errors.append(f"'{item}': that's a {end - start + 1}-port range - narrow it down.")
+            continue
+        if (start, end) not in seen:
+            seen.add((start, end))
+            ranges.append((start, end))
+    if len(ranges) > 25:
+        errors.append("Too many firewall port entries (25 max).")
+    return ranges, errors
+
+
 APT_OPTS = ["-y", "-q", "-o", "DPkg::Lock::Timeout=300"]
 
 lock = threading.Lock()
@@ -867,6 +902,11 @@ def validate_settings(body):
         errors.append("Danger zone password: 6-64 characters, no spaces, quotes, \\, $ or `.")
     settings["uninstallPassword"] = uninstall_password
 
+    extra_raw = body.get("extraFirewallPorts")
+    extra_ports, extra_errors = parse_port_ranges(extra_raw if isinstance(extra_raw, list) else [])
+    errors += extra_errors
+    settings["extraFirewallPorts"] = extra_ports
+
     mode = db.get("mode")
     if IS_WINDOWS:
         expected = ("install", "external")
@@ -1402,13 +1442,21 @@ def write_env(settings, database, extra=None):
 
 
 def step_firewall(settings):
+    extra = settings.get("extraFirewallPorts") or []
+    extra_note = f" + {len(extra)} extra port range(s)" if extra else ""
     if IS_WINDOWS:
         for port in (settings["clientPort"], settings["apiPort"]):
             rule = f"SnailyCAD-{NAME}-{port}"
             add_to_manifest("WIN_FW_RULE", rule)
             netsh_rule(rule)  # an earlier attempt's rule: no duplicates
             check(netsh_rule(rule, port), f"Could not add a firewall rule for port {port}")
-        say(f"Windows Firewall: allowed ports {settings['clientPort']} and {settings['apiPort']}.")
+        for start, end in extra:
+            spec = str(start) if start == end else f"{start}-{end}"
+            rule = f"SnailyCAD-{NAME}-extra-{start}-{end}"
+            add_to_manifest("WIN_FW_RULE", rule)
+            netsh_rule(rule)  # an earlier attempt's rule: no duplicates
+            check(netsh_rule(rule, spec), f"Could not add a firewall rule for port(s) {spec}")
+        say(f"Windows Firewall: allowed ports {settings['clientPort']} and {settings['apiPort']}{extra_note}.")
         return
     if not ufw_active():
         say("No active ufw firewall; nothing to open.")
@@ -1416,7 +1464,11 @@ def step_firewall(settings):
     for port in (settings["clientPort"], settings["apiPort"]):
         add_to_manifest("UFW_PORT", port)
         check(run(["ufw", "allow", f"{port}/tcp", "comment", f"{NAME} SnailyCAD"]), f"Could not open port {port}")
-    say(f"Firewall: opened ports {settings['clientPort']} and {settings['apiPort']}.")
+    for start, end in extra:
+        spec = str(start) if start == end else f"{start}:{end}"
+        add_to_manifest("UFW_PORT", spec)
+        check(run(["ufw", "allow", f"{spec}/tcp", "comment", f"{NAME} SnailyCAD extra"]), f"Could not open port(s) {spec}")
+    say(f"Firewall: opened ports {settings['clientPort']} and {settings['apiPort']}{extra_note}.")
 
 
 def step_service():

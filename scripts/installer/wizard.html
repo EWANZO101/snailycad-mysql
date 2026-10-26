@@ -152,6 +152,16 @@
         margin: 0 0 1.5rem;
         color: var(--gray-400);
       }
+      h2.sub {
+        margin: 1.75rem 0 4px;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      p.help {
+        font-size: 0.8125rem;
+        color: var(--gray-400);
+        margin: 0 0 12px;
+      }
       .actions {
         display: flex;
         justify-content: space-between;
@@ -864,6 +874,35 @@
             </div>
           </div>
         </div>
+        <h2 class="sub">Extra firewall ports</h2>
+        <p class="help">
+          The website and API ports above are always opened. Check any extra ports other software
+          on this server needs reachable from outside - a game server, a companion app - or add
+          your own below.
+        </p>
+        <div class="options two">
+          <label class="option"
+            ><input type="checkbox" class="fw-preset" value="3000-3500" />
+            <span
+              ><b>3000-3500</b>
+              <small>FiveM / game servers</small></span
+            ></label
+          >
+          <label class="option"
+            ><input type="checkbox" class="fw-preset" value="8000-8888" />
+            <span
+              ><b>8000-8888</b>
+              <small>Web / companion apps</small></span
+            ></label
+          >
+        </div>
+        <div class="grid">
+          <div class="field full">
+            <label for="fw-custom">Custom ports</label
+            ><input id="fw-custom" placeholder="e.g. 9123, 9200-9300" />
+            <div class="help">Comma-separated; a single port (9123) or a range (9200-9300).</div>
+          </div>
+        </div>
         <div class="alert info" id="urls"></div>
         <div class="alert error hidden" id="site-error"></div>
         <div class="actions">
@@ -1300,6 +1339,32 @@
         $(id).addEventListener("input", syncUrls),
       );
 
+      function firewallPorts() {
+        const checked = Array.from(document.querySelectorAll(".fw-preset:checked")).map(
+          (el) => el.value,
+        );
+        const custom = $("fw-custom")
+          .value.split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        return [...new Set([...checked, ...custom])];
+      }
+      function firewallPortsError(ports) {
+        const re = /^(\d{1,5})(-(\d{1,5}))?$/;
+        for (const p of ports) {
+          const m = re.exec(p);
+          if (!m) return `'${p}' isn't a port or port range (e.g. 9123 or 3000-3500).`;
+          const start = Number(m[1]),
+            end = m[3] ? Number(m[3]) : start;
+          if (start < 1 || start > 65535 || end < 1 || end > 65535)
+            return `'${p}': ports must be 1-65535.`;
+          if (end < start) return `'${p}': the range is backwards.`;
+          if (end - start > 5000) return `'${p}': that's a ${end - start + 1}-port range - narrow it down.`;
+        }
+        if (ports.length > 25) return "Too many firewall port entries (25 max).";
+        return null;
+      }
+
       $("site-next").addEventListener("click", async () => {
         const client = Number($("client-port").value),
           apiPort = Number($("api-port").value);
@@ -1318,6 +1383,8 @@
             "error",
             "Danger zone password: 6-64 characters, no spaces, quotes, \\, $ or `.",
           );
+        const fwError = firewallPortsError(firewallPorts());
+        if (fwError) return alertBox($("site-error"), "error", fwError);
         for (const [label, port] of [
           ["Website", client],
           ["API", apiPort],
@@ -1343,6 +1410,7 @@
           clientPort: Number($("client-port").value),
           apiPort: Number($("api-port").value),
           uninstallPassword: $("uninstall-password").value,
+          extraFirewallPorts: firewallPorts(),
           db: dbSettings(),
         };
       }
@@ -1357,9 +1425,12 @@
         }[s.db.mode];
         const docker = state.method === "docker";
         const windows = state.checks?.platform === "windows";
+        const extra = s.extraFirewallPorts.length
+          ? ` + ${s.extraFirewallPorts.map((p) => esc(p)).join(", ")}`
+          : "";
         const firewall = windows
-          ? `Adds Windows Firewall rules for ports ${s.clientPort} and ${s.apiPort}`
-          : `Opens ports ${s.clientPort} and ${s.apiPort} if ufw is active`;
+          ? `Adds Windows Firewall rules for ports ${s.clientPort} and ${s.apiPort}${extra}`
+          : `Opens ports ${s.clientPort} and ${s.apiPort}${extra} if ufw is active`;
         const runsAs = docker
           ? "Containers that restart on their own"
           : windows
