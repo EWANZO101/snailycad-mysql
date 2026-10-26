@@ -9,7 +9,7 @@ import type { CustomRole, DiscordRole } from "@snailycad/types";
 import { useTranslations } from "use-intl";
 import { ModalIds } from "types/modal-ids";
 import { CUSTOM_ROLE_SCHEMA } from "@snailycad/schemas";
-import { Permissions, toPermissionList } from "@snailycad/permissions";
+import { type Permissions, toPermissionList } from "@snailycad/permissions";
 import { ImageSelectInput, validateFile } from "components/form/inputs/ImageSelectInput";
 import { usePermission } from "hooks/usePermission";
 import { usePermissionsModal } from "hooks/use-permissions-modal";
