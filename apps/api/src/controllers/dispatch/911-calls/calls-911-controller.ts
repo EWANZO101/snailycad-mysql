@@ -8,7 +8,7 @@ import {
   type ASSIGNED_UNIT,
 } from "@snailycad/schemas";
 import { HeaderParams, BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-params";
-import { BadRequest, NotFound } from "@tsed/exceptions";
+import { BadRequest, Forbidden, NotFound } from "@tsed/exceptions";
 import { prisma } from "lib/data/prisma";
 import { Socket } from "services/socket-service";
 import { UseAfter, UseBeforeEach } from "@tsed/platform-middlewares";
@@ -45,6 +45,33 @@ import { handleEndCall } from "lib/dispatch/911-calls/handle-end-911-call";
 import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 import { _leoProperties, assignedUnitsInclude, callInclude } from "utils/leo/includes";
 import { insensitive } from "lib/data/db-provider";
+
+/** whether `unit` (as returned by `findUnit`) belongs to `userId` - true for their own
+ * officer/deputy, or for a combined unit they're one of the members of. `unit` is loosely
+ * typed here the same way `findUnit`'s own `includes` param is (its declared return types
+ * don't include the `officers`/`deputies` relations the underlying query actually fetches
+ * for combined units - see utils/leo/includes.ts's combinedUnitProperties). */
+function isSelfAssign(unit: any, type: string, userId: string): boolean {
+  if (!unit) return false;
+
+  if (type === "leo" || type === "ems-fd") {
+    return unit.userId === userId;
+  }
+
+  if (type === "combined-leo") {
+    return Boolean(
+      unit.officers?.some((officer: { userId: string | null }) => officer.userId === userId),
+    );
+  }
+
+  if (type === "combined-ems-fd") {
+    return Boolean(
+      unit.deputies?.some((deputy: { userId: string | null }) => deputy.userId === userId),
+    );
+  }
+
+  return false;
+}
 
 @Tags("Dispatch")
 @Controller("/911-calls")
@@ -486,6 +513,7 @@ export class Calls911Controller {
     @PathParams("callId") callId: string,
     @BodyParams("unit") rawUnitId: string | null,
     @QueryParams("force", Boolean) force = false,
+    @Context("user") user: User,
   ): Promise<APITypes.Post911CallAssignUnAssign> {
     if (!rawUnitId) {
       throw new BadRequest("unitIsRequired");
@@ -494,6 +522,21 @@ export class Calls911Controller {
     const { unit, type } = await findUnit(rawUnitId);
     if (!unit) {
       throw new NotFound("unitNotFound");
+    }
+
+    // A unit assigning *itself* to a call is a narrower action than a dispatcher/admin
+    // assigning any unit to a call, so it's gated by its own permission on top of the
+    // base Leo/EmsFd/Dispatch permissions above - a department that wants units to only
+    // be assigned by dispatch can revoke SelfAssignToCalls without touching Leo/EmsFd.
+    if (callType === "assign" && isSelfAssign(unit, type, user.id)) {
+      const canSelfAssign = hasPermission({
+        userToCheck: user,
+        permissionsToCheck: [Permissions.SelfAssignToCalls],
+      });
+
+      if (!canSelfAssign) {
+        throw new Forbidden("noPermissionToSelfAssignToCalls");
+      }
     }
 
     const call = await prisma.call911.findUnique({

@@ -528,7 +528,8 @@
     "SetUserDefinedCallsignOnEmsFd": "Set User Defined Callsign On EMS/FD Deputy",
     "LeoManageCitizenProfile": "Manage Citizen Profile (non-admin)",
     "ManageSmartSigns": "Manage Smart Signs",
-    "ManageSmartMotorwaySigns": "Manage Smart Motorway Signs"
+    "ManageSmartMotorwaySigns": "Manage Smart Motorway Signs",
+    "SelfAssignToCalls": "Self-Assign to 911 Calls"
   },
   "CustomLocales": {
     "customLocales": "Custom Locales",
