@@ -1588,7 +1588,14 @@ def docker_install(settings, deploy_only=False):
             say("Docker network cad_web already exists.")
             return
         add_to_manifest("DOCKER_NETWORK", "cad_web")
-        check(run(["docker", "network", "create", "cad_web"]), "Could not create the Docker network")
+        ok, output = run(["docker", "network", "create", "cad_web"])
+        if not ok and "already exists" in output:
+            # the inspect check above raced (or just failed transiently - a loaded host's docker
+            # CLI can time out) and missed a network another process/attempt already created;
+            # that's the same end state we wanted, not a failure.
+            say("Docker network cad_web already exists.")
+            return
+        check((ok, output), "Could not create the Docker network")
         say("Docker network cad_web created.")
 
     def images():
