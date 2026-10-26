@@ -227,6 +227,26 @@
         background: var(--green-500);
         color: var(--white);
       }
+      .danger {
+        background: var(--red-600);
+        color: var(--white);
+      }
+      .danger:hover {
+        background: #c81e1e;
+      }
+      dialog.card {
+        max-width: 480px;
+        width: calc(100% - 32px);
+        color: inherit;
+      }
+      dialog.card::backdrop {
+        background: rgb(0 0 0 / 0.6);
+      }
+      dialog.card h2 {
+        margin: 0 0 12px;
+        font-size: 1.25rem;
+        color: var(--red-300);
+      }
       button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
@@ -866,6 +886,30 @@
         </div>
       </section>
 
+      <dialog id="db-conflict-dialog" class="card">
+        <h2>⚠ Existing database found</h2>
+        <p id="db-conflict-info"></p>
+        <label style="display: flex; align-items: flex-start; gap: 8px; margin: 16px 0">
+          <input type="checkbox" id="db-conflict-ack" style="margin-top: 3px" />
+          <span
+            >I understand this permanently deletes all existing data in this database and cannot
+            be undone.</span
+          >
+        </label>
+        <div class="field">
+          <label for="db-conflict-type" id="db-conflict-type-label"
+            >Type the database name to confirm</label
+          >
+          <input id="db-conflict-type" autocomplete="off" />
+        </div>
+        <div class="actions">
+          <button class="secondary" id="db-conflict-cancel">Cancel</button>
+          <div class="right">
+            <button class="danger" id="db-conflict-confirm" disabled>Erase and install</button>
+          </div>
+        </div>
+      </dialog>
+
       <!-- 7. progress -->
       <section class="card hidden" data-page="6">
         <h1 id="p-title">Installing SnailyCAD</h1>
@@ -1330,20 +1374,64 @@
       <dt>Runs as</dt><dd>${runsAs}</dd>`;
       }
 
-      $("install").addEventListener("click", async () => {
+      async function submitInstall(dbExtra) {
         $("install").disabled = true;
-        const { ok, data } = await api("/api/install", settings());
+        const base = settings();
+        const body = { ...base, db: { ...base.db, ...(dbExtra || {}) } };
+        const { ok, status, data } = await api("/api/install", body);
         $("install").disabled = false;
-        if (!ok)
+        if (!ok) {
+          if (status === 409 && data.needsConfirmation && data.dbConflict) {
+            openDbConflictDialog(data.dbConflict);
+            return;
+          }
           return alertBox(
             $("install-error"),
             "error",
             data.error || "Could not start the install.",
           );
+        }
         alertBox($("install-error"), "error", "");
         show(6);
         poll();
+      }
+      $("install").addEventListener("click", () => submitInstall());
+
+      // --- database-already-used confirmation: a deliberate 3-step gate (an informed checkbox,
+      // typing the exact name back, and a final separate button) before anything is erased -
+      // never trust the client alone for this: /api/install re-checks the same two conditions.
+      function updateDbConflictState() {
+        const dlg = $("db-conflict-dialog");
+        const matches = $("db-conflict-type").value === dlg.dataset.name && dlg.dataset.name;
+        $("db-conflict-confirm").disabled = !($("db-conflict-ack").checked && matches);
+      }
+      $("db-conflict-ack").addEventListener("change", updateDbConflictState);
+      $("db-conflict-type").addEventListener("input", updateDbConflictState);
+      $("db-conflict-cancel").addEventListener("click", () => $("db-conflict-dialog").close());
+      $("db-conflict-confirm").addEventListener("click", () => {
+        const typed = $("db-conflict-type").value;
+        $("db-conflict-dialog").close();
+        submitInstall({ confirmClear: true, confirmClearName: typed });
       });
+
+      function openDbConflictDialog(conflict) {
+        const dlg = $("db-conflict-dialog");
+        dlg.dataset.name = conflict.name || "";
+        $("db-conflict-ack").checked = false;
+        $("db-conflict-type").value = "";
+        updateDbConflictState();
+        const sample = (conflict.sampleTables || []).map(esc).join(", ");
+        const count = conflict.tableCount || 0;
+        $("db-conflict-info").innerHTML =
+          `Database <code>${esc(conflict.name)}</code> on <code>${esc(conflict.host || "")}</code> already exists` +
+          (count
+            ? ` and contains <b>${count} existing table${count === 1 ? "" : "s"}</b>${sample ? ` (including ${sample}${count > (conflict.sampleTables || []).length ? ", …" : ""})` : ""}`
+            : "") +
+          `. Continuing will <b>permanently erase everything in it</b> before installing. If this isn't ` +
+          `supposed to be there, click Cancel and go back to pick a different database name instead.`;
+        $("db-conflict-type-label").textContent = `Type "${conflict.name}" to confirm`;
+        dlg.showModal();
+      }
 
       // --- 7. progress
       const icons = { done: "✓", failed: "✕", active: "", pending: "" };
