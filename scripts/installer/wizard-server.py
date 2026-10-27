@@ -23,6 +23,7 @@ made, so uninstall.sh can remove it again. Access needs the token install.sh pri
 import glob
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 import platform
@@ -1403,11 +1404,47 @@ def step_database(settings):
     return {"host": "127.0.0.1", "port": int(port), "user": db["user"], "password": password, "name": db["name"]}
 
 
+def is_ip_literal(host):
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return False
+
+
+def shared_domain(client_host, api_host, api_is_ip):
+    """Value for the .env DOMAIN setting: the parent domain shared by the client and API
+    hosts, so SnailyCAD's auth cookie can be scoped to cover both (apps/api/src/utils/
+    set-cookie.ts). Per .env.example's own instruction this is the domain only, not a
+    sub-domain - e.g. "example.com" for client "cad.example.com" + api
+    "cad-api.example.com", not "cad.example.com". If the two hosts don't actually share a
+    multi-label suffix (different domains entirely, or the API is a bare IP), there's
+    nothing meaningful to share - fall back to the client's own host, which still lets the
+    client's own cookies be scoped/secured correctly."""
+    if api_is_ip or client_host == api_host:
+        return client_host
+    c, a = client_host.split("."), api_host.split(".")
+    n = 0
+    while n < min(len(c), len(a)) and c[len(c) - 1 - n] == a[len(a) - 1 - n]:
+        n += 1
+    return ".".join(c[-n:]) if n >= 2 else client_host
+
+
 def write_env(settings, database, extra=None):
-    client_url = f"http://{settings['address']}:{settings['clientPort']}"
+    client_host = settings["address"]
     # .get(...) with a fallback to settings['address']: any caller built before apiAddress existed
     # (or a settings dict assembled elsewhere without it) still gets the old same-host behavior.
-    api_url = f"http://{settings.get('apiAddress') or settings['address']}:{settings['apiPort']}/v1"
+    api_host = settings.get("apiAddress") or settings["address"]
+    client_is_ip, api_is_ip = is_ip_literal(client_host), is_ip_literal(api_host)
+    # A domain is expected to sit behind a reverse proxy terminating TLS on 80/443 (same
+    # convention .env.example's own examples use: "https://cad.mysite.com" vs
+    # "http://99.99.00.190:3000") - the installer's internal Node.js port is never part of
+    # a public domain URL, only of a bare-IP one.
+    client_url = f"http://{client_host}:{settings['clientPort']}" if client_is_ip else f"https://{client_host}"
+    api_url = f"http://{api_host}:{settings['apiPort']}/v1" if api_is_ip else f"https://{api_host}/v1"
+    # DOMAIN is only meaningful for a real domain (set-cookie.ts skips it entirely for an
+    # IP - see isAnIP there) - leave it blank for an IP install, same as before this fix.
+    domain_value = "" if client_is_ip else shared_domain(client_host, api_host, api_is_ip)
     values = {
         "DB_PROVIDER": "postgresql" if settings["db"].get("engine") == "postgresql" else "mysql",
         "DB_PASSWORD": quote(database["password"], safe=""),
@@ -1420,7 +1457,7 @@ def write_env(settings, database, extra=None):
         "CORS_ORIGIN_URL": client_url,
         "NEXT_PUBLIC_CLIENT_URL": client_url,
         "NEXT_PUBLIC_PROD_ORIGIN": api_url,
-        "DOMAIN": "",
+        "DOMAIN": domain_value,
         "SECURE_COOKIES_FOR_IFRAME": "false",
         "PORT_API": str(settings["apiPort"]),
         "PORT_CLIENT": str(settings["clientPort"]),
