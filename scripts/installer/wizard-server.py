@@ -1833,6 +1833,30 @@ def nssm_commands(nssm, depends_on=None):
     return commands
 
 
+def nssm_start_and_wait(nssm, name, timeout_seconds=60):
+    """Starts an NSSM service and, if `nssm start` itself reports failure, waits to see whether
+    it actually comes up anyway before giving up. NSSM's `start` fails with "Unexpected status
+    SERVICE_START_PENDING in response to START control" whenever the service takes a little
+    longer to leave SERVICE_START_PENDING than NSSM's own (short, fixed) wait allows - that's not
+    the same as the service actually failing, and a slower machine (mid-install, CPU busy with the
+    CAD's own build) hits it easily. Only raises if it never reaches SERVICE_RUNNING in time."""
+    result = run([nssm, "start", name], timeout=120)
+    if result[0]:
+        return
+
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        status_ok, status = quiet([nssm, "status", name])
+        status = status.strip()
+        if status == "SERVICE_RUNNING":
+            return
+        if status_ok and status in ("SERVICE_STOPPED", "SERVICE_PAUSED"):
+            break
+        time.sleep(2)
+
+    check(result, f"Could not start the {name} service")
+
+
 def ps_quote(text):
     return "'" + str(text).replace("'", "''") + "'"
 
@@ -1889,8 +1913,9 @@ def windows_service():
         if quiet([nssm, "status", NAME])[0]:  # an earlier attempt
             run([nssm, "stop", NAME], timeout=120)
             run([nssm, "remove", NAME, "confirm"])
-        for cmd in nssm_commands(nssm, depends_on):
+        for cmd in nssm_commands(nssm, depends_on)[:-1]:
             check(run(cmd, timeout=120), f"Could not set up the {NAME} service")
+        nssm_start_and_wait(nssm, NAME)
         say(f"Windows service {NAME} started; logs in {CAD_LOG}.")
         return
     set_in_manifest("WIN_SERVICE", "task")
@@ -1959,10 +1984,10 @@ def control_service_windows():
                 # against NAME fail while this control panel is up, which defeats its purpose. The
                 # control panel already tolerates NAME being stopped/unknown (see service_status()
                 # in control-server.py), so it doesn't need a hard SCM dependency on it to work.
-                [nssm, "start", control_name],
             ]
             for cmd in commands:
                 check(run(cmd, timeout=120), f"Could not set up the {control_name} service")
+            nssm_start_and_wait(nssm, control_name)
             say(f"Control Panel service {control_name} started; logs in {control_log}.")
             return
         say("NSSM is not available for the Control Panel service; using a scheduled task instead.", "error")
