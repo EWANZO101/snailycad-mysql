@@ -61,6 +61,7 @@ PAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "wizard.htm
 COMPOSE_FILE = "production.docker-compose.yml"
 COMPOSE_FILE_POSTGRES = "production.postgres.docker-compose.yml"
 PORT = int(os.environ.get("SNAILY_WIZARD_PORT", "3100"))
+CONTROL_PORT = os.environ.get("SNAILY_CONTROL_PORT", "3101")
 NODE_MAJOR = os.environ.get("SNAILY_NODE_MAJOR", "22")
 PNPM_VERSION = "9.0.4"
 COOKIE = "snaily_wizard"
@@ -1351,7 +1352,7 @@ WantedBy=multi-user.target
         f.write(unit)
     check(run(["systemctl", "daemon-reload"]), "systemctl daemon-reload failed")
     check(run(["systemctl", "enable", "--now", control_name]), "Could not start the Control Panel service")
-    control_port = os.environ.get("SNAILY_CONTROL_PORT", "3101")
+    control_port = CONTROL_PORT
     say(f"Control Panel service {control_name} started on 127.0.0.1:{control_port} (loopback only). "
         f"From your own PC: ssh -L {control_port}:127.0.0.1:{control_port} this-server, then open "
         f"http://127.0.0.1:{control_port}/ — or open it directly if you're on this machine.")
@@ -1720,7 +1721,7 @@ def control_service_windows():
     control_log = os.path.join(LOGS_DIR, "control.log")
     add_to_manifest("CONTROL_SERVICE", control_name)
     win_service = manifest_value("WIN_SERVICE") or "nssm"
-    control_port = os.environ.get("SNAILY_CONTROL_PORT", "3101")
+    control_port = CONTROL_PORT
     # "Control Panel.url": double-click to open the popup controller, the same convenience as
     # "Update SnailyCAD.bat" above — no command line needed
     with open(os.path.join(INSTALL_DIR, "Control Panel.url"), "w", encoding="utf-8", newline="\r\n") as f:
@@ -1976,6 +1977,7 @@ def state():
         "lines": sorted(LINES + service_lines, key=lambda line: line["t"])[-100:],
         "busy": bool(BUSY),
         "cadUrl": JOB["cadUrl"],
+        "controlUrl": f"http://127.0.0.1:{CONTROL_PORT}/" if JOB["steps"].get("control") == "done" else None,
         "uninstall": (f'powershell -ExecutionPolicy Bypass -File "{os.path.join(INSTALL_DIR, "uninstall.ps1")}"'
                       if IS_WINDOWS else f"sudo bash {INSTALL_DIR}/uninstall.sh"),
         "platform": "windows" if IS_WINDOWS else "linux",

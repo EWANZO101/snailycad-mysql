@@ -890,6 +890,7 @@
         dbTested: false,
         polling: null,
         reqPolling: null,
+        controlWindow: null,
       };
 
       async function api(path, body) {
@@ -1315,14 +1316,20 @@
 
       $("install").addEventListener("click", async () => {
         $("install").disabled = true;
+        // opened now, inside the click itself, so browsers don't treat it as a blocked popup —
+        // it sits on about:blank until the Control Panel step finishes, then gets redirected to it
+        state.controlWindow = window.open("about:blank", "_blank");
         const { ok, data } = await api("/api/install", settings());
         $("install").disabled = false;
-        if (!ok)
+        if (!ok) {
+          if (state.controlWindow && !state.controlWindow.closed) state.controlWindow.close();
+          state.controlWindow = null;
           return alertBox(
             $("install-error"),
             "error",
             data.error || "Could not start the install.",
           );
+        }
         alertBox($("install-error"), "error", "");
         show(6);
         poll();
@@ -1375,8 +1382,15 @@
           $("p-open").classList.remove("hidden");
           $("p-finish").classList.remove("hidden");
           $("p-done").innerHTML =
-            `Your CAD: <code>${esc(s.cadUrl)}</code><br>Remove everything again with: <code>${esc(s.uninstall)}</code>`;
+            `Your CAD: <code>${esc(s.cadUrl)}</code><br>Remove everything again with: <code>${esc(s.uninstall)}</code>` +
+            (s.controlUrl ? `<br>Control Panel: <code>${esc(s.controlUrl)}</code>` : "");
           $("p-done").classList.remove("hidden");
+          // the Control Panel pops open on its own once — the CAD link above still needs a click,
+          // since that's the one the user actually wants focused
+          if (s.controlUrl && !state.controlOpened) {
+            state.controlOpened = true;
+            window.open(s.controlUrl, "_blank", "noopener");
+          }
         }
         return finished || setupFailed;
       }

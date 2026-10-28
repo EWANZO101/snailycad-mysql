@@ -53,6 +53,10 @@ export function DispatchDropdown() {
         {ERLC && hasPermissions([Permissions.Dispatch]) ? (
           <DropdownMenuLinkItem href="/dispatch/erlc">{t("erlc")}</DropdownMenuLinkItem>
         ) : null}
+
+        {ERLC && hasPermissions([Permissions.Dispatch]) ? (
+          <DropdownMenuLinkItem href="/dispatch/dot">{t("dot")}</DropdownMenuLinkItem>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

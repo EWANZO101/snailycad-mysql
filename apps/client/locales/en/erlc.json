@@ -128,6 +128,13 @@
     "model": "Model",
     "owner": "Owner",
     "color": "Colour",
-    "livery": "Livery"
+    "livery": "Livery",
+    "dot": "DOT",
+    "dotPageIntro": "The DOT (Department of Transportation) team from your ER:LC server: its units and its 911 calls, filtered out of the full roster.",
+    "dotCalls": "DOT calls",
+    "noDotCalls": "No DOT calls in the server right now.",
+    "dotUnits": "DOT units",
+    "noDotUnits": "No DOT units in the server right now.",
+    "openFullErlcPage": "Open Dispatch > ER:LC for the full roster and server commands"
   }
 }
