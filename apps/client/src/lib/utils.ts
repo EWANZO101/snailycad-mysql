@@ -7,9 +7,11 @@ import {
   WhitelistStatus,
   type EmsFdDeputy,
   type CombinedEmsFdUnit,
+  type DotWorker,
+  type CombinedDotUnit,
   type Business,
 } from "@snailycad/types";
-import { isUnitCombined, isUnitCombinedEmsFd, isUnitOfficer } from "@snailycad/utils/typeguards";
+import { isUnitOfficer } from "@snailycad/utils/typeguards";
 import { handleRequest } from "./fetch";
 import type { IncomingMessage } from "connect";
 import type { NextApiRequestCookies } from "next/dist/server/api-utils";
@@ -43,13 +45,19 @@ export async function requestAll(
 }
 
 export function makeUnitName(
-  unit: Officer | EmsFdDeputy | CombinedLeoUnit | CombinedEmsFdUnit | undefined,
+  unit:
+    | Officer
+    | EmsFdDeputy
+    | DotWorker
+    | CombinedLeoUnit
+    | CombinedEmsFdUnit
+    | CombinedDotUnit
+    | undefined,
 ) {
   if (!unit) return "UNKNOWN";
 
-  const isCombined = isUnitCombined(unit) || isUnitCombinedEmsFd(unit);
-
-  if (isCombined || !unit.citizen) return "";
+  // combined units (leo/ems-fd/dot) have no citizen of their own
+  if (!("citizen" in unit) || !unit.citizen) return "";
 
   return `${unit.citizen.name} ${unit.citizen.surname}`;
 }
@@ -58,7 +66,7 @@ export function yesOrNoText(t: boolean): "yes" | "no" {
   return t ? "yes" : "no";
 }
 
-export function formatUnitDivisions(unit: Officer | EmsFdDeputy) {
+export function formatUnitDivisions(unit: Officer | EmsFdDeputy | DotWorker) {
   const division = isUnitOfficer(unit) ? null : unit.division?.value.value;
   if (!("divisions" in unit)) return division as string;
   const divisions = unit.divisions.map((d) => d.value.value).join(", ");
@@ -86,7 +94,7 @@ export function filterLicenseType(value: Value, type: ValueLicenseType) {
   return value.licenseType === type;
 }
 
-export function getUnitDepartment(unit: Officer | EmsFdDeputy | null) {
+export function getUnitDepartment(unit: Officer | EmsFdDeputy | DotWorker | null) {
   if (!unit) return null;
 
   const whitelistStatus = isUnitOfficer(unit) ? unit.whitelistStatus : null;
@@ -102,7 +110,7 @@ export function getUnitDepartment(unit: Officer | EmsFdDeputy | null) {
   return unit.department;
 }
 
-export function formatOfficerDepartment(unit: Officer | EmsFdDeputy) {
+export function formatOfficerDepartment(unit: Officer | EmsFdDeputy | DotWorker) {
   const whitelistStatus = unit.whitelistStatus;
   const department = unit.department;
 

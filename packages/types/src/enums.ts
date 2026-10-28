@@ -60,6 +60,7 @@ export const Feature = {
   UNIT_PRIVATE_MESSAGES: "UNIT_PRIVATE_MESSAGES",
   RADIO: "RADIO",
   ERLC: "ERLC",
+  DOT: "DOT",
 } as const;
 
 export type Feature = (typeof Feature)[keyof typeof Feature];
@@ -187,6 +188,7 @@ export type ValueLicenseType = (typeof ValueLicenseType)[keyof typeof ValueLicen
 export const DepartmentType = {
   LEO: "LEO",
   EMS_FD: "EMS_FD",
+  DOT: "DOT",
 } as const;
 
 export type DepartmentType = (typeof DepartmentType)[keyof typeof DepartmentType];
@@ -244,6 +246,7 @@ export const WhatPages = {
   DISPATCH: "DISPATCH",
   EMS_FD: "EMS_FD",
   LEO: "LEO",
+  DOT: "DOT",
 } as const;
 
 export type WhatPages = (typeof WhatPages)[keyof typeof WhatPages];
@@ -358,6 +361,7 @@ export const DashboardLayoutCardType = {
   ACTIVE_WARRANTS: "ACTIVE_WARRANTS",
   ACTIVE_OFFICERS: "ACTIVE_OFFICERS",
   ACTIVE_DEPUTIES: "ACTIVE_DEPUTIES",
+  ACTIVE_DOT: "ACTIVE_DOT",
   ACTIVE_INCIDENTS: "ACTIVE_INCIDENTS",
 } as const;
 

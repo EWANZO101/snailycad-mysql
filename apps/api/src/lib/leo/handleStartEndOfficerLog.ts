@@ -1,27 +1,28 @@
-import { type EmsFdDeputy, type Officer, ShouldDoType } from "@prisma/client";
+import { type EmsFdDeputy, type Officer, type DotWorker, ShouldDoType } from "@prisma/client";
 import { incidentInclude } from "controllers/leo/incidents/IncidentController";
 import { prisma } from "lib/data/prisma";
 import type { Socket } from "services/socket-service";
 import { callInclude } from "~/utils/leo/includes";
 
-interface Options<Type extends "leo" | "ems-fd"> {
+interface Options<Type extends "leo" | "ems-fd" | "dot"> {
   shouldDo: ShouldDoType;
-  unit: Type extends "leo" ? Officer : EmsFdDeputy;
+  unit: Type extends "leo" ? Officer : Type extends "ems-fd" ? EmsFdDeputy : DotWorker;
   socket: Socket;
   userId?: string | null;
   type: Type;
 }
 
-function getPrismaName(type: "leo" | "ems-fd") {
+function getPrismaName(type: "leo" | "ems-fd" | "dot") {
   const idPropertyNames = {
     leo: "officerId",
     "ems-fd": "emsFdDeputyId",
+    dot: "dotWorkerId",
   } as const;
   const idPropertyName = idPropertyNames[type];
   return idPropertyName;
 }
 
-export async function handleStartEndOfficerLog<Type extends "leo" | "ems-fd">(
+export async function handleStartEndOfficerLog<Type extends "leo" | "ems-fd" | "dot">(
   options: Options<Type>,
 ) {
   const idPropertyName = getPrismaName(options.type);
@@ -68,7 +69,7 @@ export async function handleStartEndOfficerLog<Type extends "leo" | "ems-fd">(
   }
 }
 
-async function handleUnassignFromCalls<Type extends "leo" | "ems-fd">(
+async function handleUnassignFromCalls<Type extends "leo" | "ems-fd" | "dot">(
   options: Pick<Options<Type>, "type" | "unit" | "socket">,
 ) {
   const idPropertyName = getPrismaName(options.type);
@@ -98,10 +99,13 @@ async function handleUnassignFromCalls<Type extends "leo" | "ems-fd">(
   });
 }
 
-async function handleUnassignFromActiveIncident<Type extends "leo" | "ems-fd">(
+async function handleUnassignFromActiveIncident<Type extends "leo" | "ems-fd" | "dot">(
   options: Pick<Options<Type>, "type" | "unit" | "socket">,
 ) {
-  const prismaName = getPrismaName(options.type).replace("Id", "") as "officer" | "emsFdDeputy";
+  const prismaName = getPrismaName(options.type).replace("Id", "") as
+    | "officer"
+    | "emsFdDeputy"
+    | "dotWorker";
 
   // @ts-expect-error method has same properties
   const unit = await prisma[prismaName].findUnique({
@@ -130,10 +134,13 @@ async function handleUnassignFromActiveIncident<Type extends "leo" | "ems-fd">(
   options.socket.emitUpdateActiveIncident({ ...incident, unitsInvolved });
 }
 
-async function handleSetUnitOffDuty<Type extends "leo" | "ems-fd">(
+async function handleSetUnitOffDuty<Type extends "leo" | "ems-fd" | "dot">(
   options: Pick<Options<Type>, "type" | "unit" | "socket">,
 ) {
-  const prismaName = getPrismaName(options.type).replace("Id", "") as "officer" | "emsFdDeputy";
+  const prismaName = getPrismaName(options.type).replace("Id", "") as
+    | "officer"
+    | "emsFdDeputy"
+    | "dotWorker";
 
   // @ts-expect-error method has same properties
   await prisma[prismaName].update({

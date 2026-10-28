@@ -105,6 +105,9 @@ export const enum ModalIds {
   CreateDoctorVisit = "CreateDoctorVisitModal",
   SelectDeputy = "SelectDeputyModal",
   ManageDeputy = "ManageDeputyModal",
+  SelectDotWorker = "SelectDotWorkerModal",
+  ManageDotWorker = "ManageDotWorkerModal",
+  ManageDotWorkOrder = "ManageDotWorkOrderModal",
   ManageAOP = "ManageAOPModal",
   EnableSignal100 = "EnableSignal100Modal",
 
@@ -132,6 +135,8 @@ export const enum ModalIds {
   AlertDeleteBolo = "AlertDeleteBoloModal",
   AlertEnd911Call = "AlertEnd911CallModal",
   AlertDeleteDeputy = "AlertDeleteDeputyModal",
+  AlertDeleteDotWorker = "AlertDeleteDotWorkerModal",
+  AlertDeleteWorkOrder = "AlertDeleteWorkOrderModal",
   AlertDeleteTruckLog = "AlertDeleteTruckLogModal",
   AlertDeleteCallEvent = "AlertDeleteCallEventModal",
   AlertDeleteUser = "AlertDeleteUserModal",

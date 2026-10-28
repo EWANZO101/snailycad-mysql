@@ -54,3 +54,5 @@ export const defaultEmsFdPermissions = [
   Permissions.ManageDeadCitizens,
   Permissions.SelfAssignToCalls,
 ];
+
+export const defaultDotPermissions = [Permissions.Dot, Permissions.SelfAssignToCalls];

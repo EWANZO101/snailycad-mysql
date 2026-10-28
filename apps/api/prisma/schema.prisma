@@ -284,6 +284,7 @@ model User {
   dispatchLayoutOrder      Json                      @default(dbgenerated("(json_array())"))
   emsFdLayoutOrder         Json                      @default(dbgenerated("(json_array())"))
   officerLayoutOrder       Json                      @default(dbgenerated("(json_array())"))
+  dotLayoutOrder           Json                      @default(dbgenerated("(json_array())"))
 
   // relational data
   citizens                     Citizen[]
@@ -299,6 +300,7 @@ model User {
   Employee                     Employee[]
   officers                     Officer[]
   emsFdDeputies                EmsFdDeputy[]
+  dotWorkers                   DotWorker[]
   TruckLog                     TruckLog[]
   ExpungementRequest           ExpungementRequest[]
   ActiveDispatchers            ActiveDispatchers[]
@@ -416,6 +418,7 @@ model Citizen {
   warrants             Warrant[]
   Record               Record[]
   emsFdDeputies        EmsFdDeputy[]
+  dotWorkers           DotWorker[]
   TaxiCall             TaxiCall[]
   createdTaxiCalls     TaxiCall[]                    @relation("taxiCallCreator")
   truckLogs            TruckLog[]
@@ -683,6 +686,7 @@ model Value {
   StatusValueToValue              StatusValue[]                 @relation("StatusValueToValue")
   divisionToValue                 DivisionValue[]               @relation("divisionToValue")
   emsFdRankToValue                EmsFdDeputy[]                 @relation("emsFdRankToValue")
+  dotRankToValue                  DotWorker[]                   @relation("dotRankToValue")
   departmentToValue               DepartmentValue[]             @relation("departmentToValue")
   driversLicenseCategoryToValue   DriversLicenseCategoryValue[] @relation("driversLicenseCategoryToValue")
   VehicleValue                    VehicleValue[]                @relation("vehicleValueToValue")
@@ -791,6 +795,7 @@ model DivisionValue {
   callsign                   String?                      @db.Text
   officerDivisionsToDivision Officer[]                    @relation("officerDivisionsToDivision")
   deputies                   EmsFdDeputy[]                @relation("emsFdDivisionToDivision")
+  dotWorkers                 DotWorker[]                  @relation("dotDivisionToDivision")
   pairedUnitTemplate         String?                      @db.VarChar(255)
   extraFields                Json?
   Call911                    Call911[]
@@ -808,6 +813,7 @@ model DepartmentValue {
   isDefaultDepartment   Boolean                 @default(false)
   type                  DepartmentType          @default(LEO)
   EmsFdDeputy           EmsFdDeputy[]           @relation("emsFdDepartmentToDepartment")
+  DotWorker             DotWorker[]             @relation("dotDepartmentToDepartment")
   Officer               Officer[]               @relation("officerDepartmentToDepartment")
   division              DivisionValue[]         @relation("divisionDepartmentToValue")
   LeoWhitelistStatus    LeoWhitelistStatus[]
@@ -823,10 +829,12 @@ model DepartmentValue {
   Value                 Value[]                 @relation("officerRankDepartments")
   EmergencyVehicleValue EmergencyVehicleValue[]
   mCombinedEmsFdUnit    CombinedEmsFdUnit[]
+  mCombinedDotUnit      CombinedDotUnit[]
   ActiveDispatchers     ActiveDispatchers[]
   links                 DepartmentValueLink[]
   tonePresets           TonePreset[]
   radioChannels         RadioChannel[]          @relation("radioChannelDepartments")
+  dotWorkOrders         DotWorkOrder[]          @relation("dotWorkOrderDepartment")
 }
 
 model DepartmentValueLink {
@@ -848,8 +856,10 @@ model EmergencyVehicleValue {
 
   Officers          Officer[]           @relation("activeEmergencyVehicle_leo")
   EmsFdDeputies     EmsFdDeputy[]       @relation("activeEmergencyVehicle_emsfd")
+  DotWorkers        DotWorker[]         @relation("activeEmergencyVehicle_dot")
   CombinedLeoUnit   CombinedLeoUnit[]   @relation("activeEmergencyVehicle_combined_unit")
   CombinedEmsFdUnit CombinedEmsFdUnit[] @relation("activeEmergencyVehicle_combined_emsfd_unit")
+  CombinedDotUnit   CombinedDotUnit[]   @relation("activeEmergencyVehicle_combined_dot_unit")
 }
 
 model DriversLicenseCategoryValue {
@@ -1138,6 +1148,8 @@ model UnitQualification {
   Officer       Officer?     @relation(fields: [officerId], references: [id], onDelete: Cascade)
   emsFdDeputyId String?
   emsFdDeputy   EmsFdDeputy? @relation(fields: [emsFdDeputyId], references: [id], onDelete: Cascade)
+  dotWorkerId   String?
+  dotWorker     DotWorker?   @relation(fields: [dotWorkerId], references: [id], onDelete: Cascade)
 }
 
 model QualificationValue {
@@ -1162,6 +1174,7 @@ model LeoWhitelistStatus {
   departmentId String
   Officers     Officer[]
   EmsFdDeputy  EmsFdDeputy[]
+  DotWorker    DotWorker[]
 }
 
 model StatusValue {
@@ -1177,8 +1190,10 @@ model StatusValue {
 
   officerStatusToValue Officer[]           @relation("officerStatusToValue")
   emsFdStatusToValue   EmsFdDeputy[]       @relation("emsFdStatusToValue")
+  dotStatusToValue     DotWorker[]         @relation("dotStatusToValue")
   CombinedLeoUnit      CombinedLeoUnit[]   @relation("combinedUnitStatusToValue")
   CombinedEmsFdUnit    CombinedEmsFdUnit[] @relation("combinedEmsFdUnitStatusToValue")
+  CombinedDotUnit      CombinedDotUnit[]   @relation("combinedDotUnitStatusToValue")
   Call911              Call911[]
   LeoIncident          LeoIncident[]
   EmsFdIncident        EmsFdIncident[]
@@ -1195,6 +1210,8 @@ model OfficerLog {
   updatedAt     DateTime     @default(now()) @updatedAt
   emsFdDeputy   EmsFdDeputy? @relation(fields: [emsFdDeputyId], references: [id], onDelete: Cascade)
   emsFdDeputyId String?
+  dotWorker     DotWorker?   @relation(fields: [dotWorkerId], references: [id], onDelete: Cascade)
+  dotWorkerId   String?
 }
 
 model ImpoundedVehicle {
@@ -1236,6 +1253,8 @@ model LeoIncident {
   CombinedLeoUnit      CombinedLeoUnit[]      @relation("combinedActiveIncident")
   EmsFdDeputy          EmsFdDeputy[]          @relation("emsfdActiveIncident")
   CombinedEmsFdUnit    CombinedEmsFdUnit[]    @relation("combinedEmsFdActiveIncident")
+  DotWorker            DotWorker[]            @relation("dotActiveIncident")
+  CombinedDotUnit      CombinedDotUnit[]      @relation("combinedDotActiveIncident")
   Record               Record[]
   DispatchChat         DispatchChat[]
 }
@@ -1313,6 +1332,70 @@ model CombinedEmsFdUnit {
   @@index([statusId])
 }
 
+model CombinedDotUnit {
+  id                  String                 @id @default(uuid())
+  workers             DotWorker[]
+  callsign            String                 @db.Text
+  userDefinedCallsign String?                @db.Text
+  callsign2           String?                @db.Text
+  department          DepartmentValue?       @relation(fields: [departmentId], references: [id])
+  departmentId        String?
+  incremental         Int?
+  radioChannelId      String?                @db.Text
+  status              StatusValue?           @relation("combinedDotUnitStatusToValue", fields: [statusId], references: [id])
+  statusId            String?
+  pairedUnitTemplate  String?                @db.VarChar(255)
+  activeCall          Call911?               @relation("CombinedDotUnitActiveCall", fields: [activeCallId], references: [id])
+  activeCallId        String?
+  activeIncident      LeoIncident?           @relation("combinedDotActiveIncident", fields: [activeIncidentId], references: [id])
+  activeIncidentId    String?
+  activeVehicle       EmergencyVehicleValue? @relation("activeEmergencyVehicle_combined_dot_unit", fields: [activeVehicleId], references: [id], onDelete: SetNull)
+  activeVehicleId     String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @default(now()) @updatedAt
+
+  AssignedUnit         AssignedUnit[]
+  IncidentInvolvedUnit IncidentInvolvedUnit[]
+  ChatCreator          ChatCreator[]
+
+  @@index([statusId])
+}
+
+enum DotWorkOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum DotWorkOrderStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+/// a road/infrastructure job DOT can pick up and work: a pothole, closure, downed sign, etc.
+model DotWorkOrder {
+  id               String               @id @default(cuid())
+  title            String               @db.VarChar(255)
+  description      String?              @db.Text
+  location         String               @db.VarChar(255)
+  postal           String?              @db.VarChar(255)
+  priority         DotWorkOrderPriority @default(MEDIUM)
+  status           DotWorkOrderStatus   @default(OPEN)
+  department       DepartmentValue?     @relation("dotWorkOrderDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentId     String?
+  assignedWorker   DotWorker?           @relation("dotWorkOrderAssignee", fields: [assignedWorkerId], references: [id], onDelete: SetNull)
+  assignedWorkerId String?
+  createdByUserId  String?
+  completedAt      DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @default(now()) @updatedAt
+
+  @@index([status, priority, departmentId])
+}
+
 // dispatching
 model ActiveDispatchers {
   id           String           @id @default(cuid())
@@ -1363,6 +1446,10 @@ model ChatCreator {
   combinedLeoId     String?
   combinedEmsFdUnit CombinedEmsFdUnit? @relation(fields: [combinedEmsFdId], references: [id])
   combinedEmsFdId   String?
+  dotWorker         DotWorker?         @relation(fields: [dotWorkerId], references: [id])
+  dotWorkerId       String?
+  combinedDotUnit   CombinedDotUnit?   @relation(fields: [combinedDotId], references: [id])
+  combinedDotId     String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @default(now()) @updatedAt
   DispatchChat      DispatchChat[]
@@ -1404,6 +1491,8 @@ model Call911 {
   extraFields       Json?
   status            WhitelistStatus?
   CombinedEmsFdUnit CombinedEmsFdUnit[] @relation("CombinedEmsFdUnitActiveCall")
+  DotWorker         DotWorker[]         @relation("dotActiveCall")
+  CombinedDotUnit   CombinedDotUnit[]   @relation("CombinedDotUnitActiveCall")
   Record            Record[]
   EmsFdIncident     EmsFdIncident?      @relation(fields: [emsFdIncidentId], references: [id])
   emsFdIncidentId   String?
@@ -1440,6 +1529,10 @@ model AssignedUnit {
   combinedLeoId     String?
   combinedEmsFdUnit CombinedEmsFdUnit? @relation(fields: [combinedEmsFdId], references: [id])
   combinedEmsFdId   String?
+  dotWorker         DotWorker?         @relation(fields: [dotWorkerId], references: [id])
+  dotWorkerId       String?
+  combinedDotUnit   CombinedDotUnit?   @relation(fields: [combinedDotId], references: [id])
+  combinedDotId     String?
   call911           Call911?           @relation(fields: [call911Id], references: [id], onDelete: Cascade)
   call911Id         String?
   createdAt         DateTime           @default(now())
@@ -1468,6 +1561,10 @@ model IncidentInvolvedUnit {
   combinedLeoId     String?
   combinedEmsFdUnit CombinedEmsFdUnit? @relation(fields: [combinedEmsFdId], references: [id])
   combinedEmsFdId   String?
+  dotWorker         DotWorker?         @relation(fields: [dotWorkerId], references: [id])
+  dotWorkerId       String?
+  combinedDotUnit   CombinedDotUnit?   @relation(fields: [combinedDotId], references: [id])
+  combinedDotId     String?
   incident          LeoIncident?       @relation("unitsInvolved", fields: [incidentId], references: [id], onDelete: Cascade)
   incidentId        String?
   createdAt         DateTime           @default(now())
@@ -1681,6 +1778,55 @@ model EmsFdDeputy {
   combinedEmsFdUnitId  String?
   EmsFdIncident        EmsFdIncident[]        @relation("emsFdIncidentCreator")
   ChatCreator          ChatCreator[]
+
+  @@index([callsign, callsign2, statusId])
+}
+
+model DotWorker {
+  id                   String                 @id @default(cuid())
+  department           DepartmentValue?       @relation("dotDepartmentToDepartment", fields: [departmentId], references: [id])
+  departmentId         String?
+  callsign             String                 @db.VarChar(255)
+  callsign2            String                 @db.VarChar(255)
+  incremental          Int?
+  userDefinedCallsign  String?                @db.Text
+  division             DivisionValue?         @relation("dotDivisionToDivision", fields: [divisionId], references: [id])
+  divisionId           String?
+  position             String?                @db.Text
+  rank                 Value?                 @relation("dotRankToValue", fields: [rankId], references: [id])
+  rankId               String?
+  status               StatusValue?           @relation("dotStatusToValue", fields: [statusId], references: [id])
+  statusId             String?
+  suspended            Boolean                @default(false)
+  badgeNumber          Int?
+  badgeNumberString    String?                @db.Text
+  imageId              String?                @db.VarChar(255)
+  imageBlurData        String?                @db.Text
+  citizen              Citizen                @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+  citizenId            String
+  user                 User?                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @default(now()) @updatedAt
+  radioChannelId       String?                @db.Text
+  activeCall           Call911?               @relation("dotActiveCall", fields: [activeCallId], references: [id])
+  activeCallId         String?
+  activeIncident       LeoIncident?           @relation("dotActiveIncident", fields: [activeIncidentId], references: [id])
+  activeIncidentId     String?
+  whitelistStatus      LeoWhitelistStatus?    @relation(fields: [whitelistStatusId], references: [id])
+  whitelistStatusId    String?
+  logs                 OfficerLog[]
+  AssignedUnit         AssignedUnit[]
+  qualifications       UnitQualification[]
+  IncidentInvolvedUnit IncidentInvolvedUnit[]
+  activeVehicle        EmergencyVehicleValue? @relation("activeEmergencyVehicle_dot", fields: [activeVehicleId], references: [id], onDelete: SetNull)
+  activeVehicleId      String?
+  isTemporary          Boolean                @default(false)
+  identifiers          Json                   @default(dbgenerated("(json_array())"))
+  CombinedDotUnit      CombinedDotUnit?       @relation(fields: [combinedDotUnitId], references: [id])
+  combinedDotUnitId    String?
+  ChatCreator          ChatCreator[]
+  assignedWorkOrders   DotWorkOrder[]         @relation("dotWorkOrderAssignee")
 
   @@index([callsign, callsign2, statusId])
 }
@@ -2049,6 +2195,7 @@ enum ValueLicenseType {
 enum DepartmentType {
   LEO
   EMS_FD
+  DOT
 }
 
 enum ValueType {
@@ -2270,11 +2417,13 @@ enum Feature {
   UNIT_PRIVATE_MESSAGES
   RADIO
   ERLC
+  DOT
 }
 
 enum DashboardLayoutCardType {
   ACTIVE_CALLS
   ACTIVE_BOLOS
+  ACTIVE_DOT
   ACTIVE_WARRANTS
   ACTIVE_OFFICERS
   ACTIVE_DEPUTIES

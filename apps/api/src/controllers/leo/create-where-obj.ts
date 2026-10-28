@@ -2,12 +2,14 @@ import { type Prisma } from "@prisma/client";
 import { WhitelistStatus } from "@snailycad/types";
 import { insensitive } from "lib/data/db-provider";
 
-interface CreateWhereObjOptions<Type extends "OFFICER" | "DEPUTY"> {
+interface CreateWhereObjOptions<Type extends "OFFICER" | "DEPUTY" | "DOT_WORKER"> {
   departmentId?: string;
   query: string;
   pendingOnly: boolean;
   type: Type;
-  extraWhere?: Type extends "OFFICER" ? Prisma.OfficerWhereInput : Prisma.EmsFdDeputyWhereInput;
+  // kept as a loose union (rather than a `Type extends ...` conditional) since a 3-way
+  // conditional here doesn't distribute cleanly through `createWhere`'s own generic `Type`
+  extraWhere?: Prisma.OfficerWhereInput | Prisma.EmsFdDeputyWhereInput | Prisma.DotWorkerWhereInput;
 }
 
 export function createWhereCombinedUnit<Type extends "OFFICER" | "DEPUTY">(
@@ -26,7 +28,7 @@ export function createWhereCombinedUnit<Type extends "OFFICER" | "DEPUTY">(
   };
 }
 
-export function createWhere<Type extends "OFFICER" | "DEPUTY">({
+export function createWhere<Type extends "OFFICER" | "DEPUTY" | "DOT_WORKER">({
   query,
   pendingOnly,
   departmentId,
@@ -78,9 +80,12 @@ export function createWhere<Type extends "OFFICER" | "DEPUTY">({
           }
         : {},
     ],
-  } satisfies Type extends "OFFICER" ? Prisma.OfficerWhereInput : Prisma.EmsFdDeputyWhereInput;
+  };
 
-  return where;
+  // the shape above is a valid where-input for all three unit types; the exact type just
+  // isn't resolvable through `Type`'s own conditional here (see the comment on `extraWhere`)
+
+  return where as any;
 }
 
 function getName(query: string) {

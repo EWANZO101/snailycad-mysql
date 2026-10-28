@@ -5,18 +5,25 @@ import { prisma } from "lib/data/prisma";
 interface Options {
   unitId?: string;
   userId?: string;
-  type: "leo" | "ems-fd" | "combined-leo" | "combined-ems-fd";
+  type: "leo" | "ems-fd" | "dot" | "combined-leo" | "combined-ems-fd" | "combined-dot";
   departmentId: string;
   callsign1: string;
   callsign2: string;
 }
 
 export async function validateDuplicateCallsigns(options: Options) {
-  if (options.type === "combined-ems-fd" || options.type === "combined-leo") return;
+  if (
+    options.type === "combined-ems-fd" ||
+    options.type === "combined-leo" ||
+    options.type === "combined-dot"
+  ) {
+    return;
+  }
 
   const prismaNames = {
     "ems-fd": "emsFdDeputy",
     leo: "officer",
+    dot: "dotWorker",
   } as const;
 
   const t = prismaNames[options.type];
