@@ -14,6 +14,7 @@ export enum Permissions {
   ViewLicenseExams = "ViewLicenseExams",
   ManageLicenseExams = "ManageLicenseExams",
   SetUserDefinedCallsignOnOfficer = "SetUserDefinedCallsignOnOfficer",
+  SelfAssignToCalls = "SelfAssignToCalls",
   // leo supervisor: scoped officer management
   ManageOfficerRank = "ManageOfficerRank",
   ManageOfficerCallsign = "ManageOfficerCallsign",

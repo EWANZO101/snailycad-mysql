@@ -23,6 +23,7 @@ made, so uninstall.sh can remove it again. Access needs the token install.sh pri
 import glob
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 import platform
@@ -79,7 +80,42 @@ if IS_WINDOWS:
 
 SAFE_NAME = re.compile(r"^[A-Za-z0-9_]{1,32}$")
 HOSTNAME = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
+PORT_RANGE = re.compile(r"^(\d{1,5})(?:-(\d{1,5}))?$")
 APT_ENV = {"DEBIAN_FRONTEND": "noninteractive"}
+
+
+def parse_port_ranges(raw):
+    """raw: a list of '9123' / '3000-3500' strings (wizard.html's firewall presets + custom
+    field). Returns (ranges, errors): ranges is a deduplicated list of (start, end) ints, each
+    1-65535 with start<=end; errors describes anything that didn't parse or validate."""
+    ranges, errors, seen = [], [], set()
+    for item in raw or []:
+        item = str(item).strip()
+        if not item:
+            continue
+        m = PORT_RANGE.match(item)
+        if not m:
+            errors.append(f"'{item}' isn't a port or port range (e.g. 9123 or 3000-3500).")
+            continue
+        start = int(m.group(1))
+        end = int(m.group(2)) if m.group(2) else start
+        if end < start:
+            errors.append(f"'{item}': the range is backwards.")
+            continue
+        if not (1 <= start <= 65535 and 1 <= end <= 65535):
+            errors.append(f"'{item}': ports must be 1-65535.")
+            continue
+        if end - start > 5000:
+            errors.append(f"'{item}': that's a {end - start + 1}-port range - narrow it down.")
+            continue
+        if (start, end) not in seen:
+            seen.add((start, end))
+            ranges.append((start, end))
+    if len(ranges) > 25:
+        errors.append("Too many firewall port entries (25 max).")
+    return ranges, errors
+
+
 APT_OPTS = ["-y", "-q", "-o", "DPkg::Lock::Timeout=300"]
 
 lock = threading.Lock()
@@ -841,12 +877,20 @@ def validate_settings(body):
     except (TypeError, ValueError):
         client_port = api_port = 0
     engine = db.get("engine") or "mysql"
-    settings = {"address": str(body.get("address", "")).strip(), "clientPort": client_port, "apiPort": api_port,
+    # apiAddress is optional: blank/absent means "same host as the website", which is also the only
+    # choice the wizard offered before this field existed - existing callers of this endpoint that
+    # don't send it at all keep working exactly as before.
+    api_address = str(body.get("apiAddress", "")).strip()
+    website_address = str(body.get("address", "")).strip()
+    settings = {"address": website_address, "apiAddress": api_address or website_address,
+                "clientPort": client_port, "apiPort": api_port,
                 "db": {"mode": db.get("mode"), "engine": engine}}
     if engine not in ("mysql", "postgresql"):
         errors.append("Choose MySQL / MariaDB or PostgreSQL.")
     if not HOSTNAME.match(settings["address"]):
         errors.append("Enter a valid IP address or domain.")
+    if not HOSTNAME.match(settings["apiAddress"]):
+        errors.append("Enter a valid IP address or domain for the API.")
     for label, port in (("Website", client_port), ("API", api_port)):
         if not 1024 <= port <= 65535:
             errors.append(f"{label} port must be 1024-65535.")
@@ -859,6 +903,11 @@ def validate_settings(body):
     if not re.match(r"""^[^\s"'\\$`]{6,64}$""", uninstall_password):
         errors.append("Danger zone password: 6-64 characters, no spaces, quotes, \\, $ or `.")
     settings["uninstallPassword"] = uninstall_password
+
+    extra_raw = body.get("extraFirewallPorts")
+    extra_ports, extra_errors = parse_port_ranges(extra_raw if isinstance(extra_raw, list) else [])
+    errors += extra_errors
+    settings["extraFirewallPorts"] = extra_ports
 
     mode = db.get("mode")
     if IS_WINDOWS:
@@ -1126,6 +1175,101 @@ def windows_install_postgres():
         f"The postgres user's password is in {PG_PASSWORD_PATH}.")
 
 
+# database reuse / erase -----------------------------------------------------------------
+# Before creating a database, the wizard checks whether that exact name is already there (a
+# previous unrelated install, or a database the admin didn't mean to point at) and - if the admin
+# explicitly confirms it through the wizard's own 3-step gate (see db_conflict() and /api/install
+# below) - erases only its *contents*, never the database object, its owner, or its grants. This
+# is deliberately a content-only wipe (DROP TABLE / DROP SCHEMA ... CASCADE), not DROP DATABASE:
+# an "external" database's user is very often not the account that created the database itself and
+# may not have the server-level privilege to drop/recreate it, even though it fully owns the
+# tables inside it.
+
+def clear_mysql_tables(query, name):
+    """query: a callable like socket_mysql, or (lambda sql: external_mysql(db, sql)). Drops every
+    base table in database `name`, leaving the database itself, its user and its grants as they
+    were. SnailyCAD's schema has no views/routines, so base tables are everything that matters."""
+    ok, out = query(f"SELECT table_name FROM information_schema.tables "
+                     f"WHERE table_schema = '{name}' AND table_type = 'BASE TABLE'")
+    if not ok:
+        raise StepError(f"Could not list the existing tables in {name} to erase them.")
+    tables = [t.strip() for t in out.strip().split("\n") if t.strip() and SAFE_NAME.match(t.strip())]
+    if not tables:
+        return
+    sql = "SET FOREIGN_KEY_CHECKS=0; " + "; ".join(f"DROP TABLE IF EXISTS `{t}`" for t in tables) + "; SET FOREIGN_KEY_CHECKS=1"
+    check(query(sql), f"Could not drop the existing tables in {name}")
+
+
+def clear_pg_schema(query, name):
+    """query: a callable like (lambda sql: pg_admin(sql, name)) or (lambda sql: external_pg(db, sql, name))
+    - already connected to database `name`. Drops and recreates its public schema in one statement
+    (CASCADE handles foreign-key order), leaving the database itself, its owner and its grants as
+    they were."""
+    check(query("DROP SCHEMA public CASCADE; CREATE SCHEMA public"), f"Could not erase the existing contents of {name}")
+
+
+def db_conflict(settings):
+    """Checks whether settings['db']['name'] already exists on the database server this install
+    would use, before anything is created. Returns None when there's nothing to warn about: no
+    server reachable yet (install/local mode, nothing there so far), the name is free, or this is
+    the same wizard run's own earlier attempt (the manifest already owns that name/user - safe to
+    reuse without asking again). Otherwise returns {"name", "host", "tableCount", "sampleTables"}
+    for the wizard to show before letting the admin choose to erase it.
+
+    Advisory only, for the UI: step_database()/step_database_pg() independently re-check right
+    before doing anything destructive, using the same queries, so a client can never make this the
+    only thing standing between it and an erase - the server decides for itself every time."""
+    db = settings["db"]
+    if db["mode"] not in ("install", "local", "external"):
+        return None  # docker's "container" mode always starts from a fresh container
+    name = db["name"]
+    if manifest_value("DB_NAME") == name and manifest_value("DB_USER") == db.get("user"):
+        return None
+
+    if db.get("engine") == "postgresql":
+        if db["mode"] == "external":
+            if not external_pg(db, "SELECT 1", "postgres")[0]:
+                return None  # can't connect at all; the normal install flow reports that error
+            exists = external_pg(db, f"SELECT 1 FROM pg_database WHERE datname = '{name}'", "postgres")
+            if not (exists[0] and exists[1].strip()):
+                return None
+            host = db["host"]
+            count_ok, count_out = external_pg(db, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")
+            names_ok, names_out = external_pg(db, "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name LIMIT 5")
+        else:
+            if not pg_server_present() or not pg_admin("SELECT 1")[0]:
+                return None
+            exists = pg_admin(f"SELECT 1 FROM pg_database WHERE datname = '{name}'")
+            if not (exists[0] and exists[1].strip()):
+                return None
+            host = "127.0.0.1"
+            count_ok, count_out = pg_admin("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'", name)
+            names_ok, names_out = pg_admin("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name LIMIT 5", name)
+    else:
+        if db["mode"] == "external":
+            if not external_mysql(db, "SELECT 1")[0]:
+                return None
+            exists = external_mysql(db, f"SHOW DATABASES LIKE '{name}'")
+            host = db["host"]
+            query = lambda sql: external_mysql(db, sql)  # noqa: E731
+        else:
+            if not socket_mysql("SELECT 1")[0]:
+                return None
+            exists = socket_mysql(f"SHOW DATABASES LIKE '{name}'")
+            host = "127.0.0.1"
+            query = socket_mysql
+        if not (exists[0] and exists[1].strip()):
+            return None
+        count_ok, count_out = query(f"SELECT COUNT(*) FROM information_schema.tables "
+                                     f"WHERE table_schema = '{name}' AND table_type = 'BASE TABLE'")
+        names_ok, names_out = query(f"SELECT table_name FROM information_schema.tables WHERE table_schema = '{name}' "
+                                     f"AND table_type = 'BASE TABLE' ORDER BY table_name LIMIT 5")
+
+    table_count = int(count_out.strip()) if count_ok and count_out.strip().isdigit() else 0
+    sample_tables = [t.strip() for t in names_out.strip().split("\n") if t.strip()] if names_ok else []
+    return {"name": name, "host": host, "tableCount": table_count, "sampleTables": sample_tables}
+
+
 def step_database_pg(db):
     add_to_manifest("DB_ENGINE", "postgresql")
     if db["mode"] == "external":
@@ -1133,11 +1277,23 @@ def step_database_pg(db):
         if not result["ok"]:
             raise StepError(result["message"])
         say(result["message"])
+        ours = manifest_value("DB_NAME") == db["name"] and manifest_value("DB_USER") == db["user"]
+        exists = external_pg(db, f"SELECT 1 FROM pg_database WHERE datname = '{db['name']}'", "postgres")
+        db_exists = bool(exists[0] and exists[1].strip())
+        if not ours and db_exists:
+            count_out = check(external_pg(db, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"),
+                              "Could not count the existing tables")
+            table_count = int(count_out.strip()) if count_out.strip().isdigit() else 0
+            if not db.get("confirmedClear"):
+                detail = f" with {table_count} existing table(s)" if table_count else ""
+                raise StepError(f"Database {db['name']} already exists{detail}. Pick another name, "
+                                f"or confirm erasing it in the wizard first.")
+            say(f"Erasing the existing contents of {db['name']} (confirmed)...")
+            clear_pg_schema(lambda sql: external_pg(db, sql), db["name"])
         add_to_manifest("DB_NAME", db["name"])
         add_to_manifest("DB_USER", db["user"])
         add_to_manifest("DB_ADMIN", "external")
-        exists = external_pg(db, f"SELECT 1 FROM pg_database WHERE datname = '{db['name']}'", "postgres")
-        if exists[0] and not exists[1].strip():
+        if not db_exists:
             # usually allowed (CREATEDB); when it isn't, the database must already exist
             external_pg(db, f"CREATE DATABASE {pg_quote_ident(db['name'])}", "postgres")
         return {"host": db["host"], "port": db["port"], "user": db["user"], "password": db["password"], "name": db["name"]}
@@ -1152,14 +1308,17 @@ def step_database_pg(db):
 
     check(pg_admin("SELECT 1"), "Cannot log in to PostgreSQL as postgres" if IS_WINDOWS
           else "Cannot log in to PostgreSQL as the postgres user")
-    # created by an earlier attempt of this wizard: reuse it. Anything else is not ours to touch.
+    # created by an earlier attempt of this wizard: reuse it. Anything else is not ours to touch
+    # without the admin explicitly confirming it first (see db_conflict() and /api/install).
     ours = manifest_value("DB_NAME") == db["name"] and manifest_value("DB_USER") == db["user"]
     db_exists = check(pg_admin(f"SELECT 1 FROM pg_database WHERE datname = '{db['name']}'"), "Could not list databases").strip()
     role_exists = check(pg_admin(f"SELECT 1 FROM pg_roles WHERE rolname = '{db['user']}'"), "Could not list users").strip()
-    if not ours and db_exists:
-        raise StepError(f"A database named {db['name']} already exists. Pick another name.")
-    if not ours and role_exists:
-        raise StepError(f"A user named {db['user']} already exists. Pick another name.")
+    if not ours and (db_exists or role_exists) and not db.get("confirmedClear"):
+        what = f"database named {db['name']}" if db_exists else f"user named {db['user']}"
+        raise StepError(f"A {what} already exists. Pick another name, or confirm erasing it in the wizard first.")
+    if not ours and db_exists and db.get("confirmedClear"):
+        say(f"Erasing the existing contents of {db['name']} (confirmed)...")
+        clear_pg_schema(lambda sql: pg_admin(sql, db["name"]), db["name"])
     add_to_manifest("DB_NAME", db["name"])
     add_to_manifest("DB_USER", db["user"])
     add_to_manifest("DB_ADMIN", "postgres" if IS_WINDOWS else "socket")
@@ -1185,6 +1344,19 @@ def step_database(settings):
         if not result["ok"]:
             raise StepError(result["message"])
         say(result["message"])
+        ours = manifest_value("DB_NAME") == db["name"] and manifest_value("DB_USER") == db["user"]
+        exists = external_mysql(db, f"SHOW DATABASES LIKE '{db['name']}'")
+        db_exists = bool(exists[0] and exists[1].strip())
+        if not ours and db_exists:
+            count_ok, count_out = external_mysql(db, f"SELECT COUNT(*) FROM information_schema.tables "
+                                                 f"WHERE table_schema = '{db['name']}' AND table_type = 'BASE TABLE'")
+            table_count = int(count_out.strip()) if count_ok and count_out.strip().isdigit() else 0
+            if not db.get("confirmedClear"):
+                detail = f" with {table_count} existing table(s)" if table_count else ""
+                raise StepError(f"Database {db['name']} already exists{detail}. Pick another name, "
+                                f"or confirm erasing it in the wizard first.")
+            say(f"Erasing the existing contents of {db['name']} (confirmed)...")
+            clear_mysql_tables(lambda sql: external_mysql(db, sql), db["name"])
         add_to_manifest("DB_NAME", db["name"])
         add_to_manifest("DB_USER", db["user"])
         add_to_manifest("DB_ADMIN", "external")
@@ -1202,14 +1374,19 @@ def step_database(settings):
 
     check(socket_mysql("SELECT 1"), "Cannot log in to MariaDB as root" if IS_WINDOWS
           else "Cannot log in to MySQL/MariaDB as root through its socket")
-    # created by an earlier attempt of this wizard: reuse it. Anything else is not ours to touch.
+    # created by an earlier attempt of this wizard: reuse it. Anything else is not ours to touch
+    # without the admin explicitly confirming it first (see db_conflict() and /api/install).
     ours = manifest_value("DB_NAME") == db["name"] and manifest_value("DB_USER") == db["user"]
     if not ours:
-        if check(socket_mysql(f"SHOW DATABASES LIKE '{db['name']}'"), "Could not list databases").strip():
-            raise StepError(f"A database named {db['name']} already exists. Pick another name.")
-        count = check(socket_mysql(f"SELECT COUNT(*) FROM mysql.user WHERE user = '{db['user']}'"), "Could not list users")
-        if count.strip() != "0":
-            raise StepError(f"A user named {db['user']} already exists. Pick another name.")
+        db_exists = bool(check(socket_mysql(f"SHOW DATABASES LIKE '{db['name']}'"), "Could not list databases").strip())
+        user_count = check(socket_mysql(f"SELECT COUNT(*) FROM mysql.user WHERE user = '{db['user']}'"), "Could not list users")
+        user_exists = user_count.strip() != "0"
+        if (db_exists or user_exists) and not db.get("confirmedClear"):
+            what = f"database named {db['name']}" if db_exists else f"user named {db['user']}"
+            raise StepError(f"A {what} already exists. Pick another name, or confirm erasing it in the wizard first.")
+        if db_exists and db.get("confirmedClear"):
+            say(f"Erasing the existing contents of {db['name']} (confirmed)...")
+            clear_mysql_tables(socket_mysql, db["name"])
     add_to_manifest("DB_NAME", db["name"])
     add_to_manifest("DB_USER", db["user"])
     add_to_manifest("DB_ADMIN", "root" if IS_WINDOWS else "socket")
@@ -1228,9 +1405,47 @@ def step_database(settings):
     return {"host": "127.0.0.1", "port": int(port), "user": db["user"], "password": password, "name": db["name"]}
 
 
+def is_ip_literal(host):
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return False
+
+
+def shared_domain(client_host, api_host, api_is_ip):
+    """Value for the .env DOMAIN setting: the parent domain shared by the client and API
+    hosts, so SnailyCAD's auth cookie can be scoped to cover both (apps/api/src/utils/
+    set-cookie.ts). Per .env.example's own instruction this is the domain only, not a
+    sub-domain - e.g. "example.com" for client "cad.example.com" + api
+    "cad-api.example.com", not "cad.example.com". If the two hosts don't actually share a
+    multi-label suffix (different domains entirely, or the API is a bare IP), there's
+    nothing meaningful to share - fall back to the client's own host, which still lets the
+    client's own cookies be scoped/secured correctly."""
+    if api_is_ip or client_host == api_host:
+        return client_host
+    c, a = client_host.split("."), api_host.split(".")
+    n = 0
+    while n < min(len(c), len(a)) and c[len(c) - 1 - n] == a[len(a) - 1 - n]:
+        n += 1
+    return ".".join(c[-n:]) if n >= 2 else client_host
+
+
 def write_env(settings, database, extra=None):
-    client_url = f"http://{settings['address']}:{settings['clientPort']}"
-    api_url = f"http://{settings['address']}:{settings['apiPort']}/v1"
+    client_host = settings["address"]
+    # .get(...) with a fallback to settings['address']: any caller built before apiAddress existed
+    # (or a settings dict assembled elsewhere without it) still gets the old same-host behavior.
+    api_host = settings.get("apiAddress") or settings["address"]
+    client_is_ip, api_is_ip = is_ip_literal(client_host), is_ip_literal(api_host)
+    # A domain is expected to sit behind a reverse proxy terminating TLS on 80/443 (same
+    # convention .env.example's own examples use: "https://cad.mysite.com" vs
+    # "http://99.99.00.190:3000") - the installer's internal Node.js port is never part of
+    # a public domain URL, only of a bare-IP one.
+    client_url = f"http://{client_host}:{settings['clientPort']}" if client_is_ip else f"https://{client_host}"
+    api_url = f"http://{api_host}:{settings['apiPort']}/v1" if api_is_ip else f"https://{api_host}/v1"
+    # DOMAIN is only meaningful for a real domain (set-cookie.ts skips it entirely for an
+    # IP - see isAnIP there) - leave it blank for an IP install, same as before this fix.
+    domain_value = "" if client_is_ip else shared_domain(client_host, api_host, api_is_ip)
     values = {
         "DB_PROVIDER": "postgresql" if settings["db"].get("engine") == "postgresql" else "mysql",
         "DB_PASSWORD": quote(database["password"], safe=""),
@@ -1243,7 +1458,7 @@ def write_env(settings, database, extra=None):
         "CORS_ORIGIN_URL": client_url,
         "NEXT_PUBLIC_CLIENT_URL": client_url,
         "NEXT_PUBLIC_PROD_ORIGIN": api_url,
-        "DOMAIN": "",
+        "DOMAIN": domain_value,
         "SECURE_COOKIES_FOR_IFRAME": "false",
         "PORT_API": str(settings["apiPort"]),
         "PORT_CLIENT": str(settings["clientPort"]),
@@ -1265,13 +1480,21 @@ def write_env(settings, database, extra=None):
 
 
 def step_firewall(settings):
+    extra = settings.get("extraFirewallPorts") or []
+    extra_note = f" + {len(extra)} extra port range(s)" if extra else ""
     if IS_WINDOWS:
         for port in (settings["clientPort"], settings["apiPort"]):
             rule = f"SnailyCAD-{NAME}-{port}"
             add_to_manifest("WIN_FW_RULE", rule)
             netsh_rule(rule)  # an earlier attempt's rule: no duplicates
             check(netsh_rule(rule, port), f"Could not add a firewall rule for port {port}")
-        say(f"Windows Firewall: allowed ports {settings['clientPort']} and {settings['apiPort']}.")
+        for start, end in extra:
+            spec = str(start) if start == end else f"{start}-{end}"
+            rule = f"SnailyCAD-{NAME}-extra-{start}-{end}"
+            add_to_manifest("WIN_FW_RULE", rule)
+            netsh_rule(rule)  # an earlier attempt's rule: no duplicates
+            check(netsh_rule(rule, spec), f"Could not add a firewall rule for port(s) {spec}")
+        say(f"Windows Firewall: allowed ports {settings['clientPort']} and {settings['apiPort']}{extra_note}.")
         return
     if not ufw_active():
         say("No active ufw firewall; nothing to open.")
@@ -1279,7 +1502,11 @@ def step_firewall(settings):
     for port in (settings["clientPort"], settings["apiPort"]):
         add_to_manifest("UFW_PORT", port)
         check(run(["ufw", "allow", f"{port}/tcp", "comment", f"{NAME} SnailyCAD"]), f"Could not open port {port}")
-    say(f"Firewall: opened ports {settings['clientPort']} and {settings['apiPort']}.")
+    for start, end in extra:
+        spec = str(start) if start == end else f"{start}:{end}"
+        add_to_manifest("UFW_PORT", spec)
+        check(run(["ufw", "allow", f"{spec}/tcp", "comment", f"{NAME} SnailyCAD extra"]), f"Could not open port(s) {spec}")
+    say(f"Firewall: opened ports {settings['clientPort']} and {settings['apiPort']}{extra_note}.")
 
 
 def step_service():
@@ -1383,7 +1610,12 @@ NETWORK_TROUBLE = re.compile(
 
 def compose(*args, timeout=600, on_line=None):
     compose_file = manifest_value("DOCKER_COMPOSE_FILE") or COMPOSE_FILE
-    return run(["docker", "compose", "-p", NAME, "-f", compose_file, *args], cwd=APP_DIR, timeout=timeout, on_line=on_line)
+    # Force BuildKit: the Dockerfile's --mount=type=cache layers and this function's own build_line
+    # progress parser (BUILD_STEP, above) both assume BuildKit's build output, which isn't always
+    # the host Docker Engine's default builder.
+    env = {"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"}
+    return run(["docker", "compose", "-p", NAME, "-f", compose_file, *args], cwd=APP_DIR, timeout=timeout,
+               on_line=on_line, env=env)
 
 
 def build_line(line):
@@ -1446,7 +1678,14 @@ def docker_install(settings, deploy_only=False):
             say("Docker network cad_web already exists.")
             return
         add_to_manifest("DOCKER_NETWORK", "cad_web")
-        check(run(["docker", "network", "create", "cad_web"]), "Could not create the Docker network")
+        ok, output = run(["docker", "network", "create", "cad_web"])
+        if not ok and "already exists" in output:
+            # the inspect check above raced (or just failed transiently - a loaded host's docker
+            # CLI can time out) and missed a network another process/attempt already created;
+            # that's the same end state we wanted, not a failure.
+            say("Docker network cad_web already exists.")
+            return
+        check((ok, output), "Could not create the Docker network")
         say("Docker network cad_web created.")
 
     def images():
@@ -1544,8 +1783,11 @@ def windows_build_env():
 
 def windows_dependencies():
     say("Installing the CAD's packages with pnpm (a few minutes)...")
-    check(run([*pnpm_cmd(), "install", "--prefer-offline", "--store-dir", PNPM_STORE], cwd=APP_DIR,
-              env=windows_build_env(), timeout=3600, on_line=build_line), "Could not install the dependencies")
+    # --frozen-lockfile: trust pnpm-lock.yaml as-is instead of re-resolving it against the
+    # registry, same as the Docker image's install - faster and still reproducible on a fresh clone.
+    check(run([*pnpm_cmd(), "install", "--frozen-lockfile", "--prefer-offline", "--store-dir", PNPM_STORE],
+              cwd=APP_DIR, env=windows_build_env(), timeout=3600, on_line=build_line),
+          "Could not install the dependencies")
     say("Dependencies installed.")
 
 
@@ -1629,6 +1871,30 @@ def nssm_commands(nssm, depends_on=None):
     return commands
 
 
+def nssm_start_and_wait(nssm, name, timeout_seconds=60):
+    """Starts an NSSM service and, if `nssm start` itself reports failure, waits to see whether
+    it actually comes up anyway before giving up. NSSM's `start` fails with "Unexpected status
+    SERVICE_START_PENDING in response to START control" whenever the service takes a little
+    longer to leave SERVICE_START_PENDING than NSSM's own (short, fixed) wait allows - that's not
+    the same as the service actually failing, and a slower machine (mid-install, CPU busy with the
+    CAD's own build) hits it easily. Only raises if it never reaches SERVICE_RUNNING in time."""
+    result = run([nssm, "start", name], timeout=120)
+    if result[0]:
+        return
+
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        status_ok, status = quiet([nssm, "status", name])
+        status = status.strip()
+        if status == "SERVICE_RUNNING":
+            return
+        if status_ok and status in ("SERVICE_STOPPED", "SERVICE_PAUSED"):
+            break
+        time.sleep(2)
+
+    check(result, f"Could not start the {name} service")
+
+
 def ps_quote(text):
     return "'" + str(text).replace("'", "''") + "'"
 
@@ -1685,8 +1951,9 @@ def windows_service():
         if quiet([nssm, "status", NAME])[0]:  # an earlier attempt
             run([nssm, "stop", NAME], timeout=120)
             run([nssm, "remove", NAME, "confirm"])
-        for cmd in nssm_commands(nssm, depends_on):
+        for cmd in nssm_commands(nssm, depends_on)[:-1]:
             check(run(cmd, timeout=120), f"Could not set up the {NAME} service")
+        nssm_start_and_wait(nssm, NAME)
         say(f"Windows service {NAME} started; logs in {CAD_LOG}.")
         return
     set_in_manifest("WIN_SERVICE", "task")
@@ -1749,11 +2016,16 @@ def control_service_windows():
                 [nssm, "set", control_name, "AppRotateBytes", "10485760"],
                 [nssm, "set", control_name, "AppExit", "Default", "Restart"],
                 [nssm, "set", control_name, "AppRestartDelay", "10000"],
-                [nssm, "set", control_name, "DependOnService", NAME],
-                [nssm, "start", control_name],
+                # Deliberately NOT DependOnService=NAME: Windows SCM refuses to stop a service
+                # that has a running dependent ("Cannot stop service ... because it has dependent
+                # services") unless -Force is used. That would make every "Stop" click/command
+                # against NAME fail while this control panel is up, which defeats its purpose. The
+                # control panel already tolerates NAME being stopped/unknown (see service_status()
+                # in control-server.py), so it doesn't need a hard SCM dependency on it to work.
             ]
             for cmd in commands:
                 check(run(cmd, timeout=120), f"Could not set up the {control_name} service")
+            nssm_start_and_wait(nssm, control_name)
             say(f"Control Panel service {control_name} started; logs in {control_log}.")
             return
         say("NSSM is not available for the Control Panel service; using a scheduled task instead.", "error")
@@ -2147,6 +2419,21 @@ class Handler(BaseHTTPRequestHandler):
                 errors += [f"Port {p} is already in use." for p in (settings["clientPort"], settings["apiPort"]) if not port_free(p)]
             if errors:
                 return self.send(400, {"error": " ".join(errors)})
+            # Database reuse check: never trust the client's word alone that an existing database
+            # was meant to be erased. The wizard's own 3-step dialog sends confirmClear/
+            # confirmClearName once the admin has gone through it; this still re-derives the
+            # conflict itself (db_conflict) and only accepts the confirmation when the typed name
+            # matches exactly - a stale or tampered confirmation falls straight back to the warning.
+            raw_db = body.get("db") or {}
+            confirmed = (raw_db.get("confirmClear") is True
+                        and isinstance(raw_db.get("confirmClearName"), str)
+                        and raw_db["confirmClearName"] == settings["db"]["name"])
+            conflict = db_conflict(settings)
+            if conflict and not confirmed:
+                return self.send(409, {"error": f"Database {conflict['name']} already exists.",
+                                       "needsConfirmation": True, "dbConflict": conflict})
+            if conflict and confirmed:
+                settings["db"]["confirmedClear"] = True
             BUSY["install"] = True
             threading.Thread(target=run_install, args=(settings,), daemon=True).start()
             return self.send(202, {"ok": True})

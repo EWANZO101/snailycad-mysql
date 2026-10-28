@@ -5,7 +5,7 @@ import type { Full911Call } from "state/dispatch/dispatch-state";
 import { useModal } from "state/modalState";
 import { usePermission } from "hooks/usePermission";
 import { useRouter } from "next/router";
-import { defaultPermissions } from "@snailycad/permissions";
+import { defaultPermissions, Permissions } from "@snailycad/permissions";
 import type { ActiveOfficer } from "state/leo-state";
 import type { ActiveDeputy } from "state/ems-fd-state";
 import { ShouldDoType } from "@snailycad/types";
@@ -39,6 +39,7 @@ export function ActiveCallsActionsColumn({
 
   const hasDispatchPermissions = hasPermissions(defaultPermissions.defaultDispatchPermissions);
   const isDispatch = router.pathname === "/dispatch" && hasDispatchPermissions;
+  const hasSelfAssignPermissions = hasPermissions([Permissions.SelfAssignToCalls]);
 
   const isUnitActive = unit?.status && unit.status.shouldDo !== ShouldDoType.SET_OFF_DUTY;
 
@@ -73,7 +74,7 @@ export function ActiveCallsActionsColumn({
         >
           {t("unassignFromCall")}
         </Button>
-      ) : (
+      ) : hasSelfAssignPermissions ? (
         <Button
           className="ml-2"
           disabled={!isUnitActive}
@@ -82,7 +83,7 @@ export function ActiveCallsActionsColumn({
         >
           {t("assignToCall")}
         </Button>
-      )}
+      ) : null}
 
       {TOW ? (
         <Button

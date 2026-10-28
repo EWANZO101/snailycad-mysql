@@ -152,6 +152,16 @@
         margin: 0 0 1.5rem;
         color: var(--gray-400);
       }
+      h2.sub {
+        margin: 1.75rem 0 4px;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      p.help {
+        font-size: 0.8125rem;
+        color: var(--gray-400);
+        margin: 0 0 12px;
+      }
       .actions {
         display: flex;
         justify-content: space-between;
@@ -226,6 +236,26 @@
       .success {
         background: var(--green-500);
         color: var(--white);
+      }
+      .danger {
+        background: var(--red-600);
+        color: var(--white);
+      }
+      .danger:hover {
+        background: #c81e1e;
+      }
+      dialog.card {
+        max-width: 480px;
+        width: calc(100% - 32px);
+        color: inherit;
+      }
+      dialog.card::backdrop {
+        background: rgb(0 0 0 / 0.6);
+      }
+      dialog.card h2 {
+        margin: 0 0 12px;
+        font-size: 1.25rem;
+        color: var(--red-300);
       }
       button:disabled {
         opacity: 0.5;
@@ -826,12 +856,45 @@
             <label for="api-port">API port</label><input id="api-port" inputmode="numeric" />
           </div>
           <div class="field full">
+            <label for="api-address">API address or domain</label
+            ><input id="api-address" placeholder="Same as above" />
+            <div class="help">
+              Only needed if the API should be reachable on a different host than the website - e.g.
+              the website on a domain but the API still on the server's raw IP, or two separate
+              subdomains with their own reverse proxy. Leave blank to use the address above for
+              both.
+            </div>
+          </div>
+          <div class="field full">
             <label for="uninstall-password">Danger zone password</label
             ><input id="uninstall-password" value="snaily-2026" autocomplete="off" />
             <div class="help">
               Unlocks CAD Settings &gt; Danger zone (uninstalling the CAD). Change it from the
               default; later it's <code>UNINSTALL_PASSWORD</code> in the CAD's <code>.env</code>.
             </div>
+          </div>
+        </div>
+        <h2 class="sub">Extra firewall ports</h2>
+        <p class="help">
+          The website and API ports above are always opened. Check any extra ports other software on
+          this server needs reachable from outside - a game server, a companion app - or add your
+          own below.
+        </p>
+        <div class="options two">
+          <label class="option"
+            ><input type="checkbox" class="fw-preset" value="3000-3500" />
+            <span><b>3000-3500</b> <small>FiveM / game servers</small></span></label
+          >
+          <label class="option"
+            ><input type="checkbox" class="fw-preset" value="8000-8888" />
+            <span><b>8000-8888</b> <small>Web / companion apps</small></span></label
+          >
+        </div>
+        <div class="grid">
+          <div class="field full">
+            <label for="fw-custom">Custom ports</label
+            ><input id="fw-custom" placeholder="e.g. 9123, 9200-9300" />
+            <div class="help">Comma-separated; a single port (9123) or a range (9200-9300).</div>
           </div>
         </div>
         <div class="alert info" id="urls"></div>
@@ -855,6 +918,30 @@
           <div class="right"><button class="primary" id="install">Install SnailyCAD</button></div>
         </div>
       </section>
+
+      <dialog id="db-conflict-dialog" class="card">
+        <h2>⚠ Existing database found</h2>
+        <p id="db-conflict-info"></p>
+        <label style="display: flex; align-items: flex-start; gap: 8px; margin: 16px 0">
+          <input type="checkbox" id="db-conflict-ack" style="margin-top: 3px" />
+          <span
+            >I understand this permanently deletes all existing data in this database and cannot be
+            undone.</span
+          >
+        </label>
+        <div class="field">
+          <label for="db-conflict-type" id="db-conflict-type-label"
+            >Type the database name to confirm</label
+          >
+          <input id="db-conflict-type" autocomplete="off" />
+        </div>
+        <div class="actions">
+          <button class="secondary" id="db-conflict-cancel">Cancel</button>
+          <div class="right">
+            <button class="danger" id="db-conflict-confirm" disabled>Erase and install</button>
+          </div>
+        </div>
+      </dialog>
 
       <!-- 7. progress -->
       <section class="card hidden" data-page="6">
@@ -937,6 +1024,22 @@
           /[&<>"']/g,
           (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
         );
+      }
+
+      // Mirrors the server's is_ip_literal() (wizard-server.py write_env()): a bare IP is
+      // always shown as http://host:port (no reverse proxy to assume), a domain is shown
+      // as https://host with no port - a domain is expected to sit behind a reverse proxy
+      // terminating TLS, same convention as the real .env.example's own examples.
+      function isIpLiteral(host) {
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host))
+          return host.split(".").every((n) => Number(n) <= 255);
+        return host.includes(":"); // IPv6 literal (domains never contain ':')
+      }
+      function previewUrl(host, port, path = "") {
+        if (!host) return `…${path}`;
+        return isIpLiteral(host)
+          ? `http://${esc(host)}:${esc(port)}${path}`
+          : `https://${esc(host)}${path}`;
       }
 
       function renderLog(el, lines) {
@@ -1238,19 +1341,56 @@
 
       // --- 5. website
       function syncUrls() {
-        const a = $("address").value.trim() || "…";
+        const a = $("address").value.trim();
+        const apiA = $("api-address").value.trim() || a;
         $("urls").innerHTML =
-          `CAD: <code>http://${esc(a)}:${esc($("client-port").value)}</code><br>API: <code>http://${esc(a)}:${esc($("api-port").value)}/v1</code>`;
+          `CAD: <code>${previewUrl(a, $("client-port").value)}</code><br>API: <code>${previewUrl(apiA, $("api-port").value, "/v1")}</code>`;
       }
-      ["address", "client-port", "api-port"].forEach((id) =>
+      ["address", "client-port", "api-port", "api-address"].forEach((id) =>
         $(id).addEventListener("input", syncUrls),
       );
+
+      function firewallPorts() {
+        const checked = Array.from(document.querySelectorAll(".fw-preset:checked")).map(
+          (el) => el.value,
+        );
+        const custom = $("fw-custom")
+          .value.split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        return [...new Set([...checked, ...custom])];
+      }
+      function firewallPortsError(ports) {
+        const re = /^(\d{1,5})(-(\d{1,5}))?$/;
+        for (const p of ports) {
+          const m = re.exec(p);
+          if (!m) return `'${p}' isn't a port or port range (e.g. 9123 or 3000-3500).`;
+          const start = Number(m[1]),
+            end = m[3] ? Number(m[3]) : start;
+          if (start < 1 || start > 65535 || end < 1 || end > 65535)
+            return `'${p}': ports must be 1-65535.`;
+          if (end < start) return `'${p}': the range is backwards.`;
+          if (end - start > 5000)
+            return `'${p}': that's a ${end - start + 1}-port range - narrow it down.`;
+        }
+        if (ports.length > 25) return "Too many firewall port entries (25 max).";
+        return null;
+      }
 
       $("site-next").addEventListener("click", async () => {
         const client = Number($("client-port").value),
           apiPort = Number($("api-port").value);
         if (!/^[A-Za-z0-9.-]+$/.test($("address").value.trim()))
           return alertBox($("site-error"), "error", "Enter a valid IP address or domain.");
+        if (
+          $("api-address").value.trim() &&
+          !/^[A-Za-z0-9.-]+$/.test($("api-address").value.trim())
+        )
+          return alertBox(
+            $("site-error"),
+            "error",
+            "Enter a valid IP address or domain for the API.",
+          );
         if (client === apiPort)
           return alertBox($("site-error"), "error", "The website and API need different ports.");
         if (!/^[^\s"'\\$`]{6,64}$/.test($("uninstall-password").value))
@@ -1259,6 +1399,8 @@
             "error",
             "Danger zone password: 6-64 characters, no spaces, quotes, \\, $ or `.",
           );
+        const fwError = firewallPortsError(firewallPorts());
+        if (fwError) return alertBox($("site-error"), "error", fwError);
         for (const [label, port] of [
           ["Website", client],
           ["API", apiPort],
@@ -1280,9 +1422,11 @@
       function settings() {
         return {
           address: $("address").value.trim(),
+          apiAddress: $("api-address").value.trim() || $("address").value.trim(),
           clientPort: Number($("client-port").value),
           apiPort: Number($("api-port").value),
           uninstallPassword: $("uninstall-password").value,
+          extraFirewallPorts: firewallPorts(),
           db: dbSettings(),
         };
       }
@@ -1297,9 +1441,12 @@
         }[s.db.mode];
         const docker = state.method === "docker";
         const windows = state.checks?.platform === "windows";
+        const extra = s.extraFirewallPorts.length
+          ? ` + ${s.extraFirewallPorts.map((p) => esc(p)).join(", ")}`
+          : "";
         const firewall = windows
-          ? `Adds Windows Firewall rules for ports ${s.clientPort} and ${s.apiPort}`
-          : `Opens ports ${s.clientPort} and ${s.apiPort} if ufw is active`;
+          ? `Adds Windows Firewall rules for ports ${s.clientPort} and ${s.apiPort}${extra}`
+          : `Opens ports ${s.clientPort} and ${s.apiPort}${extra} if ufw is active`;
         const runsAs = docker
           ? "Containers that restart on their own"
           : windows
@@ -1308,20 +1455,29 @@
         $("summary").innerHTML = `
       <dt>Method</dt><dd>${docker ? "Docker containers" : "Standalone (Node.js)"}</dd>
       <dt>Database</dt><dd>${dbText}</dd>
-      <dt>CAD address</dt><dd><code>http://${esc(s.address)}:${s.clientPort}</code></dd>
-      <dt>API address</dt><dd><code>http://${esc(s.address)}:${s.apiPort}/v1</code></dd>
+      <dt>CAD address</dt><dd><code>${previewUrl(s.address, s.clientPort)}</code></dd>
+      <dt>API address</dt><dd><code>${previewUrl(s.apiAddress, s.apiPort, "/v1")}</code></dd>
       <dt>Firewall</dt><dd>${firewall}</dd>
       <dt>Runs as</dt><dd>${runsAs}</dd>`;
       }
 
-      $("install").addEventListener("click", async () => {
+      async function submitInstall(dbExtra) {
         $("install").disabled = true;
         // opened now, inside the click itself, so browsers don't treat it as a blocked popup —
-        // it sits on about:blank until the Control Panel step finishes, then gets redirected to it
-        state.controlWindow = window.open("about:blank", "_blank");
-        const { ok, data } = await api("/api/install", settings());
+        // it sits on about:blank until the Control Panel step finishes, then gets redirected to
+        // it; reused across a db-conflict confirmation retry instead of opening a second tab
+        if (!state.controlWindow || state.controlWindow.closed) {
+          state.controlWindow = window.open("about:blank", "_blank");
+        }
+        const base = settings();
+        const body = { ...base, db: { ...base.db, ...(dbExtra || {}) } };
+        const { ok, status, data } = await api("/api/install", body);
         $("install").disabled = false;
         if (!ok) {
+          if (status === 409 && data.needsConfirmation && data.dbConflict) {
+            openDbConflictDialog(data.dbConflict);
+            return;
+          }
           if (state.controlWindow && !state.controlWindow.closed) state.controlWindow.close();
           state.controlWindow = null;
           return alertBox(
@@ -1333,7 +1489,44 @@
         alertBox($("install-error"), "error", "");
         show(6);
         poll();
+      }
+      $("install").addEventListener("click", () => submitInstall());
+
+      // --- database-already-used confirmation: a deliberate 3-step gate (an informed checkbox,
+      // typing the exact name back, and a final separate button) before anything is erased -
+      // never trust the client alone for this: /api/install re-checks the same two conditions.
+      function updateDbConflictState() {
+        const dlg = $("db-conflict-dialog");
+        const matches = $("db-conflict-type").value === dlg.dataset.name && dlg.dataset.name;
+        $("db-conflict-confirm").disabled = !($("db-conflict-ack").checked && matches);
+      }
+      $("db-conflict-ack").addEventListener("change", updateDbConflictState);
+      $("db-conflict-type").addEventListener("input", updateDbConflictState);
+      $("db-conflict-cancel").addEventListener("click", () => $("db-conflict-dialog").close());
+      $("db-conflict-confirm").addEventListener("click", () => {
+        const typed = $("db-conflict-type").value;
+        $("db-conflict-dialog").close();
+        submitInstall({ confirmClear: true, confirmClearName: typed });
       });
+
+      function openDbConflictDialog(conflict) {
+        const dlg = $("db-conflict-dialog");
+        dlg.dataset.name = conflict.name || "";
+        $("db-conflict-ack").checked = false;
+        $("db-conflict-type").value = "";
+        updateDbConflictState();
+        const sample = (conflict.sampleTables || []).map(esc).join(", ");
+        const count = conflict.tableCount || 0;
+        $("db-conflict-info").innerHTML =
+          `Database <code>${esc(conflict.name)}</code> on <code>${esc(conflict.host || "")}</code> already exists` +
+          (count
+            ? ` and contains <b>${count} existing table${count === 1 ? "" : "s"}</b>${sample ? ` (including ${sample}${count > (conflict.sampleTables || []).length ? ", …" : ""})` : ""}`
+            : "") +
+          `. Continuing will <b>permanently erase everything in it</b> before installing. If this isn't ` +
+          `supposed to be there, click Cancel and go back to pick a different database name instead.`;
+        $("db-conflict-type-label").textContent = `Type "${conflict.name}" to confirm`;
+        dlg.showModal();
+      }
 
       // --- 7. progress
       const icons = { done: "✓", failed: "✕", active: "", pending: "" };

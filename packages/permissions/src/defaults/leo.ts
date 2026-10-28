@@ -24,6 +24,7 @@ export const defaultLeoPermissions = [
   Permissions.ManageAwardsAndQualifications,
   Permissions.LeoManageCustomFields,
   Permissions.LeoManageCitizenProfile,
+  Permissions.SelfAssignToCalls,
 ];
 
 /**
@@ -51,4 +52,5 @@ export const defaultEmsFdPermissions = [
   Permissions.ManageEmsFdIncidents,
   Permissions.ViewDeadCitizens,
   Permissions.ManageDeadCitizens,
+  Permissions.SelfAssignToCalls,
 ];
