@@ -5,8 +5,10 @@ import {
   ActiveToneType,
   type CombinedEmsFdUnit,
   type CombinedLeoUnit,
+  type CombinedDotUnit,
   type DepartmentValue,
   type EmsFdDeputy,
+  type DotWorker,
   type Officer,
 } from "@snailycad/types";
 import { Button, Loader, SelectField, TextField } from "@snailycad/ui";
@@ -44,7 +46,13 @@ interface PlayToneEvent {
   sentBy: string;
 }
 
-type ActiveUnit = Officer | EmsFdDeputy | CombinedLeoUnit | CombinedEmsFdUnit;
+type ActiveUnit =
+  | Officer
+  | EmsFdDeputy
+  | DotWorker
+  | CombinedLeoUnit
+  | CombinedEmsFdUnit
+  | CombinedDotUnit;
 
 export function useTonePresets(enabled = true) {
   const { TONES } = useFeatureEnabled();
@@ -61,8 +69,15 @@ export function useTonePresets(enabled = true) {
 }
 
 function getUnitDepartmentIds(unit: ActiveUnit) {
-  if (isUnitCombined(unit)) return unit.officers.map((officer) => officer.departmentId);
-  if (isUnitCombinedEmsFd(unit)) return unit.deputies.map((deputy) => deputy.departmentId);
+  if ("officers" in unit) {
+    return unit.officers.map((officer) => officer.departmentId);
+  }
+  if ("deputies" in unit) {
+    return unit.deputies.map((deputy) => deputy.departmentId);
+  }
+  if ("workers" in unit) {
+    return unit.workers.map((worker) => worker.departmentId);
+  }
   return [unit.departmentId];
 }
 

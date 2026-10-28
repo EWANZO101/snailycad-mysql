@@ -19,6 +19,8 @@ import {
   type AddressValue,
   type EmergencyVehicleValue,
   type CombinedEmsFdUnit,
+  type DotWorker,
+  type CombinedDotUnit,
 } from "@snailycad/types";
 
 export function isPenalCodeValue(value: AnyValue): value is PenalCode {
@@ -98,7 +100,15 @@ export function isUnitCombinedEmsFd(
 }
 
 export function isUnitOfficer(
-  unit: Officer | CombinedEmsFdUnit | CombinedLeoUnit | EmsFdDeputy,
+  unit: Officer | CombinedEmsFdUnit | CombinedLeoUnit | EmsFdDeputy | DotWorker | CombinedDotUnit,
 ): unit is Officer {
-  return !isUnitCombined(unit) && "divisions" in unit && Array.isArray(unit.divisions);
+  return (
+    !isUnitCombined(unit as CombinedLeoUnit | Officer) &&
+    "divisions" in unit &&
+    Array.isArray(unit.divisions)
+  );
+}
+
+export function isUnitCombinedDot(unit: DotWorker | CombinedDotUnit): unit is CombinedDotUnit {
+  return !("citizenId" in unit) && "workers" in unit;
 }

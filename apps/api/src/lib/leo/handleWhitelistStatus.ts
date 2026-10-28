@@ -1,6 +1,7 @@
 import {
   type EmsFdDeputy,
   type Officer,
+  type DotWorker,
   type LeoWhitelistStatus,
   WhitelistStatus,
   type DepartmentValue,
@@ -19,7 +20,9 @@ import { ExtendedNotFound } from "~/exceptions/extended-not-found";
  */
 export async function handleWhitelistStatus(
   departmentId: string,
-  unit: ((Officer | EmsFdDeputy) & { whitelistStatus?: LeoWhitelistStatus | null }) | null,
+  unit:
+    | ((Officer | EmsFdDeputy | DotWorker) & { whitelistStatus?: LeoWhitelistStatus | null })
+    | null,
 ) {
   const department = await prisma.departmentValue.findUnique({
     where: { id: departmentId },

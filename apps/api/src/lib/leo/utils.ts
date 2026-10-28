@@ -15,7 +15,7 @@ import type { DisconnectOrConnect } from "lib/data/many-to-many";
 import type { z } from "zod";
 
 interface MaxDepartmentOptions {
-  type: "emsFdDeputy" | "officer";
+  type: "emsFdDeputy" | "officer" | "dotWorker";
   userId: string;
   cad: cad & { features?: Record<Feature, boolean>; miscCadSettings: MiscCadSettings };
   departmentId: string;

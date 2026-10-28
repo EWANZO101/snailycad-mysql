@@ -46,6 +46,25 @@ export const combinedEmsFdUnitProperties = Prisma.validator<Prisma.CombinedEmsFd
   activeVehicle: { include: { value: true } },
 });
 
+export const dotWorkerProperties = Prisma.validator<Prisma.DotWorkerSelect>()({
+  department: { include: { value: true, links: true } },
+  division: { include: { value: true, department: true } },
+  status: { include: { value: true } },
+  citizen: { select: { name: true, surname: true, id: true } },
+  user: { select: limitedUserSelect },
+  IncidentInvolvedUnit: { where: { incident: { isActive: true } }, select: { id: true } },
+  whitelistStatus: { include: { department: { include: { value: true } } } },
+  rank: true,
+  activeVehicle: { include: { value: true } },
+});
+
+export const combinedDotUnitProperties = Prisma.validator<Prisma.CombinedDotUnitSelect>()({
+  status: { include: { value: true } },
+  department: { include: { value: true } },
+  workers: { include: dotWorkerProperties },
+  activeVehicle: { include: { value: true } },
+});
+
 export const combinedUnitProperties = Prisma.validator<Prisma.CombinedLeoUnitSelect>()({
   status: { include: { value: true } },
   department: { include: { value: true } },
@@ -73,6 +92,17 @@ export const assignedUnitsInclude = Prisma.validator<{ include: Prisma.AssignedU
         department: { include: { value: true } },
         deputies: {
           include: unitProperties,
+        },
+        activeVehicle: { include: { value: true } },
+      },
+    },
+    dotWorker: { include: dotWorkerProperties },
+    combinedDotUnit: {
+      include: {
+        status: { include: { value: true } },
+        department: { include: { value: true } },
+        workers: {
+          include: dotWorkerProperties,
         },
         activeVehicle: { include: { value: true } },
       },

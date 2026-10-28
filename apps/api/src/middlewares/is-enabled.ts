@@ -38,6 +38,7 @@ export const DEFAULT_DISABLED_FEATURES: Partial<
   API_TOKEN_REMINDER: { isEnabled: false },
   RADIO: { isEnabled: false },
   ERLC: { isEnabled: false },
+  DOT: { isEnabled: false },
 };
 
 export type CadFeatures = Record<TypesFeature | DatabaseFeature, boolean> & {

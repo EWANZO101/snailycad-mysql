@@ -450,6 +450,32 @@ export type CombinedEmsFdUnit = Prisma.CombinedEmsFdUnit & {
   activeVehicle?: EmsFdDeputy["activeVehicle"];
 };
 
+export type DotWorker = Prisma.DotWorker & {
+  department: Officer["department"];
+  division?: Officer["divisions"][number] | null;
+  rank: Officer["rank"];
+  status: Officer["status"];
+  citizen: Officer["citizen"];
+  user?: LimitedUser | null;
+  whitelistStatus?: Officer["whitelistStatus"];
+  activeVehicle: EmergencyVehicleValue | null;
+};
+
+export type CombinedDotUnit = Prisma.CombinedDotUnit & {
+  status: DotWorker["status"];
+  department: DotWorker["department"];
+  workers: Omit<DotWorker, "activeIncident">[];
+  activeVehicle?: DotWorker["activeVehicle"];
+};
+
+export type DotWorkOrderPriority = Prisma.DotWorkOrderPriority;
+export type DotWorkOrderStatus = Prisma.DotWorkOrderStatus;
+
+export type DotWorkOrder = Prisma.DotWorkOrder & {
+  department: DotWorker["department"];
+  assignedWorker: DotWorker | null;
+};
+
 export type TruckLog = Prisma.TruckLog & {
   citizen: Prisma.Citizen | null;
   vehicle: RegisteredVehicle | null;

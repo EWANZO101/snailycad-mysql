@@ -6,6 +6,7 @@ import { classNames } from "lib/classNames";
 import { CitizenDropdown } from "./dropdowns/citizen-dropdown";
 import { OfficerDropdown } from "./dropdowns/officer-dropdown";
 import { EmsFdDropdown } from "./dropdowns/ems-fd-dropdown";
+import { DotDropdown } from "./dropdowns/dot-dropdown";
 import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 import { TowDropdown } from "./dropdowns/tow-dropdown";
 import { DispatchDropdown } from "./dropdowns/dispatch-dropdown";
@@ -122,6 +123,7 @@ export function Nav({ maxWidth, isAccountPending }: Props) {
                 ) : null}
 
                 {hasPermissions([Permissions.EmsFd]) ? <EmsFdDropdown /> : null}
+                {hasPermissions([Permissions.Dot]) ? <DotDropdown /> : null}
 
                 {hasPermissions([Permissions.LiveMap, Permissions.Dispatch]) ? (
                   <DispatchDropdown />

@@ -27,6 +27,7 @@ export const SHOULD_DO_LABELS: Record<ShouldDoType, string> = {
 export const WHAT_PAGES_LABELS: Record<WhatPages, string> = {
   [WhatPages.LEO]: "LEO",
   [WhatPages.EMS_FD]: "EMS/FD",
+  [WhatPages.DOT]: "DOT",
   [WhatPages.DISPATCH]: "Dispatch",
 };
 
