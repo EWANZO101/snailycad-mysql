@@ -12,9 +12,10 @@ import { defaultPermissions, type Permissions } from "@snailycad/permissions";
 import { toastMessage } from "lib/toastMessage";
 import type { GetCADDiscordRolesData, PostCADDiscordRolesData } from "@snailycad/types/api";
 import Link from "next/link";
-import { BoxArrowUpRight } from "react-bootstrap-icons";
+import { BoxArrowUpRight, PersonBadge } from "react-bootstrap-icons";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
 
 function makeRoleValues(roles: DiscordRole[] | undefined) {
   if (!roles) return [];
@@ -122,7 +123,7 @@ export function DiscordRolesTab() {
     <TabsContent value={SettingsTabs.DiscordRoles}>
       <header>
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">{t("discordRoles")}</h2>
+          <SettingsTabHeader icon={<PersonBadge size={16} />}>{t("discordRoles")}</SettingsTabHeader>
 
           <Button onPress={refreshRoles} className="h-fit min-w-fit">
             {t("refreshRoles")}

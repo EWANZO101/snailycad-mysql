@@ -1,5 +1,12 @@
 import * as React from "react";
-import type { CombinedEmsFdUnit, CombinedLeoUnit, EmsFdDeputy, Officer } from "@snailycad/types";
+import type {
+  CombinedEmsFdUnit,
+  CombinedLeoUnit,
+  CombinedDotUnit,
+  DotWorker,
+  EmsFdDeputy,
+  Officer,
+} from "@snailycad/types";
 import { useTranslations } from "next-intl";
 import { UnitItem } from "./unit-item";
 import { ManageUnitModal } from "components/dispatch/active-units/modals/manage-unit-modal";
@@ -10,7 +17,7 @@ import { useDispatchMapState } from "state/mapState";
 
 export function ActiveMapUnits() {
   const [tempUnit, setTempUnit] = React.useState<
-    null | Officer | EmsFdDeputy | CombinedEmsFdUnit | CombinedLeoUnit
+    null | Officer | EmsFdDeputy | CombinedEmsFdUnit | CombinedLeoUnit | DotWorker | CombinedDotUnit
   >(null);
   const players = useMapPlayersStore((state) => state.players);
   const { openUnits, activeMapUnits, setOpenUnits } = useDispatchMapState((state) => ({

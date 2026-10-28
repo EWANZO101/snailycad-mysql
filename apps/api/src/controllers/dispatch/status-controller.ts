@@ -12,7 +12,7 @@ import { Req, UseBeforeEach } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { BodyParams, Context, PathParams } from "@tsed/platform-params";
-import { ContentType, Description, Put } from "@tsed/schema";
+import { ContentType, Description, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { Socket } from "services/socket-service";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -25,8 +25,9 @@ import { applyUnitStatus } from "lib/dispatch/apply-unit-status";
 import { ExtendedNotFound } from "~/exceptions/extended-not-found";
 import { isFeatureEnabled } from "lib/upsert-cad";
 import { handlePanicButtonPressed } from "lib/leo/send-panic-button-webhook";
-import { leoProperties, unitProperties } from "utils/leo/includes";
+import { leoProperties, unitProperties, dotWorkerProperties } from "utils/leo/includes";
 
+@Tags("Dispatch")
 @Controller("/dispatch/status")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -39,7 +40,7 @@ export class StatusController {
   @Put("/:unitId")
   @Description("Update the status of a unit by its id.")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async updateUnitStatus(
     @PathParams("unitId") unitId: string,
@@ -96,6 +97,7 @@ export class StatusController {
         permissionsToCheck: [
           Permissions.SetUserDefinedCallsignOnEmsFd,
           Permissions.SetUserDefinedCallsignOnOfficer,
+          Permissions.SetUserDefinedCallsignOnDot,
         ],
         userToCheck: user,
       });
@@ -104,16 +106,19 @@ export class StatusController {
         throw new BadRequest("cannotSetUserDefinedCallsign");
       }
 
-      const [existingOfficer, existingDeputy] = await prisma.$transaction([
+      const [existingOfficer, existingDeputy, existingDotWorker] = await prisma.$transaction([
         prisma.officer.findFirst({
           where: { userDefinedCallsign: { equals: data.userDefinedCallsign, mode: "insensitive" } },
         }),
         prisma.emsFdDeputy.findFirst({
           where: { userDefinedCallsign: { equals: data.userDefinedCallsign, mode: "insensitive" } },
         }),
+        prisma.dotWorker.findFirst({
+          where: { userDefinedCallsign: { equals: data.userDefinedCallsign, mode: "insensitive" } },
+        }),
       ]);
 
-      if (existingOfficer || existingDeputy) {
+      if (existingOfficer || existingDeputy || existingDotWorker) {
         throw new BadRequest("callsignAlreadyTaken");
       }
 
@@ -171,6 +176,18 @@ export class StatusController {
       }
     }
 
+    if (unit.type === "dot" && !isDispatch) {
+      const hasCombinedUnit = await prisma.combinedDotUnit.findFirst({
+        where: {
+          workers: { some: { id: unit.unit.id } },
+        },
+      });
+
+      if (hasCombinedUnit) {
+        throw new BadRequest("dotWorkerIsCombined");
+      }
+    }
+
     if (!code) {
       throw new NotFound("statusNotFound");
     }
@@ -199,7 +216,11 @@ export class StatusController {
       });
     }
 
-    if (unit.type === "combined-leo" || unit.type === "combined-ems-fd") {
+    if (
+      unit.type === "combined-leo" ||
+      unit.type === "combined-ems-fd" ||
+      unit.type === "combined-dot"
+    ) {
       await handlePanicButtonPressed({
         locale: user.locale,
         socket: this.socket,
@@ -219,6 +240,19 @@ export class StatusController {
         cad,
         status: code,
         unit: fullDeputy!,
+      });
+    } else if (unit.type === "dot") {
+      const fullDotWorker = await prisma.dotWorker.findUnique({
+        where: { id: unit.unit.id },
+        include: dotWorkerProperties,
+      });
+
+      await handlePanicButtonPressed({
+        locale: user.locale,
+        socket: this.socket,
+        cad,
+        status: code,
+        unit: fullDotWorker!,
       });
     }
 
@@ -252,6 +286,10 @@ function getDivisionsFromUnit(
   }
 
   if (unit.type === "ems-fd" && unit.unit.divisionId) {
+    return [unit.unit.divisionId];
+  }
+
+  if (unit.type === "dot" && unit.unit.divisionId) {
     return [unit.unit.divisionId];
   }
 

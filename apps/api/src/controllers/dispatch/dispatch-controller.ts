@@ -1,5 +1,5 @@
 import { Controller } from "@tsed/di";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { BodyParams, PathParams, Context } from "@tsed/platform-params";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { prisma } from "lib/data/prisma";
@@ -17,6 +17,7 @@ import { hasPermission } from "@snailycad/permissions";
 import { findUnit } from "lib/leo/findUnit";
 import { getInactivityFilter } from "lib/leo/utils";
 import { getActiveDeputy } from "lib/get-active-ems-fd-deputy";
+import { getActiveDotWorker } from "lib/get-active-dot-worker";
 import type * as APITypes from "@snailycad/types/api";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
 import { z } from "zod";
@@ -28,9 +29,12 @@ import {
   unitProperties,
   combinedUnitProperties,
   combinedEmsFdUnitProperties,
+  dotWorkerProperties,
+  combinedDotUnitProperties,
 } from "utils/leo/includes";
 import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 
+@Tags("Dispatch")
 @Controller("/dispatch")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -42,7 +46,7 @@ export class DispatchController {
 
   @Get("/")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   @UseAfter(HandleInactivity)
   async getDispatchData(
@@ -76,7 +80,7 @@ export class DispatchController {
   }
 
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   @Post("/units/search")
   async searchUnits(
@@ -134,7 +138,40 @@ export class DispatchController {
       orderBy: { updatedAt: "desc" },
     });
 
-    return [...officers, ...deputies, ...combinedOfficers, ...combinedEmsFdDeputies];
+    const dotWorkers = await prisma.dotWorker.findMany({
+      where: createWhere({
+        pendingOnly: false,
+        query,
+        type: "DOT_WORKER",
+        extraWhere: {
+          combinedDotUnitId: null,
+          status: { NOT: { shouldDo: ShouldDoType.SET_OFF_DUTY } },
+        },
+      }),
+      include: dotWorkerProperties,
+      take: 25,
+      orderBy: { updatedAt: "desc" },
+    });
+
+    const combinedDotWorkers = await prisma.combinedDotUnit.findMany({
+      where: createWhereCombinedUnit({
+        type: "DOT_WORKER",
+        pendingOnly: false,
+        query,
+      }),
+      include: combinedDotUnitProperties,
+      take: 25,
+      orderBy: { updatedAt: "desc" },
+    });
+
+    return [
+      ...officers,
+      ...deputies,
+      ...dotWorkers,
+      ...combinedOfficers,
+      ...combinedEmsFdDeputies,
+      ...combinedDotWorkers,
+    ];
   }
 
   @Post("/aop")
@@ -325,10 +362,15 @@ export class DispatchController {
     const includesData = {
       leo: { name: "officer", include: leoProperties },
       "ems-fd": { name: "emsFdDeputy", include: unitProperties },
+      dot: { name: "dotWorker", include: dotWorkerProperties },
       "combined-leo": { name: "combinedLeoUnit", include: combinedUnitProperties },
       "combined-ems-fd": {
         name: "combinedEmsFdUnit",
         include: combinedEmsFdUnitProperties,
+      },
+      "combined-dot": {
+        name: "combinedDotUnit",
+        include: combinedDotUnitProperties,
       },
     };
 
@@ -346,6 +388,8 @@ export class DispatchController {
 
     if (["leo", "combined-leo"].includes(type)) {
       await this.socket.emitUpdateOfficerStatus();
+    } else if (["dot", "combined-dot"].includes(type)) {
+      await this.socket.emitUpdateDotStatus();
     } else {
       await this.socket.emitUpdateDeputyStatus();
     }
@@ -379,12 +423,13 @@ export class DispatchController {
       return null;
     }
 
-    const [officer, deputy] = await Promise.all([
+    const [officer, deputy, dotWorker] = await Promise.all([
       getActiveOfficer({ user, ctx }).catch(() => null),
       getActiveDeputy({ user, ctx }).catch(() => null),
+      getActiveDotWorker({ user, ctx }).catch(() => null),
     ]);
 
-    const unit = officer ?? deputy ?? null;
+    const unit = officer ?? deputy ?? dotWorker ?? null;
 
     // todo: replace from /players/:steamId
     // idea: in-game, if no user is found, prompt them to login via Discord or Steam and all that
@@ -434,12 +479,13 @@ export class DispatchController {
           return null;
         }
 
-        const [officer, deputy] = await Promise.all([
+        const [officer, deputy, dotWorker] = await Promise.all([
           getActiveOfficer({ user, ctx }).catch(() => null),
           getActiveDeputy({ user, ctx }).catch(() => null),
+          getActiveDotWorker({ user, ctx }).catch(() => null),
         ]);
 
-        const unit = officer ?? deputy ?? null;
+        const unit = officer ?? deputy ?? dotWorker ?? null;
 
         if (!unit && !canViewAllPlayers) {
           return null;
@@ -472,12 +518,13 @@ export class DispatchController {
       return null;
     }
 
-    const [officer, deputy] = await Promise.all([
+    const [officer, deputy, dotWorker] = await Promise.all([
       getActiveOfficer({ user, ctx }).catch(() => null),
       getActiveDeputy({ user, ctx }).catch(() => null),
+      getActiveDotWorker({ user, ctx }).catch(() => null),
     ]);
 
-    const unit = officer ?? deputy ?? null;
+    const unit = officer ?? deputy ?? dotWorker ?? null;
 
     return { ...user, unit };
   }
@@ -485,7 +532,7 @@ export class DispatchController {
   @Get("/tones")
   @IsFeatureEnabled({ feature: Feature.TONES })
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async getTones(): Promise<APITypes.GETDispatchTonesData> {
     const activeTones = await prisma.activeTone.findMany({
@@ -497,7 +544,7 @@ export class DispatchController {
   @Post("/tones")
   @IsFeatureEnabled({ feature: Feature.TONES })
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async handleTones(
     @BodyParams() body: unknown,
@@ -549,7 +596,7 @@ export class DispatchController {
   @Delete("/tones/:id")
   @IsFeatureEnabled({ feature: Feature.TONES })
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async deleteToneById(@PathParams("id") id: string): Promise<APITypes.DeleteDispatchTonesData> {
     await prisma.activeTone.delete({

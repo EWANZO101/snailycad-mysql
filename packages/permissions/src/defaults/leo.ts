@@ -52,3 +52,5 @@ export const defaultEmsFdPermissions = [
   Permissions.ViewDeadCitizens,
   Permissions.ManageDeadCitizens,
 ];
+
+export const defaultDotPermissions = [Permissions.Dot];

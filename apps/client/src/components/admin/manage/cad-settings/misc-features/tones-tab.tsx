@@ -5,6 +5,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActiveToneType, type DepartmentValue } from "@snailycad/types";
 import { Alert, Button, Loader, SelectField, TextField } from "@snailycad/ui";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { Soundwave } from "react-bootstrap-icons";
 import { type TonePreset, useTonePresets } from "components/tones/tone-presets";
 import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 import { BUILT_IN_TONE_NAMES, builtInSound, isBuiltInSound, playToneSound } from "lib/tone-sounds";
@@ -114,7 +116,7 @@ export function TonesTab() {
   return (
     <TabsContent value={SettingsTabs.TonePresets} className="mt-3">
       <header className="mb-4">
-        <h2 className="text-2xl font-semibold">{t("tonePresets")}</h2>
+        <SettingsTabHeader icon={<Soundwave size={16} />}>{t("tonePresets")}</SettingsTabHeader>
         <p className="mt-1 text-neutral-600 dark:text-gray-400">{t("tonePresetsIntro")}</p>
       </header>
 

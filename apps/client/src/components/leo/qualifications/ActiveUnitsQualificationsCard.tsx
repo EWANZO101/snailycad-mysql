@@ -2,12 +2,14 @@ import * as React from "react";
 import type {
   CombinedEmsFdUnit,
   CombinedLeoUnit,
+  CombinedDotUnit,
   EmsFdDeputy,
   Officer,
+  DotWorker,
   UnitQualification,
 } from "@snailycad/types";
 import { useDebounce, useHoverDirty } from "react-use";
-import { isUnitCombined, isUnitCombinedEmsFd } from "@snailycad/utils";
+import { isUnitCombined, isUnitCombinedEmsFd, isUnitCombinedDot } from "@snailycad/utils";
 import useFetch from "lib/useFetch";
 import { HoverCard, HoverCardContent, HoverCardTrigger, Loader } from "@snailycad/ui";
 import type { GetUnitQualificationsByUnitIdData } from "@snailycad/types/api";
@@ -22,9 +24,10 @@ const UnitQualificationsTable = dynamic(
 
 interface Props {
   unit:
-    | ((Officer | EmsFdDeputy) & { qualifications?: UnitQualification[] })
+    | ((Officer | EmsFdDeputy | DotWorker) & { qualifications?: UnitQualification[] })
     | CombinedLeoUnit
-    | CombinedEmsFdUnit;
+    | CombinedEmsFdUnit
+    | CombinedDotUnit;
   children: React.ReactNode;
   canBeOpened?: boolean;
 }
@@ -51,7 +54,7 @@ export function ActiveUnitsQualificationsCard({ canBeOpened = true, unit, childr
   const cache = units[unit.id];
 
   const handleHover = React.useCallback(async () => {
-    if (isUnitCombined(unit)) return;
+    if (isUnitCombined(unit) || isUnitCombinedDot(unit)) return;
     if (units[unit.id]) return;
 
     const { json } = await execute<GetUnitQualificationsByUnitIdData>({
@@ -78,7 +81,7 @@ export function ActiveUnitsQualificationsCard({ canBeOpened = true, unit, childr
     [hovered, state],
   );
 
-  if (isUnitCombined(unit) || isUnitCombinedEmsFd(unit) || !canBeOpened) {
+  if (isUnitCombined(unit) || isUnitCombinedEmsFd(unit) || isUnitCombinedDot(unit) || !canBeOpened) {
     // eslint-disable-next-line react/jsx-no-useless-fragment
     return <>{children}</>;
   }

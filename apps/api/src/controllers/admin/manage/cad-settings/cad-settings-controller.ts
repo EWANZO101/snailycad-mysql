@@ -8,7 +8,7 @@ import {
 } from "@snailycad/schemas";
 import { Controller } from "@tsed/di";
 import { BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-params";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { CAD_SELECT, IsAuth, setCADFeatures } from "middlewares/auth/is-auth";
 import { BadRequest, NotFound } from "@tsed/exceptions";
@@ -38,7 +38,9 @@ import { hasPermission } from "@snailycad/permissions";
 import { parseImportFile } from "~/utils/file";
 import { getPrismaModelOrderBy } from "~/utils/order-by";
 import { radioServer } from "lib/radio/radio-server";
+import { assertNotDemoAccount } from "lib/demo/demo-mode";
 
+@Tags("Admin: Manage")
 @Controller("/admin/manage/cad-settings")
 @ContentType("application/json")
 export class CADSettingsController {
@@ -139,6 +141,7 @@ export class CADSettingsController {
     @Context("cad") cad: cad,
     @BodyParams() body: unknown,
   ): Promise<APITypes.PutCADSettingsData> {
+    await assertNotDemoAccount(sessionUserId);
     const data = validateSchema(CAD_SETTINGS_SCHEMA, body);
 
     // this is fetched to get correct diff results
@@ -207,6 +210,7 @@ export class CADSettingsController {
     @Context("sessionUserId") sessionUserId: string,
     @BodyParams() body: unknown,
   ): Promise<APITypes.PutCADFeaturesData> {
+    await assertNotDemoAccount(sessionUserId);
     const data = validateSchema(DISABLED_FEATURES_SCHEMA, body);
 
     await prisma.$transaction(
@@ -260,6 +264,7 @@ export class CADSettingsController {
     @Context("cad") cad: cad & { miscCadSettings: MiscCadSettings },
     @BodyParams() body: unknown,
   ): Promise<APITypes.PutCADMiscSettingsData> {
+    await assertNotDemoAccount(sessionUserId);
     const data = validateSchema(CAD_MISC_SETTINGS_SCHEMA, body);
 
     const updated = await prisma.miscCadSettings.update({
@@ -337,6 +342,7 @@ export class CADSettingsController {
     @BodyParams() body: unknown,
     @Context("sessionUserId") sessionUserId: string,
   ): Promise<APITypes.PutCADDefaultPermissionsData> {
+    await assertNotDemoAccount(sessionUserId);
     const data = validateSchema(UPDATE_DEFAULT_PERMISSIONS_SCHEMA, body);
 
     const previous = cad.autoSetUserPropertiesId
@@ -387,6 +393,7 @@ export class CADSettingsController {
     @BodyParams() body: unknown,
     @Context("sessionUserId") sessionUserId: string,
   ): Promise<APITypes.PutCADApiTokenData> {
+    await assertNotDemoAccount(sessionUserId);
     const data = validateSchema(API_TOKEN_SCHEMA, body);
 
     const existing =
@@ -457,6 +464,7 @@ export class CADSettingsController {
     @Context("cad") cad: cad & { apiToken: ApiToken },
     @Context("sessionUserId") sessionUserId: string,
   ) {
+    await assertNotDemoAccount(sessionUserId);
     if (!cad.apiTokenId) {
       throw new BadRequest("noApiTokenId");
     }
@@ -520,7 +528,9 @@ export class CADSettingsController {
   })
   async addBlacklistedWord(
     @MultipartFile("file") file: PlatformMulterFile,
+    @Context("sessionUserId") sessionUserId: string,
   ): Promise<APITypes.PostBlacklistedWordsData> {
+    await assertNotDemoAccount(sessionUserId);
     const toValidateBody = parseImportFile(file);
     const validatedWords = validateSchema(BLACKLISTED_WORD_SCHEMA, toValidateBody);
 
@@ -544,7 +554,9 @@ export class CADSettingsController {
   })
   async deleteBlacklistedWord(
     @PathParams("wordId") wordId: string,
+    @Context("sessionUserId") sessionUserId: string,
   ): Promise<APITypes.DeleteBlacklistedWordsData> {
+    await assertNotDemoAccount(sessionUserId);
     const existingWord = await prisma.blacklistedWord.findFirst({
       where: {
         id: wordId,

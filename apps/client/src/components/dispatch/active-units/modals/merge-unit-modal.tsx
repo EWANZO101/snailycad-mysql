@@ -1,9 +1,11 @@
 import type {
   CombinedEmsFdUnit,
   CombinedLeoUnit,
+  CombinedDotUnit,
   EmergencyVehicleValue,
   EmsFdDeputy,
   Officer,
+  DotWorker,
 } from "@snailycad/types";
 import { Loader, Button, AsyncListSearchField, Item, TextField } from "@snailycad/ui";
 import { FormField } from "components/form/FormField";
@@ -14,26 +16,31 @@ import { useTranslations } from "next-intl";
 import { useModal } from "state/modalState";
 import { ModalIds } from "types/modal-ids";
 import { Select } from "components/form/Select";
-import { isUnitCombined, isUnitCombinedEmsFd } from "@snailycad/utils/typeguards";
+import { isUnitCombined, isUnitCombinedEmsFd, isUnitCombinedDot } from "@snailycad/utils/typeguards";
 import { useGenerateCallsign } from "hooks/useGenerateCallsign";
 import { makeUnitName } from "lib/utils";
 import type { PostDispatchStatusMergeOfficers } from "@snailycad/types/api";
 import type { ActiveDeputy } from "state/ems-fd-state";
 import type { ActiveOfficer } from "state/leo-state";
+import type { ActiveDotWorker } from "state/dot-state";
 import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 
 interface Props {
   isDispatch: boolean;
-  unit: Officer | EmsFdDeputy;
+  unit: Officer | EmsFdDeputy | DotWorker;
   onClose?(): void;
 
-  type: "leo" | "ems-fd";
+  type: "leo" | "ems-fd" | "dot";
 
-  activeUnits: (EmsFdDeputy | CombinedEmsFdUnit | Officer | CombinedLeoUnit)[];
-  setActiveUnits(units: (EmsFdDeputy | CombinedEmsFdUnit | Officer | CombinedLeoUnit)[]): void;
+  activeUnits: (EmsFdDeputy | CombinedEmsFdUnit | Officer | CombinedLeoUnit | DotWorker | CombinedDotUnit)[];
+  setActiveUnits(
+    units: (EmsFdDeputy | CombinedEmsFdUnit | Officer | CombinedLeoUnit | DotWorker | CombinedDotUnit)[],
+  ): void;
 
-  activeUnit: ActiveDeputy | ActiveOfficer | null;
-  setActiveUnit(unit: EmsFdDeputy | CombinedEmsFdUnit | Officer | CombinedLeoUnit | null): void;
+  activeUnit: ActiveDeputy | ActiveOfficer | ActiveDotWorker | null;
+  setActiveUnit(
+    unit: EmsFdDeputy | CombinedEmsFdUnit | Officer | CombinedLeoUnit | DotWorker | CombinedDotUnit | null,
+  ): void;
 }
 
 export function MergeUnitModal({
@@ -59,7 +66,7 @@ export function MergeUnitModal({
     modalState.closeModal(ModalIds.MergeUnit);
   }
 
-  function makeValuesOption(unit: Officer | EmsFdDeputy, fixed?: boolean) {
+  function makeValuesOption(unit: Officer | EmsFdDeputy | DotWorker, fixed?: boolean) {
     return {
       label: `${generateCallsign(unit)} ${makeUnitName(unit)}`,
       value: unit.id,
@@ -100,7 +107,9 @@ export function MergeUnitModal({
     }
   }
 
-  const isCombined = activeUnit && (isUnitCombined(activeUnit) || isUnitCombinedEmsFd(activeUnit));
+  const isCombined =
+    activeUnit &&
+    (isUnitCombined(activeUnit) || isUnitCombinedEmsFd(activeUnit) || isUnitCombinedDot(activeUnit));
 
   const INITIAL_VALUES = {
     vehicleId: null as string | null,
@@ -112,8 +121,9 @@ export function MergeUnitModal({
         : [makeValuesOption(unit, true)],
   };
 
-  const title = type === "leo" ? t("mergeOfficers") : t("mergeDeputies");
-  const label = type === "leo" ? t("officers") : t("deputies");
+  const title =
+    type === "leo" ? t("mergeOfficers") : type === "dot" ? t("mergeDotWorkers") : t("mergeDeputies");
+  const label = type === "leo" ? t("officers") : type === "dot" ? t("dotWorkers") : t("deputies");
 
   return (
     <Modal
@@ -129,8 +139,11 @@ export function MergeUnitModal({
               <Select
                 isMulti
                 values={activeUnits
-                  .filter((u) => !isUnitCombined(u) || !isUnitCombinedEmsFd(u))
-                  .map((v) => makeValuesOption(v as EmsFdDeputy | Officer))}
+                  .filter(
+                    (u) =>
+                      !isUnitCombined(u) || !isUnitCombinedEmsFd(u) || !isUnitCombinedDot(u),
+                  )
+                  .map((v) => makeValuesOption(v as EmsFdDeputy | Officer | DotWorker))}
                 name="ids"
                 onChange={handleChange}
                 value={values.ids}

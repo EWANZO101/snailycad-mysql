@@ -19,7 +19,7 @@ import {
 import { Controller } from "@tsed/di";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { validateMaxDivisionsPerUnit } from "controllers/leo/my-officers/MyOfficersController";
 import { findUnit } from "lib/leo/findUnit";
 import { updateOfficerDivisionsCallsigns } from "lib/leo/utils";
@@ -46,6 +46,8 @@ import {
   _leoProperties,
   combinedUnitProperties,
   combinedEmsFdUnitProperties,
+  dotWorkerProperties,
+  combinedDotUnitProperties,
 } from "utils/leo/includes";
 import { getTranslator } from "~/utils/get-translator";
 import { type APIEmbed } from "discord-api-types/v10";
@@ -64,6 +66,7 @@ export const ACCEPT_DECLINE_TYPES = ["ACCEPT", "DECLINE"] as const;
 export type AcceptDeclineType = (typeof ACCEPT_DECLINE_TYPES)[number];
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/units")
 @ContentType("application/json")
 export class AdminManageUnitsController {
@@ -117,12 +120,25 @@ export class AdminManageUnitsController {
       }),
     ]);
 
+    const [dotWorkersCount, _dotWorkers] = await prisma.$transaction([
+      prisma.dotWorker.count({
+        where: createWhere({ departmentId, query, pendingOnly, type: "DOT_WORKER" }),
+      }),
+      prisma.dotWorker.findMany({
+        take: includeAll ? undefined : 35,
+        skip: includeAll ? undefined : skip,
+        include: dotWorkerProperties,
+        where: createWhere({ departmentId, query, pendingOnly, type: "DOT_WORKER" }),
+      }),
+    ]);
+
     const officers = _officers.map((o) => ({ ...o, type: "OFFICER" as const }));
     const emsFdDeputies = _emsFdDeputies.map((o) => ({ ...o, type: "DEPUTY" as const }));
+    const dotWorkers = _dotWorkers.map((o) => ({ ...o, type: "DOT" as const }));
 
     return {
-      units: [...officers, ...emsFdDeputies],
-      totalCount: officerCount + emsFdDeputiesCount,
+      units: [...officers, ...emsFdDeputies, ...dotWorkers],
+      totalCount: officerCount + emsFdDeputiesCount + dotWorkersCount,
     };
   }
 
@@ -142,7 +158,7 @@ export class AdminManageUnitsController {
       departmentId,
     };
 
-    const [officers, deputies] = await prisma.$transaction([
+    const [officers, deputies, dotWorkers] = await prisma.$transaction([
       prisma.officer.findMany({
         where,
         include: _leoProperties,
@@ -153,9 +169,14 @@ export class AdminManageUnitsController {
         include: unitProperties,
         orderBy: { updatedAt: "desc" },
       }),
+      prisma.dotWorker.findMany({
+        where,
+        include: dotWorkerProperties,
+        orderBy: { updatedAt: "desc" },
+      }),
     ]);
 
-    const units = [...officers, ...deputies];
+    const units = [...officers, ...deputies, ...dotWorkers];
 
     return units;
   }
@@ -166,7 +187,7 @@ export class AdminManageUnitsController {
   })
   async pruneInactiveUnits(
     @Context("sessionUserId") sessionUserId: string,
-    @BodyParams("unitIds", String) unitIds: `${"OFFICER" | "EMS_FD"}-${string}`[],
+    @BodyParams("unitIds", String) unitIds: `${"OFFICER" | "EMS_FD" | "DOT_WORKER"}-${string}`[],
     @BodyParams("days", Number) days = 30,
     @BodyParams("action", String) action = "SET_DEPARTMENT_DEFAULT",
   ) {
@@ -187,7 +208,8 @@ export class AdminManageUnitsController {
     const arr = await prisma.$transaction(
       unitIds.map((id) => {
         const [type, unitId] = id.split("-");
-        const prismaName = type === "OFFICER" ? "officer" : "emsFdDeputy";
+        const prismaName =
+          type === "OFFICER" ? "officer" : type === "DOT_WORKER" ? "dotWorker" : "emsFdDeputy";
 
         if (action === "SET_DEPARTMENT_NULL") {
           // @ts-expect-error method properties are the same
@@ -259,30 +281,45 @@ export class AdminManageUnitsController {
 
       const where = { OR };
 
-      const [userOfficers, userDeputies, userCombinedOfficers, userCombinedDeputies] =
-        await prisma.$transaction([
-          prisma.officer.findMany({
-            where,
-            include: { ...leoProperties, ...extraInclude },
-          }),
-          prisma.emsFdDeputy.findMany({
-            where,
-            include: { ...unitProperties, ...extraInclude },
-          }),
-          prisma.combinedLeoUnit.findMany({
-            where: { officers: { some: where } },
-            include: combinedUnitProperties,
-          }),
-          prisma.combinedEmsFdUnit.findMany({
-            where: { deputies: { some: where } },
-            include: combinedEmsFdUnitProperties,
-          }),
-        ]);
+      const [
+        userOfficers,
+        userDeputies,
+        userDotWorkers,
+        userCombinedOfficers,
+        userCombinedDeputies,
+        userCombinedDotWorkers,
+      ] = await prisma.$transaction([
+        prisma.officer.findMany({
+          where,
+          include: { ...leoProperties, ...extraInclude },
+        }),
+        prisma.emsFdDeputy.findMany({
+          where,
+          include: { ...unitProperties, ...extraInclude },
+        }),
+        prisma.dotWorker.findMany({
+          where,
+          include: { ...dotWorkerProperties, ...extraInclude },
+        }),
+        prisma.combinedLeoUnit.findMany({
+          where: { officers: { some: where } },
+          include: combinedUnitProperties,
+        }),
+        prisma.combinedEmsFdUnit.findMany({
+          where: { deputies: { some: where } },
+          include: combinedEmsFdUnitProperties,
+        }),
+        prisma.combinedDotUnit.findMany({
+          where: { workers: { some: where } },
+          include: combinedDotUnitProperties,
+        }),
+      ]);
 
       return {
         userOfficers,
         userDeputies,
-        userCombinedUnits: [...userCombinedOfficers, ...userCombinedDeputies],
+        userDotWorkers,
+        userCombinedUnits: [...userCombinedOfficers, ...userCombinedDeputies, ...userCombinedDotWorkers],
       } as any;
     }
 
@@ -299,6 +336,13 @@ export class AdminManageUnitsController {
     }
 
     if (!unit) {
+      unit = await prisma.dotWorker.findUnique({
+        where: { id: unitId },
+        include: { ...dotWorkerProperties, ...extraInclude },
+      });
+    }
+
+    if (!unit) {
       unit = await prisma.combinedLeoUnit.findUnique({
         where: { id: unitId },
         include: combinedUnitProperties,
@@ -309,6 +353,13 @@ export class AdminManageUnitsController {
       unit = await prisma.combinedEmsFdUnit.findUnique({
         where: { id: unitId },
         include: combinedEmsFdUnitProperties,
+      });
+    }
+
+    if (!unit) {
+      unit = await prisma.combinedDotUnit.findUnique({
+        where: { id: unitId },
+        include: combinedDotUnitProperties,
       });
     }
 
@@ -331,7 +382,8 @@ export class AdminManageUnitsController {
     const updated = await Promise.all(
       ids.map(async (fullId) => {
         const [id, rawType] = fullId.split("-");
-        const type = rawType === "OFFICER" ? "officer" : "emsFdDeputy";
+        const type =
+          rawType === "OFFICER" ? "officer" : rawType === "DOT_WORKER" ? "dotWorker" : "emsFdDeputy";
 
         if (rawType === "OFFICER") {
           const log = await prisma.officerLog.findFirst({
@@ -360,6 +412,7 @@ export class AdminManageUnitsController {
     await Promise.all([
       this.socket.emitUpdateOfficerStatus(),
       this.socket.emitUpdateDeputyStatus(),
+      this.socket.emitUpdateDotStatus(),
     ]);
 
     await createAuditLogEntry({
@@ -397,15 +450,22 @@ export class AdminManageUnitsController {
     const { type, unit } = await findUnit(unitId, undefined, {
       officer: leoProperties,
       emsFdDeputy: unitProperties,
+      dotWorker: dotWorkerProperties,
     });
 
-    if (!unit || type === "combined-ems-fd" || type === "combined-leo") {
+    if (
+      !unit ||
+      type === "combined-ems-fd" ||
+      type === "combined-leo" ||
+      type === "combined-dot"
+    ) {
       throw new NotFound("unitNotFound");
     }
 
     const prismaNames = {
       "ems-fd": "emsFdDeputy",
       leo: "officer",
+      dot: "dotWorker",
     } as const;
     const t = prismaNames[type];
 
@@ -520,7 +580,7 @@ export class AdminManageUnitsController {
   ): Promise<APITypes.PutManageUnitData> {
     const data = validateSchema(UPDATE_UNIT_SCHEMA.partial(), body);
 
-    let type: "officer" | "emsFdDeputy" = "officer";
+    let type: "officer" | "emsFdDeputy" | "dotWorker" = "officer";
     let unit: any = await prisma.officer.findUnique({
       where: { id },
       include: leoProperties,
@@ -531,6 +591,14 @@ export class AdminManageUnitsController {
       unit = await prisma.emsFdDeputy.findUnique({
         where: { id },
         include: unitProperties,
+      });
+    }
+
+    if (!unit) {
+      type = "dotWorker";
+      unit = await prisma.dotWorker.findUnique({
+        where: { id },
+        include: dotWorkerProperties,
       });
     }
 
@@ -600,7 +668,7 @@ export class AdminManageUnitsController {
         userId: data.userId || undefined,
         isTemporary: Boolean(data.userId),
       },
-      include: type === "officer" ? leoProperties : unitProperties,
+      include: type === "officer" ? leoProperties : type === "dotWorker" ? dotWorkerProperties : unitProperties,
     });
 
     await createAuditLogEntry({
@@ -621,7 +689,7 @@ export class AdminManageUnitsController {
   ): Promise<APITypes.PostCitizenImageByIdData> {
     try {
       const { unit, type } = await findUnit(unitId);
-      const prismaName = type === "leo" ? "officer" : "emsFdDeputy";
+      const prismaName = type === "leo" ? "officer" : type === "dot" ? "dotWorker" : "emsFdDeputy";
 
       if (!unit) {
         throw new NotFound("unitNotFound");
@@ -693,7 +761,7 @@ export class AdminManageUnitsController {
       throw new BadRequest("invalidType");
     }
 
-    let unitType: "leo" | "ems-fd" = "leo";
+    let unitType: "leo" | "ems-fd" | "dot" = "leo";
     let unit: any = await prisma.officer.findFirst({
       where: { id: unitId },
       include: leoProperties,
@@ -708,12 +776,21 @@ export class AdminManageUnitsController {
     }
 
     if (!unit) {
+      unitType = "dot";
+      unit = await prisma.dotWorker.findFirst({
+        where: { id: unitId },
+        include: dotWorkerProperties,
+      });
+    }
+
+    if (!unit) {
       throw new NotFound("unitNotFound");
     }
 
     const prismaNames = {
       leo: "officer",
       "ems-fd": "emsFdDeputy",
+      dot: "dotWorker",
     } as const;
     const prismaName = prismaNames[unitType];
 
@@ -736,7 +813,7 @@ export class AdminManageUnitsController {
           departmentId: unit.whitelistStatus.departmentId,
           rankId: unit.whitelistStatus.department.defaultOfficerRankId ?? undefined,
         },
-        include: unitType === "leo" ? leoProperties : unitProperties,
+        include: unitType === "leo" ? leoProperties : unitType === "dot" ? dotWorkerProperties : unitProperties,
       });
 
       await createAuditLogEntry({
@@ -755,7 +832,7 @@ export class AdminManageUnitsController {
         // @ts-expect-error function has the same properties
         const updated = await prisma[prismaName].delete({
           where: { id: unit.id },
-          include: unitType === "leo" ? leoProperties : unitProperties,
+          include: unitType === "leo" ? leoProperties : unitType === "dot" ? dotWorkerProperties : unitProperties,
         });
 
         await createAuditLogEntry({
@@ -780,7 +857,7 @@ export class AdminManageUnitsController {
         const updated = await prisma[prismaName].update({
           where: { id: unit.id },
           data: { departmentId: null },
-          include: unitType === "leo" ? leoProperties : unitProperties,
+          include: unitType === "leo" ? leoProperties : unitType === "dot" ? dotWorkerProperties : unitProperties,
         });
 
         await createAuditLogEntry({
@@ -813,7 +890,7 @@ export class AdminManageUnitsController {
         const updated = await prisma[prismaName].update({
           where: { id: unit.id },
           data: { departmentId: defaultDepartment.id },
-          include: unitType === "leo" ? leoProperties : unitProperties,
+          include: unitType === "leo" ? leoProperties : unitType === "dot" ? dotWorkerProperties : unitProperties,
         });
 
         await createAuditLogEntry({
@@ -843,7 +920,11 @@ export class AdminManageUnitsController {
   ): Promise<APITypes.PostManageUnitAddQualificationData> {
     const unit = await findUnit(unitId);
 
-    if (unit.type === "combined-ems-fd" || unit.type === "combined-leo") {
+    if (
+      unit.type === "combined-ems-fd" ||
+      unit.type === "combined-leo" ||
+      unit.type === "combined-dot"
+    ) {
       throw new BadRequest("Cannot add qualifications to combined units");
     }
 
@@ -854,6 +935,7 @@ export class AdminManageUnitsController {
     const types = {
       leo: "officerId",
       "ems-fd": "emsFdDeputyId",
+      dot: "dotWorkerId",
     } as const;
 
     const qualificationValue = await prisma.qualificationValue.findUnique({
@@ -899,7 +981,7 @@ export class AdminManageUnitsController {
   ): Promise<APITypes.DeleteManageUnitQualificationData> {
     const unit = await findUnit(unitId);
 
-    if (unit.type === "combined-ems-fd" || unit.type === "combined-leo") {
+    if (unit.type === "combined-ems-fd" || unit.type === "combined-leo" || unit.type === "combined-dot") {
       throw new BadRequest("Cannot add qualifications to combined units");
     }
 
@@ -943,7 +1025,7 @@ export class AdminManageUnitsController {
 
     const unit = await findUnit(unitId);
 
-    if (unit.type === "combined-ems-fd" || unit.type === "combined-leo") {
+    if (unit.type === "combined-ems-fd" || unit.type === "combined-leo" || unit.type === "combined-dot") {
       throw new BadRequest("Cannot add qualifications to combined units");
     }
 
@@ -993,7 +1075,11 @@ export class AdminManageUnitsController {
   ): Promise<APITypes.DeleteManageUnitByIdData> {
     const unit = await findUnit(unitId);
 
-    if (unit.type === "combined-ems-fd" || unit.type === "combined-leo") {
+    if (
+      unit.type === "combined-ems-fd" ||
+      unit.type === "combined-leo" ||
+      unit.type === "combined-dot"
+    ) {
       throw new BadRequest("Cannot delete combined units");
     }
 
@@ -1004,6 +1090,7 @@ export class AdminManageUnitsController {
     const types = {
       leo: "officer",
       "ems-fd": "emsFdDeputy",
+      dot: "dotWorker",
     } as const;
     const t = types[unit.type];
 

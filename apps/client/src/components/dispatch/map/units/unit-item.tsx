@@ -12,7 +12,14 @@ import {
 import { useTranslations } from "next-intl";
 import { useModal } from "state/modalState";
 import { ModalIds } from "types/modal-ids";
-import type { CombinedEmsFdUnit, CombinedLeoUnit, EmsFdDeputy, Officer } from "@snailycad/types";
+import type {
+  CombinedEmsFdUnit,
+  CombinedLeoUnit,
+  CombinedDotUnit,
+  DotWorker,
+  EmsFdDeputy,
+  Officer,
+} from "@snailycad/types";
 import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 import { UnitRadioChannelModal } from "components/dispatch/active-units/modals/unit-radio-channel-modal";
 import { isUnitCombined, isUnitCombinedEmsFd } from "@snailycad/utils";
@@ -20,7 +27,9 @@ import { isUnitCombined, isUnitCombinedEmsFd } from "@snailycad/utils";
 interface CallItemProps {
   player: MapPlayer;
   setTempUnit: React.Dispatch<
-    React.SetStateAction<Officer | EmsFdDeputy | CombinedEmsFdUnit | CombinedLeoUnit | null>
+    React.SetStateAction<
+      Officer | EmsFdDeputy | CombinedEmsFdUnit | CombinedLeoUnit | DotWorker | CombinedDotUnit | null
+    >
   >;
 }
 

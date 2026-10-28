@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { Controller, UseBeforeEach } from "@tsed/common";
 import { Context } from "@tsed/platform-params";
-import { ContentType, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import { BadRequest, Forbidden } from "@tsed/exceptions";
 import { Rank, type User } from "@prisma/client";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -48,6 +48,7 @@ function canRunUpdater(mode: UpdateMode) {
   return existsSync("/run/systemd/system");
 }
 
+@Tags("Admin")
 @Controller("/admin/update")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

@@ -59,6 +59,7 @@ export function CallsignsTab({ units }: Props) {
   const LABELS = {
     DEPUTY: t("Ems.deputy"),
     OFFICER: t("Leo.officer"),
+    DOT: t("Dot.worker"),
   };
 
   return (

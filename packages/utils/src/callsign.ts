@@ -1,4 +1,11 @@
-import type { CombinedEmsFdUnit, CombinedLeoUnit, EmsFdDeputy, Officer } from "@snailycad/types";
+import type {
+  CombinedEmsFdUnit,
+  CombinedLeoUnit,
+  CombinedDotUnit,
+  DotWorker,
+  EmsFdDeputy,
+  Officer,
+} from "@snailycad/types";
 import { replaceTemplateVariables } from "./utils/replace-template-variables";
 
 type P =
@@ -11,8 +18,10 @@ type P =
 type Unit =
   | Pick<Officer, P | "divisions">
   | Pick<EmsFdDeputy, P | "division">
+  | Pick<DotWorker, P | "division">
   | CombinedLeoUnit
-  | CombinedEmsFdUnit;
+  | CombinedEmsFdUnit
+  | CombinedDotUnit;
 
 /**
  * given a unit and a template, generate a callsign for the unit

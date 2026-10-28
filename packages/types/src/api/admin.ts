@@ -22,6 +22,9 @@ export interface GetAdminDashboardData {
   suspendedOfficers: number;
   suspendedEmsFDDeputies: number;
   onDutyEmsDeputies: number;
+  dotWorkersCount: number;
+  onDutyDotWorkers: number;
+  suspendedDotWorkers: number;
   imageData: { count: number; totalSize: number };
 }
 
@@ -265,13 +268,17 @@ export type DeleteManageCustomFieldsData = boolean;
  */
 export interface GetManageUnitsData {
   totalCount: number;
-  units: ((Types.Officer & { type: "OFFICER" }) | (Types.EmsFdDeputy & { type: "DEPUTY" }))[];
+  units: (
+    | (Types.Officer & { type: "OFFICER" })
+    | (Types.EmsFdDeputy & { type: "DEPUTY" })
+    | (Types.DotWorker & { type: "DOT" })
+  )[];
 }
 /**
  * @method Get
  * @route /admin/manage/units/:id
  */
-export type GetManageUnitByIdData = (Types.Officer | Types.EmsFdDeputy) & {
+export type GetManageUnitByIdData = (Types.Officer | Types.EmsFdDeputy | Types.DotWorker) & {
   qualifications: Types.UnitQualification[];
   logs: Prisma.OfficerLog[];
 };
@@ -280,26 +287,26 @@ export type GetManageUnitByIdData = (Types.Officer | Types.EmsFdDeputy) & {
  * @method Put
  * @route /admin/manage/units/off-duty
  */
-export type PutManageUnitsOffDutyData = (Prisma.Officer | Prisma.EmsFdDeputy)[];
+export type PutManageUnitsOffDutyData = (Prisma.Officer | Prisma.EmsFdDeputy | Prisma.DotWorker)[];
 
 /**
  * @method Put
  * @route /admin/manage/units/callsign/:unitId
  */
-export type PutManageUnitCallsignData = Types.Officer | Types.EmsFdDeputy;
+export type PutManageUnitCallsignData = Types.Officer | Types.EmsFdDeputy | Types.DotWorker;
 
 /**
  * @method Put
  * @route /admin/manage/units/:unitId
  */
-export type PutManageUnitData = Types.Officer | Types.EmsFdDeputy;
+export type PutManageUnitData = Types.Officer | Types.EmsFdDeputy | Types.DotWorker;
 
 /**
  * @method Post
  * @route /admin/manage/units/departments/:unitId
  */
 export type PostManageUnitAcceptDeclineDepartmentData =
-  | ((Types.Officer | Types.EmsFdDeputy) & {
+  | ((Types.Officer | Types.EmsFdDeputy | Types.DotWorker) & {
       deleted?: boolean;
     })
   | null;

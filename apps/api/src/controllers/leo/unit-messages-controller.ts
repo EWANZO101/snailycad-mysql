@@ -1,6 +1,6 @@
 import { Context, Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams, PathParams } from "@tsed/platform-params";
-import { ContentType, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { Feature, type User } from "@snailycad/types";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import { IsFeatureEnabled } from "middlewares/is-enabled";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { Socket } from "services/socket-service";
 import { validateSchema } from "lib/data/validate-schema";
-import { leoProperties, unitProperties } from "utils/leo/includes";
+import { leoProperties, unitProperties, dotWorkerProperties } from "utils/leo/includes";
 
 const UNIT_MESSAGE_SCHEMA = z.object({
   message: z.string().trim().min(1).max(2000),
@@ -25,12 +25,15 @@ async function findUnitsByIds(ids: string[]) {
   const uniqueIds = [...new Set(ids)];
   if (uniqueIds.length <= 0) return new Map<string, any>();
 
-  const [officers, deputies] = await Promise.all([
+  const [officers, deputies, dotWorkers] = await Promise.all([
     prisma.officer.findMany({ where: { id: { in: uniqueIds } }, include: leoProperties }),
     prisma.emsFdDeputy.findMany({ where: { id: { in: uniqueIds } }, include: unitProperties }),
+    prisma.dotWorker.findMany({ where: { id: { in: uniqueIds } }, include: dotWorkerProperties }),
   ]);
 
-  return new Map<string, any>([...officers, ...deputies].map((unit) => [unit.id, unit]));
+  return new Map<string, any>(
+    [...officers, ...deputies, ...dotWorkers].map((unit) => [unit.id, unit]),
+  );
 }
 
 /**
@@ -38,16 +41,18 @@ async function findUnitsByIds(ids: string[]) {
  * members message from their own officer or deputy.
  */
 async function assertOwnUnit(unitId: string, user: Pick<User, "id">) {
-  const [officer, deputy] = await Promise.all([
+  const [officer, deputy, dotWorker] = await Promise.all([
     prisma.officer.findFirst({ where: { id: unitId, userId: user.id }, select: { id: true } }),
     prisma.emsFdDeputy.findFirst({ where: { id: unitId, userId: user.id }, select: { id: true } }),
+    prisma.dotWorker.findFirst({ where: { id: unitId, userId: user.id }, select: { id: true } }),
   ]);
 
-  if (!officer && !deputy) {
+  if (!officer && !deputy && !dotWorker) {
     throw new NotFound("unitNotFound");
   }
 }
 
+@Tags("Law Enforcement")
 @Controller("/unit-messages")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -60,7 +65,7 @@ export class UnitMessagesController {
 
   @Get("/:unitId")
   @Description("Get the conversations of one of your units, with unread counts")
-  @UsePermissions({ permissions: [Permissions.Leo, Permissions.EmsFd] })
+  @UsePermissions({ permissions: [Permissions.Leo, Permissions.EmsFd, Permissions.Dot] })
   async getConversations(@PathParams("unitId") unitId: string, @Context("user") user: User) {
     await assertOwnUnit(unitId, user);
 
@@ -104,11 +109,11 @@ export class UnitMessagesController {
 
   @Get("/:unitId/recipients")
   @Description("Get the on-duty officers and deputies one of your units can message")
-  @UsePermissions({ permissions: [Permissions.Leo, Permissions.EmsFd] })
+  @UsePermissions({ permissions: [Permissions.Leo, Permissions.EmsFd, Permissions.Dot] })
   async getRecipients(@PathParams("unitId") unitId: string, @Context("user") user: User) {
     await assertOwnUnit(unitId, user);
 
-    const [officers, deputies] = await Promise.all([
+    const [officers, deputies, dotWorkers] = await Promise.all([
       prisma.officer.findMany({
         where: { ...ON_DUTY_FILTER, NOT: { id: unitId } },
         include: leoProperties,
@@ -117,14 +122,18 @@ export class UnitMessagesController {
         where: { ...ON_DUTY_FILTER, NOT: { id: unitId } },
         include: unitProperties,
       }),
+      prisma.dotWorker.findMany({
+        where: { ...ON_DUTY_FILTER, NOT: { id: unitId } },
+        include: dotWorkerProperties,
+      }),
     ]);
 
-    return [...officers, ...deputies];
+    return [...officers, ...deputies, ...dotWorkers];
   }
 
   @Get("/:unitId/:otherUnitId")
   @Description("Get the messages between one of your units and another unit, and mark them read")
-  @UsePermissions({ permissions: [Permissions.Leo, Permissions.EmsFd] })
+  @UsePermissions({ permissions: [Permissions.Leo, Permissions.EmsFd, Permissions.Dot] })
   async getMessages(
     @PathParams("unitId") unitId: string,
     @PathParams("otherUnitId") otherUnitId: string,
@@ -158,7 +167,7 @@ export class UnitMessagesController {
 
   @Post("/:unitId/:otherUnitId")
   @Description("Send a private message from one of your units to another officer or deputy")
-  @UsePermissions({ permissions: [Permissions.Leo, Permissions.EmsFd] })
+  @UsePermissions({ permissions: [Permissions.Leo, Permissions.EmsFd, Permissions.Dot] })
   async sendMessage(
     @PathParams("unitId") unitId: string,
     @PathParams("otherUnitId") otherUnitId: string,

@@ -3,7 +3,7 @@
   "name": "snailycad",
   "version": "1.80.2",
   "scripts": {
-    "start": "pnpm concurrently \"pnpm --filter \"@snailycad/client\" start\" \"pnpm --filter \"@snailycad/api\" generate && pnpm --filter \"@snailycad/api\" start\"",
+    "start": "pnpm concurrently \"pnpm --filter \"@snailycad/client\" start\" \"pnpm --filter \"@snailycad/api\" start\"",
     "full-start": "git stash && git pull && pnpm install && node scripts/copy-env.mjs --client --api && pnpm run build && pnpm run start",
     "build": "node scripts/create-images-domain.mjs && pnpm turbo run build --filter=\"{packages/*}\" && pnpm turbo run build --filter=\"{apps/*}\"",
     "dev": "docker compose up -d && pnpm turbo run watch --parallel --concurrency 11",

@@ -5,6 +5,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, FullDate, Loader, SelectField, SwitchField } from "@snailycad/ui";
 import { getAPIUrl } from "@snailycad/utils/api-url";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { CpuFill } from "react-bootstrap-icons";
 import useFetch from "lib/useFetch";
 
 interface FivemFrameworkData {
@@ -93,7 +95,7 @@ export function FivemFrameworkTab() {
   return (
     <TabsContent value={SettingsTabs.FivemFramework} className="mt-3">
       <header className="mb-4">
-        <h2 className="text-2xl font-semibold">{t("title")}</h2>
+        <SettingsTabHeader icon={<CpuFill size={16} />}>{t("title")}</SettingsTabHeader>
         <p className="mt-1 text-neutral-600 dark:text-gray-400">{t("intro")}</p>
       </header>
 

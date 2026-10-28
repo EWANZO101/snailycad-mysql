@@ -1,7 +1,7 @@
 import { Button } from "@snailycad/ui";
 import { useModal } from "state/modalState";
 import { useAreaOfPlay } from "hooks/global/useAreaOfPlay";
-import { Pencil } from "react-bootstrap-icons";
+import { GeoAltFill, Pencil } from "react-bootstrap-icons";
 import { ModalIds } from "types/modal-ids";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
@@ -18,9 +18,9 @@ export function DispatchAreaOfPlay() {
 
   return (
     <>
-      <span>
-        {" "}
-        - AOP: {areaOfPlay}
+      <span className="inline-flex items-center gap-1.5">
+        <GeoAltFill size={14} className="text-neutral-500 dark:text-gray-400" />
+        AOP: {areaOfPlay}
         <Button
           onPress={() => modalState.openModal(ModalIds.ManageAOP)}
           variant={null}

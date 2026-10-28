@@ -1,7 +1,9 @@
 import {
   type CombinedLeoUnit,
+  type CombinedDotUnit,
   DiscordWebhookType,
   type EmsFdDeputy,
+  type DotWorker,
   type Feature,
   type MiscCadSettings,
   type Officer,
@@ -23,6 +25,8 @@ import {
   unitProperties,
   combinedUnitProperties,
   combinedEmsFdUnitProperties,
+  dotWorkerProperties,
+  combinedDotUnitProperties,
 } from "utils/leo/includes";
 
 type FoundUnit = Awaited<ReturnType<typeof findUnit>>;
@@ -64,10 +68,16 @@ export async function applyUnitStatus(options: ApplyUnitStatusOptions) {
         where: { userId: options.userId },
         data: { statusId: null, activeCallId: null, activeIncidentId: null },
       });
+    } else if (unit.type === "dot") {
+      await prisma.dotWorker.updateMany({
+        where: { userId: options.userId },
+        data: { statusId: null, activeCallId: null, activeIncidentId: null },
+      });
     }
   }
 
-  let updatedUnit: EmsFdDeputy | Officer | CombinedLeoUnit | null = null;
+  let updatedUnit: EmsFdDeputy | Officer | DotWorker | CombinedLeoUnit | CombinedDotUnit | null =
+    null;
   const shouldFindIncremental =
     code.shouldDo === ShouldDoType.SET_ON_DUTY && !unit.unit.incremental;
   const statusId = code.shouldDo === ShouldDoType.SET_OFF_DUTY ? null : code.id;
@@ -98,6 +108,17 @@ export async function applyUnitStatus(options: ApplyUnitStatusOptions) {
       },
       include: unitProperties,
     });
+  } else if (unit.type === "dot") {
+    updatedUnit = await prisma.dotWorker.update({
+      where: { id: unit.unit.id },
+      data: {
+        userDefinedCallsign,
+        activeVehicleId: activeEmergencyVehicleId,
+        statusId,
+        incremental,
+      },
+      include: dotWorkerProperties,
+    });
   } else if (unit.type === "combined-leo") {
     updatedUnit = await prisma.combinedLeoUnit.update({
       where: { id: unit.unit.id },
@@ -107,6 +128,16 @@ export async function applyUnitStatus(options: ApplyUnitStatusOptions) {
         statusId,
       },
       include: combinedUnitProperties,
+    });
+  } else if (unit.type === "combined-dot") {
+    updatedUnit = await prisma.combinedDotUnit.update({
+      where: { id: unit.unit.id },
+      data: {
+        userDefinedCallsign,
+        activeVehicleId: activeEmergencyVehicleId,
+        statusId,
+      },
+      include: combinedDotUnitProperties,
     });
   } else {
     updatedUnit = await prisma.combinedEmsFdUnit.update({
@@ -144,10 +175,24 @@ export async function applyUnitStatus(options: ApplyUnitStatusOptions) {
       userId: options.userId,
       type: "ems-fd",
     });
+  } else if (unit.type === "dot") {
+    await handleStartEndOfficerLog({
+      unit: unit.unit,
+      shouldDo: code.shouldDo,
+      socket,
+      userId: options.userId,
+      type: "dot",
+    });
   } else {
     if (code.shouldDo === ShouldDoType.SET_OFF_DUTY) {
       if (unit.type === "combined-ems-fd") {
         await prisma.combinedEmsFdUnit
+          .delete({
+            where: { id: unit.unit.id },
+          })
+          .catch(() => null);
+      } else if (unit.type === "combined-dot") {
+        await prisma.combinedDotUnit
           .delete({
             where: { id: unit.unit.id },
           })
@@ -172,6 +217,8 @@ export async function applyUnitStatus(options: ApplyUnitStatusOptions) {
 
   if (unit.type === "leo" || unit.type === "combined-leo") {
     await socket.emitUpdateOfficerStatus();
+  } else if (unit.type === "dot" || unit.type === "combined-dot") {
+    await socket.emitUpdateDotStatus();
   } else {
     await socket.emitUpdateDeputyStatus();
   }

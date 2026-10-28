@@ -120,7 +120,8 @@ type UserPicks =
   | "developerMode"
   | "dispatchLayoutOrder"
   | "emsFdLayoutOrder"
-  | "officerLayoutOrder";
+  | "officerLayoutOrder"
+  | "dotLayoutOrder";
 
 export type User = Pick<
   Prisma.User & {
@@ -359,7 +360,7 @@ export type DispatchChat = Prisma.DispatchChat & {
 };
 
 export interface ChatCreator {
-  unit: Officer | CombinedLeoUnit | EmsFdDeputy | CombinedEmsFdUnit;
+  unit: Officer | CombinedLeoUnit | EmsFdDeputy | CombinedEmsFdUnit | DotWorker | CombinedDotUnit;
 }
 
 export type Call911 = Prisma.Call911 & {
@@ -377,7 +378,7 @@ export type Call911 = Prisma.Call911 & {
 export type Position = Prisma.Position;
 
 export type AssignedUnit = Prisma.AssignedUnit & {
-  unit?: Officer | CombinedLeoUnit | EmsFdDeputy;
+  unit?: Officer | CombinedLeoUnit | EmsFdDeputy | DotWorker | CombinedDotUnit;
 };
 
 export type AssignedWarrantOfficer = Prisma.AssignedWarrantOfficer & {
@@ -385,7 +386,7 @@ export type AssignedWarrantOfficer = Prisma.AssignedWarrantOfficer & {
 };
 
 export type IncidentInvolvedUnit = Prisma.IncidentInvolvedUnit & {
-  unit?: Officer | CombinedLeoUnit | EmsFdDeputy;
+  unit?: Officer | CombinedLeoUnit | EmsFdDeputy | DotWorker | CombinedDotUnit;
 };
 
 export type Call911Event = Prisma.Call911Event;
@@ -448,6 +449,32 @@ export type CombinedEmsFdUnit = Prisma.CombinedEmsFdUnit & {
   department: EmsFdDeputy["department"];
   deputies: Omit<EmsFdDeputy, "activeIncident">[];
   activeVehicle?: EmsFdDeputy["activeVehicle"];
+};
+
+export type DotWorker = Prisma.DotWorker & {
+  department: Officer["department"];
+  division?: Officer["divisions"][number] | null;
+  rank: Officer["rank"];
+  status: Officer["status"];
+  citizen: Officer["citizen"];
+  user?: LimitedUser | null;
+  whitelistStatus?: Officer["whitelistStatus"];
+  activeVehicle: EmergencyVehicleValue | null;
+};
+
+export type CombinedDotUnit = Prisma.CombinedDotUnit & {
+  status: DotWorker["status"];
+  department: DotWorker["department"];
+  workers: Omit<DotWorker, "activeIncident">[];
+  activeVehicle?: DotWorker["activeVehicle"];
+};
+
+export type DotWorkOrderPriority = Prisma.DotWorkOrderPriority;
+export type DotWorkOrderStatus = Prisma.DotWorkOrderStatus;
+
+export type DotWorkOrder = Prisma.DotWorkOrder & {
+  department: DotWorker["department"];
+  assignedWorker: DotWorker | null;
 };
 
 export type TruckLog = Prisma.TruckLog & {

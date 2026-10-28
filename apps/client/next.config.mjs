@@ -51,6 +51,16 @@ const nextConfig = {
         hostname: "localhost",
         pathname: "**"
       },
+      {
+        protocol: "http",
+        hostname: "51.89.167.197",
+        pathname: "**"
+      },
+      {
+        protocol: "https",
+        hostname: "api-demo-snaily.opslabsystems.cloud",
+        pathname: "**"
+      },
     ]
   }, // end images
   // prettier-enable

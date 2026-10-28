@@ -1,0 +1,294 @@
+/* SnailyCAD API docs — dark theme for Swagger UI (@tsed/swagger's cssPath option).
+   Not copied by SWC's TS compile step, so scripts/postbuild.mjs copies this folder into dist/ too. */
+
+:root {
+  --sc-bg: #0b0d12;
+  --sc-bg-raised: #12151c;
+  --sc-bg-card: #161a23;
+  --sc-border: #262b36;
+  --sc-text: #e7e9ee;
+  --sc-text-muted: #9aa1b0;
+  --sc-text-faint: #6b7280;
+  --sc-accent: #4f9dff;
+  --sc-accent-soft: rgba(79, 157, 255, 0.14);
+  --sc-get: #4f9dff;
+  --sc-post: #35c488;
+  --sc-put: #f0a93e;
+  --sc-delete: #ff5d6c;
+  --sc-patch: #2fd9c4;
+}
+
+body {
+  background: var(--sc-bg);
+}
+
+.swagger-ui {
+  color: var(--sc-text);
+  filter: none;
+}
+
+.swagger-ui .topbar {
+  background: var(--sc-bg-raised);
+  border-bottom: 1px solid var(--sc-border);
+  box-shadow: none;
+}
+
+.swagger-ui .info .title,
+.swagger-ui .info li,
+.swagger-ui .info p,
+.swagger-ui .info table {
+  color: var(--sc-text);
+}
+
+.swagger-ui .info .title small {
+  background: var(--sc-accent-soft);
+  color: var(--sc-accent);
+}
+
+.swagger-ui .info a,
+.swagger-ui .link {
+  color: var(--sc-accent);
+}
+
+.swagger-ui .scheme-container {
+  background: var(--sc-bg-raised);
+  box-shadow: none;
+  border-bottom: 1px solid var(--sc-border);
+}
+
+.swagger-ui .scheme-container .schemes > label {
+  color: var(--sc-text-muted);
+}
+
+/* the tag sections (now ~19 readable groups instead of 89 class-derived ones) */
+.swagger-ui .opblock-tag {
+  color: var(--sc-text);
+  border-bottom: 1px solid var(--sc-border);
+}
+
+.swagger-ui .opblock-tag:hover {
+  background: var(--sc-bg-raised);
+}
+
+.swagger-ui .opblock-tag small {
+  color: var(--sc-text-muted);
+}
+
+.swagger-ui .opblock-tag-section svg,
+.swagger-ui .opblock-summary-control svg,
+.swagger-ui .expand-operation svg,
+.swagger-ui .arrow {
+  fill: var(--sc-text-muted);
+}
+
+.swagger-ui .opblock {
+  background: var(--sc-bg-card);
+  border-color: var(--sc-border);
+  box-shadow: none;
+}
+
+.swagger-ui .opblock .opblock-summary-method {
+  color: #0b0d12;
+}
+
+.swagger-ui .opblock .opblock-summary-path,
+.swagger-ui .opblock .opblock-summary-path__deprecated,
+.swagger-ui .opblock .opblock-summary-operation-id,
+.swagger-ui .opblock .opblock-summary-description {
+  color: var(--sc-text);
+}
+
+.swagger-ui .opblock.opblock-get { border-color: var(--sc-get); background: rgba(79, 157, 255, 0.06); }
+.swagger-ui .opblock.opblock-get .opblock-summary-method { background: var(--sc-get); }
+.swagger-ui .opblock.opblock-get .opblock-summary { border-color: var(--sc-get); }
+
+.swagger-ui .opblock.opblock-post { border-color: var(--sc-post); background: rgba(53, 196, 136, 0.06); }
+.swagger-ui .opblock.opblock-post .opblock-summary-method { background: var(--sc-post); }
+.swagger-ui .opblock.opblock-post .opblock-summary { border-color: var(--sc-post); }
+
+.swagger-ui .opblock.opblock-put { border-color: var(--sc-put); background: rgba(240, 169, 62, 0.07); }
+.swagger-ui .opblock.opblock-put .opblock-summary-method { background: var(--sc-put); }
+.swagger-ui .opblock.opblock-put .opblock-summary { border-color: var(--sc-put); }
+
+.swagger-ui .opblock.opblock-delete { border-color: var(--sc-delete); background: rgba(255, 93, 108, 0.07); }
+.swagger-ui .opblock.opblock-delete .opblock-summary-method { background: var(--sc-delete); }
+.swagger-ui .opblock.opblock-delete .opblock-summary { border-color: var(--sc-delete); }
+
+.swagger-ui .opblock.opblock-patch { border-color: var(--sc-patch); background: rgba(47, 217, 196, 0.07); }
+.swagger-ui .opblock.opblock-patch .opblock-summary-method { background: var(--sc-patch); }
+.swagger-ui .opblock.opblock-patch .opblock-summary { border-color: var(--sc-patch); }
+
+.swagger-ui .opblock-body,
+.swagger-ui .opblock-section-header,
+.swagger-ui .tab {
+  background: var(--sc-bg-card);
+}
+
+.swagger-ui .opblock-section-header {
+  box-shadow: none;
+  border-bottom: 1px solid var(--sc-border);
+}
+
+.swagger-ui .opblock-description-wrapper p,
+.swagger-ui .opblock-external-docs-wrapper p,
+.swagger-ui .opblock-title_normal p,
+.swagger-ui .markdown p,
+.swagger-ui .markdown li,
+.swagger-ui .renderedMarkdown p,
+.swagger-ui .renderedMarkdown li {
+  color: var(--sc-text-muted);
+}
+
+.swagger-ui .parameter__name,
+.swagger-ui .parameter__in,
+.swagger-ui table.parameters td,
+.swagger-ui .response-col_status,
+.swagger-ui .response-col_description {
+  color: var(--sc-text);
+}
+
+.swagger-ui .parameter__type,
+.swagger-ui .parameter__deprecated,
+.swagger-ui .parameter__extension {
+  color: var(--sc-text-faint);
+}
+
+.swagger-ui table thead tr td,
+.swagger-ui table thead tr th {
+  color: var(--sc-text-muted);
+  border-bottom: 1px solid var(--sc-border);
+}
+
+.swagger-ui .parameters-col_description input,
+.swagger-ui .parameters-col_description textarea,
+.swagger-ui select,
+.swagger-ui input[type="text"],
+.swagger-ui input[type="password"],
+.swagger-ui input[type="search"],
+.swagger-ui input[type="email"],
+.swagger-ui textarea {
+  background: var(--sc-bg-raised);
+  color: var(--sc-text);
+  border: 1px solid var(--sc-border);
+}
+
+.swagger-ui select:focus,
+.swagger-ui input:focus,
+.swagger-ui textarea:focus {
+  outline: none;
+  border-color: var(--sc-accent);
+  box-shadow: 0 0 0 3px var(--sc-accent-soft);
+}
+
+.swagger-ui .btn {
+  background: transparent;
+  color: var(--sc-text);
+  border-color: var(--sc-border);
+}
+
+.swagger-ui .btn:hover {
+  border-color: var(--sc-text-muted);
+}
+
+.swagger-ui .btn.execute {
+  background: var(--sc-accent);
+  color: #0b0d12;
+  border-color: var(--sc-accent);
+  font-weight: 700;
+}
+
+.swagger-ui .btn.authorize {
+  color: var(--sc-accent);
+  border-color: var(--sc-accent);
+}
+
+.swagger-ui .btn.authorize svg {
+  fill: var(--sc-accent);
+}
+
+.swagger-ui .model-box,
+.swagger-ui section.models,
+.swagger-ui section.models .model-container {
+  background: var(--sc-bg-card);
+  border-color: var(--sc-border);
+}
+
+.swagger-ui section.models {
+  border: 1px solid var(--sc-border);
+}
+
+.swagger-ui section.models h4,
+.swagger-ui .model-title,
+.swagger-ui .model,
+.swagger-ui .model .property {
+  color: var(--sc-text);
+}
+
+.swagger-ui .model .property.primitive {
+  color: var(--sc-accent);
+}
+
+.swagger-ui .prop-type {
+  color: var(--sc-post);
+}
+
+.swagger-ui .microlight,
+.swagger-ui .highlight-code,
+.swagger-ui pre {
+  background: #090b0f !important;
+  color: var(--sc-text);
+  border: 1px solid var(--sc-border);
+  border-radius: 6px;
+}
+
+.swagger-ui .tab li button.tablinks {
+  color: var(--sc-text-muted);
+}
+
+.swagger-ui .tab li.active button.tablinks,
+.swagger-ui .tab li button.tablinks:hover {
+  color: var(--sc-accent);
+}
+
+.swagger-ui .responses-inner h4,
+.swagger-ui .responses-inner h5 {
+  color: var(--sc-text);
+}
+
+.swagger-ui .response-col_links,
+.swagger-ui .response-col_links .response-undocumented {
+  color: var(--sc-text-faint);
+}
+
+.swagger-ui .copy-to-clipboard {
+  background: var(--sc-bg-raised);
+}
+
+.swagger-ui .dialog-ux .modal-ux {
+  background: var(--sc-bg-card);
+  border-color: var(--sc-border);
+}
+
+.swagger-ui .dialog-ux .modal-ux-header h3,
+.swagger-ui .dialog-ux .modal-ux-content p,
+.swagger-ui .dialog-ux .modal-ux-content h4 {
+  color: var(--sc-text);
+}
+
+.swagger-ui .dialog-ux .modal-ux-header {
+  border-bottom: 1px solid var(--sc-border);
+}
+
+.swagger-ui ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.swagger-ui ::-webkit-scrollbar-track {
+  background: var(--sc-bg);
+}
+
+.swagger-ui ::-webkit-scrollbar-thumb {
+  background: var(--sc-border);
+  border-radius: 6px;
+}

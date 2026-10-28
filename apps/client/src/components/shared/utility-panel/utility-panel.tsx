@@ -4,7 +4,7 @@ import { useTime } from "hooks/shared/useTime";
 import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 import { classNames } from "lib/classNames";
 import { useTranslations } from "next-intl";
-import { Grid1x2Fill, Wifi } from "react-bootstrap-icons";
+import { ClockFill, Grid1x2Fill, Wifi } from "react-bootstrap-icons";
 import dynamic from "next/dynamic";
 import { Button } from "@snailycad/ui";
 import { useModal } from "state/modalState";
@@ -29,7 +29,12 @@ export function UtilityPanel({ children, isDispatch }: Props) {
   const modalState = useModal();
 
   return (
-    <div className="w-full mb-3 card overflow-y-hidden">
+    <div
+      className={classNames(
+        "w-full mb-3 card overflow-y-hidden",
+        isDispatch && "utility-panel-dispatch",
+      )}
+    >
       <header className="flex items-center justify-between px-4 py-2 mb-2 bg-gray-200 dark:bg-secondary">
         <h1 className="text-xl font-semibold">
           {t("utilityPanel")}
@@ -53,7 +58,10 @@ export function UtilityPanel({ children, isDispatch }: Props) {
               />
             </span>
           ) : null}
-          <span ref={timeRef} />
+          <span className="inline-flex items-center gap-1.5 text-sm text-neutral-600 dark:text-gray-300">
+            <ClockFill size={13} />
+            <span ref={timeRef} />
+          </span>
         </div>
       </header>
 

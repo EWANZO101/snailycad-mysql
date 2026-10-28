@@ -2,7 +2,7 @@ import { WhitelistStatus } from "@prisma/client";
 import { BodyParams, PathParams, QueryParams, UseBeforeEach } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { BadRequest, NotFound } from "@tsed/exceptions";
-import { ContentType, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import {
   type AcceptDeclineType,
   ACCEPT_DECLINE_TYPES,
@@ -20,6 +20,7 @@ const vehicleInclude = {
   citizen: true,
 };
 
+@Tags("Law Enforcement")
 @Controller("/leo/dmv")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

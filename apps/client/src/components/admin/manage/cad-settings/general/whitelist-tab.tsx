@@ -2,12 +2,14 @@ import { TabsContent } from "@radix-ui/react-tabs";
 import type { PutCADSettingsData } from "@snailycad/types/api";
 import { Button, Loader, SwitchField } from "@snailycad/ui";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
 import { SettingsFormField } from "components/form/SettingsFormField";
 import { useAuth } from "context/AuthContext";
 import { Form, Formik } from "formik";
 import { toastMessage } from "lib/toastMessage";
 import useFetch from "lib/useFetch";
 import { useTranslations } from "use-intl";
+import { ShieldLockFill } from "react-bootstrap-icons";
 
 export function WhitelistTab() {
   const t = useTranslations("CadSettings");
@@ -47,7 +49,7 @@ export function WhitelistTab() {
 
   return (
     <TabsContent value={SettingsTabs.WhitelistSettings}>
-      <h2 className="font-semibold text-2xl mb-3">{t("whitelisting")}</h2>
+      <SettingsTabHeader icon={<ShieldLockFill size={16} />}>{t("whitelisting")}</SettingsTabHeader>
 
       <Formik initialValues={initialValues} onSubmit={handleSubmit}>
         {({ errors, values, setFieldValue }) => (

@@ -15,6 +15,7 @@ import { CallSignPreview } from "components/leo/CallsignPreview";
 import {
   CREATE_TEMPORARY_EMS_FD_DEPUTY_SCHEMA,
   CREATE_TEMPORARY_OFFICER_SCHEMA,
+  CREATE_TEMPORARY_DOT_WORKER_SCHEMA,
 } from "@snailycad/schemas";
 import { handleValidate } from "lib/handleValidate";
 
@@ -26,7 +27,7 @@ export function CreateTemporaryUnitModal({ onClose }: Props) {
   const modalState = useModal();
   const common = useTranslations("Common");
   const { state, execute } = useFetch();
-  const type = modalState.getPayload(ModalIds.CreateTemporaryUnit) as "ems-fd" | "officer";
+  const type = modalState.getPayload(ModalIds.CreateTemporaryUnit) as "ems-fd" | "officer" | "dot";
 
   const { DIVISIONS, BADGE_NUMBERS } = useFeatureEnabled();
   const { division, department } = useValues();
@@ -54,7 +55,11 @@ export function CreateTemporaryUnitModal({ onClose }: Props) {
   }
 
   const schema =
-    type === "ems-fd" ? CREATE_TEMPORARY_EMS_FD_DEPUTY_SCHEMA : CREATE_TEMPORARY_OFFICER_SCHEMA;
+    type === "ems-fd"
+      ? CREATE_TEMPORARY_EMS_FD_DEPUTY_SCHEMA
+      : type === "dot"
+        ? CREATE_TEMPORARY_DOT_WORKER_SCHEMA
+        : CREATE_TEMPORARY_OFFICER_SCHEMA;
   const validate = handleValidate(schema);
   const INITIAL_VALUES = {
     name: "",
@@ -119,7 +124,8 @@ export function CreateTemporaryUnitModal({ onClose }: Props) {
                   .filter(
                     (v) =>
                       (type === "officer" && v.type === "LEO") ||
-                      (type === "ems-fd" && v.type === "EMS_FD"),
+                      (type === "ems-fd" && v.type === "EMS_FD") ||
+                      (type === "dot" && v.type === "DOT"),
                   )
                   .map((v) => ({
                     label: v.value.value,

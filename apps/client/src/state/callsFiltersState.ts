@@ -1,4 +1,11 @@
-import type { Record, Citizen, MedicalRecord, RegisteredVehicle, Weapon } from "@snailycad/types";
+import type {
+  CallSource,
+  Record,
+  Citizen,
+  MedicalRecord,
+  RegisteredVehicle,
+  Weapon,
+} from "@snailycad/types";
 import { shallow } from "zustand/shallow";
 import { createWithEqualityFn } from "zustand/traditional";
 
@@ -24,6 +31,10 @@ interface CallFiltersState {
 
   assignedUnit: string | null;
   setAssignedUnit(assignedUnit: string | null): void;
+
+  /** which integration's calls to show - null means "all sources" */
+  source: CallSource | null;
+  setSource(source: CallSource | null): void;
 }
 
 export const useCallsFilters = createWithEqualityFn<CallFiltersState>()(
@@ -42,6 +53,9 @@ export const useCallsFilters = createWithEqualityFn<CallFiltersState>()(
 
     division: null,
     setDivision: (division) => set({ division }),
+
+    source: null,
+    setSource: (source) => set({ source }),
   }),
   shallow,
 );

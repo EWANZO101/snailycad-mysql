@@ -102,7 +102,7 @@ async function findStatus(
     include: { value: true, departments: { select: { id: true } } },
     orderBy: { value: { position: "asc" } },
   });
-  const page = unitType === "leo" ? "LEO" : "EMS_FD";
+  const page = unitType === "leo" ? "LEO" : unitType === "ems-fd" ? "EMS_FD" : "DOT";
   const forPage = (status: (typeof statuses)[number]) => {
     const pages = Array.isArray(status.whatPages) ? (status.whatPages as string[]) : [];
     return pages.length === 0 || pages.includes(page);
@@ -149,7 +149,9 @@ export async function syncFivemDuty(options: Options): Promise<DutySyncResult> {
   const units: CandidateUnit[] =
     data.unitType === "leo"
       ? await prisma.officer.findMany({ where: { userId }, include: unitInclude })
-      : await prisma.emsFdDeputy.findMany({ where: { userId }, include: unitInclude });
+      : data.unitType === "ems-fd"
+        ? await prisma.emsFdDeputy.findMany({ where: { userId }, include: unitInclude })
+        : await prisma.dotWorker.findMany({ where: { userId }, include: unitInclude });
 
   if (!units.length) return { result: "skipped", reason: "noUnit" };
 
@@ -209,9 +211,14 @@ async function isCombined(unitType: DutyInput["unitType"], unitId: string) {
           where: { officers: { some: { id: unitId } } },
           select: { id: true },
         })
-      : await prisma.combinedEmsFdUnit.findFirst({
-          where: { deputies: { some: { id: unitId } } },
-          select: { id: true },
-        });
+      : unitType === "ems-fd"
+        ? await prisma.combinedEmsFdUnit.findFirst({
+            where: { deputies: { some: { id: unitId } } },
+            select: { id: true },
+          })
+        : await prisma.combinedDotUnit.findFirst({
+            where: { workers: { some: { id: unitId } } },
+            select: { id: true },
+          });
   return !!combined;
 }

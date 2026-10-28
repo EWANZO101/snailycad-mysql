@@ -9,6 +9,7 @@ import type { ActiveOfficer } from "state/leo-state";
 import { useValues } from "context/ValuesContext";
 import { useDispatchState } from "state/dispatch/dispatch-state";
 import type { ActiveDeputy } from "state/ems-fd-state";
+import type { ActiveDotWorker } from "state/dot-state";
 import { makeUnitName } from "lib/utils";
 import {
   type CombinedLeoUnit,
@@ -18,14 +19,14 @@ import {
 } from "@snailycad/types";
 import { classNames } from "lib/classNames";
 import { useUnitStatusChange } from "hooks/shared/useUnitsStatusChange";
-import { isUnitCombined } from "@snailycad/utils";
+import { isUnitCombined, isUnitCombinedDot } from "@snailycad/utils";
 import { useGenerateCallsign } from "hooks/useGenerateCallsign";
 import type { PostDispatchStatusUnmergeUnitById } from "@snailycad/types/api";
 import { ValueSelectField } from "components/form/inputs/value-select-field";
 
 interface Props {
-  type?: "ems-fd" | "leo";
-  unit: ActiveOfficer | ActiveDeputy | CombinedLeoUnit | null;
+  type?: "ems-fd" | "leo" | "dot";
+  unit: ActiveOfficer | ActiveDeputy | ActiveDotWorker | CombinedLeoUnit | null;
   onClose?(): void;
 }
 
@@ -34,13 +35,19 @@ export function ManageUnitModal({ type = "leo", unit, onClose }: Props) {
   const common = useTranslations("Common");
   const { state, execute } = useFetch();
   const { codes10 } = useValues();
-  const { activeOfficers, activeDeputies, setActiveDeputies, setActiveOfficers } =
-    useDispatchState();
+  const {
+    activeOfficers,
+    activeDeputies,
+    activeDotUnits,
+    setActiveDeputies,
+    setActiveOfficers,
+    setActiveDotUnits,
+  } = useDispatchState();
   const { generateCallsign } = useGenerateCallsign();
 
   const t = useTranslations("Leo");
-  const setUnits = type === "leo" ? setActiveOfficers : setActiveDeputies;
-  const units = type === "leo" ? activeOfficers : activeDeputies;
+  const setUnits = type === "leo" ? setActiveOfficers : type === "dot" ? setActiveDotUnits : setActiveDeputies;
+  const units = type === "leo" ? activeOfficers : type === "dot" ? activeDotUnits : activeDeputies;
 
   const { state: statusState, setStatus } = useUnitStatusChange({ setUnits, units });
 
@@ -79,7 +86,8 @@ export function ManageUnitModal({ type = "leo", unit, onClose }: Props) {
     return null;
   }
 
-  const title = isUnitCombined(unit)
+  const isCombinedUnit = type === "dot" ? isUnitCombinedDot(unit) : isUnitCombined(unit);
+  const title = isCombinedUnit
     ? `${common("manage")} ${generateCallsign(unit, "pairedUnitTemplate")}`
     : `${common("manage")} ${generateCallsign(unit)} ${makeUnitName(unit)}`;
 
@@ -111,10 +119,10 @@ export function ManageUnitModal({ type = "leo", unit, onClose }: Props) {
             <footer
               className={classNames(
                 "flex mt-5",
-                isUnitCombined(unit) ? "justify-between" : "justify-end",
+                isCombinedUnit ? "justify-between" : "justify-end",
               )}
             >
-              {isUnitCombined(unit) ? (
+              {isCombinedUnit ? (
                 <Button
                   disabled={state === "loading"}
                   onPress={handleUnmerge}

@@ -1,4 +1,4 @@
-import type { Officer, EmsFdDeputy, CombinedLeoUnit } from "@prisma/client";
+import type { Officer, EmsFdDeputy, DotWorker, CombinedLeoUnit } from "@prisma/client";
 import { ShouldDoType } from "@snailycad/types";
 import { prisma } from "lib/data/prisma";
 import type { Socket } from "services/socket-service";
@@ -11,11 +11,13 @@ export async function setInactiveUnitsOffDuty(updatedAt: Date, socket: Socket) {
       updatedAt: { not: { gte: updatedAt } },
     };
 
-    const [officers, deputies] = await prisma.$transaction([
+    const [officers, deputies, dotWorkers] = await prisma.$transaction([
       prisma.officer.findMany({ where }),
       prisma.emsFdDeputy.findMany({ where }),
+      prisma.dotWorker.findMany({ where }),
       prisma.combinedLeoUnit.deleteMany({ where }),
       prisma.combinedEmsFdUnit.deleteMany({ where }),
+      prisma.combinedDotUnit.deleteMany({ where }),
     ]);
 
     // First set all units off-duty
@@ -38,6 +40,15 @@ export async function setInactiveUnitsOffDuty(updatedAt: Date, socket: Socket) {
           userId: deputy.userId,
         }),
       ),
+      ...dotWorkers.map((dotWorker) =>
+        handleStartEndOfficerLog({
+          shouldDo: ShouldDoType.SET_OFF_DUTY,
+          socket,
+          type: "dot",
+          unit: dotWorker,
+          userId: dotWorker.userId,
+        }),
+      ),
     ]);
 
     await Promise.allSettled([
@@ -46,6 +57,10 @@ export async function setInactiveUnitsOffDuty(updatedAt: Date, socket: Socket) {
         data: { statusId: null, activeCallId: null, activeIncidentId: null },
       }),
       prisma.emsFdDeputy.updateMany({
+        where,
+        data: { statusId: null, activeCallId: null },
+      }),
+      prisma.dotWorker.updateMany({
         where,
         data: { statusId: null, activeCallId: null },
       }),
@@ -59,13 +74,18 @@ export async function setInactiveUnitsOffDuty(updatedAt: Date, socket: Socket) {
           where: { unitId: deputy.id },
         }),
       ),
+      ...dotWorkers.map((dotWorker) =>
+        prisma.dispatchChat.deleteMany({
+          where: { unitId: dotWorker.id },
+        }),
+      ),
     ]);
   } catch {
     console.error("unable to set units off-duty. Skipping...");
   }
 }
 
-export function filterInactiveUnits<Unit extends Officer | EmsFdDeputy | CombinedLeoUnit>({
+export function filterInactiveUnits<Unit extends Officer | EmsFdDeputy | DotWorker | CombinedLeoUnit>({
   unit,
   unitsInactivityFilter,
 }: {

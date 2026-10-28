@@ -1,6 +1,6 @@
 import { Context, Controller, UseBefore } from "@tsed/common";
 import { BodyParams, HeaderParams, PathParams } from "@tsed/platform-params";
-import { ContentType, Description, Get, Post } from "@tsed/schema";
+import { ContentType, Description, Get, Post, Tags } from "@tsed/schema";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { API_TOKEN_HEADER } from "@snailycad/config";
 import { Feature, type User } from "@snailycad/types";
@@ -36,8 +36,9 @@ const TONE_SCHEMA = z.object({
   tone: z.string().trim().min(1).max(64),
 });
 
-const UNIT_PERMISSIONS = [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd];
+const UNIT_PERMISSIONS = [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot];
 
+@Tags("Radio")
 @Controller("/radio")
 @ContentType("application/json")
 export class RadioController {

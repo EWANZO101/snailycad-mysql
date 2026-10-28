@@ -1,5 +1,5 @@
 import { Controller } from "@tsed/di";
-import { ContentType, Delete, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Post, Put, Tags } from "@tsed/schema";
 import { CALL_911_EVENT_SCHEMA } from "@snailycad/schemas";
 import { BodyParams, PathParams } from "@tsed/platform-params";
 import { NotFound } from "@tsed/exceptions";
@@ -13,6 +13,7 @@ import { officerOrDeputyToUnit } from "lib/leo/officerOrDeputyToUnit";
 import type * as APITypes from "@snailycad/types/api";
 import { callInclude } from "~/utils/leo/includes";
 
+@Tags("Dispatch")
 @Controller("/911-calls/events")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -24,7 +25,7 @@ export class Calls911EventsController {
 
   @Post("/:callId")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async createCallEvent(
     @PathParams("callId") callId: string,
@@ -61,7 +62,7 @@ export class Calls911EventsController {
 
   @Put("/:callId/:eventId")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async updateCallEvent(
     @PathParams("callId") callId: string,
@@ -118,7 +119,7 @@ export class Calls911EventsController {
 
   @Delete("/:callId/:eventId")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async deleteCallEvent(
     @PathParams("callId") callId: string,

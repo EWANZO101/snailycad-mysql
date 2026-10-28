@@ -8,7 +8,7 @@ import { validateSchema } from "lib/data/validate-schema";
 import { ExtendedNotFound } from "~/exceptions/extended-not-found";
 import { ExtendedBadRequest } from "~/exceptions/extended-bad-request";
 import { validateUser2FA } from "lib/auth/2fa";
-import { ContentType, Description, Returns } from "@tsed/schema";
+import { ContentType, Description, Returns, Tags } from "@tsed/schema";
 import {
   type User,
   WhitelistStatus,
@@ -27,6 +27,7 @@ import { createFeaturesObject } from "middlewares/is-enabled";
 import { sendUserWhitelistStatusChangeWebhook } from "../admin/manage/manage-users-controller";
 import { sendUserRegisteredWebhook } from "lib/discord/extra-webhooks";
 
+@Tags("Authentication")
 @Controller("/auth")
 @ContentType("application/json")
 export class AuthController {

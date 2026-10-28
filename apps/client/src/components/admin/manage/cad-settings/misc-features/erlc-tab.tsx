@@ -6,6 +6,8 @@ import { Alert, Button, Loader, SelectField, SwitchField, TextField } from "@sna
 import { getAPIUrl } from "@snailycad/utils/api-url";
 import Link from "next/link";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { Controller } from "react-bootstrap-icons";
 import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 import useFetch from "lib/useFetch";
 
@@ -206,7 +208,7 @@ export function ErlcTab() {
   return (
     <TabsContent value={SettingsTabs.Erlc} className="mt-3">
       <header className="mb-4">
-        <h2 className="text-2xl font-semibold">{t("erlc")}</h2>
+        <SettingsTabHeader icon={<Controller size={16} />}>{t("erlc")}</SettingsTabHeader>
         <p className="mt-1 text-neutral-600 dark:text-gray-400">{t("intro")}</p>
       </header>
 

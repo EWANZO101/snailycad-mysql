@@ -1,5 +1,5 @@
 import { Controller, UseBefore, UseBeforeEach } from "@tsed/common";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { NotFound, InternalServerError, BadRequest } from "@tsed/exceptions";
 import { QueryParams, BodyParams, Context, PathParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
@@ -36,6 +36,7 @@ export const incidentInclude = {
 
 type ActiveTypes = "active" | "inactive" | "all";
 
+@Tags("Law Enforcement")
 @Controller("/incidents")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -73,8 +74,10 @@ export class IncidentController {
             { unitsInvolved: { some: { id: assignedUnit } } },
             { unitsInvolved: { some: { officerId: assignedUnit } } },
             { unitsInvolved: { some: { emsFdDeputyId: assignedUnit } } },
+            { unitsInvolved: { some: { dotWorkerId: assignedUnit } } },
             { unitsInvolved: { some: { combinedLeoId: assignedUnit } } },
             { unitsInvolved: { some: { combinedEmsFdId: assignedUnit } } },
+            { unitsInvolved: { some: { combinedDotId: assignedUnit } } },
           ],
         }
       : {};
@@ -202,7 +205,7 @@ export class IncidentController {
   @Post("/:type/:incidentId")
   @Description("Assign or unassign a unit from an Active Incident")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async assignToIncident(
     @PathParams("type") assignType: "assign" | "unassign",
@@ -230,8 +233,10 @@ export class IncidentController {
     const types = {
       "combined-leo": "combinedLeoId",
       "combined-ems-fd": "combinedEmsFdId",
+      "combined-dot": "combinedDotId",
       leo: "officerId",
       "ems-fd": "emsFdDeputyId",
+      dot: "dotWorkerId",
     };
 
     const existing = await prisma.incidentInvolvedUnit.findFirst({
@@ -265,8 +270,10 @@ export class IncidentController {
     const prismaNames = {
       leo: "officer",
       "ems-fd": "emsFdDeputy",
+      dot: "dotWorker",
       "combined-leo": "combinedLeoUnit",
       "combined-ems-fd": "combinedEmsFdUnit",
+      "combined-dot": "combinedDotUnit",
     } as const;
     const prismaName = prismaNames[type];
 
@@ -286,6 +293,7 @@ export class IncidentController {
     await Promise.all([
       this.socket.emitUpdateOfficerStatus(),
       this.socket.emitUpdateDeputyStatus(),
+      this.socket.emitUpdateDotStatus(),
     ]);
 
     const updated = await prisma.leoIncident.findUniqueOrThrow({

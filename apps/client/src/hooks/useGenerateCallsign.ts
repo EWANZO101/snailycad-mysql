@@ -2,6 +2,8 @@ import { useAuth } from "context/AuthContext";
 import type {
   CombinedEmsFdUnit,
   CombinedLeoUnit,
+  CombinedDotUnit,
+  DotWorker,
   EmsFdDeputy,
   MiscCadSettings,
   Officer,
@@ -18,8 +20,10 @@ type P =
 type Unit =
   | Pick<Officer, P | "divisions" | "activeDivisionCallsign">
   | Pick<EmsFdDeputy, P | "division">
+  | Pick<DotWorker, P | "division">
   | CombinedLeoUnit
-  | CombinedEmsFdUnit;
+  | CombinedEmsFdUnit
+  | CombinedDotUnit;
 type TemplateId = keyof Pick<MiscCadSettings, "pairedUnitTemplate" | "callsignTemplate">;
 
 export function useGenerateCallsign() {

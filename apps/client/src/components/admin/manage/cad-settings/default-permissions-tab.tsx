@@ -11,6 +11,8 @@ import { usePermissionsModal } from "hooks/use-permissions-modal";
 import { type PermissionNames, getPermissions, defaultPermissions } from "@snailycad/permissions";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { ShieldLockFill } from "react-bootstrap-icons";
 
 export function DefaultPermissionsTab() {
   const common = useTranslations("Common");
@@ -60,7 +62,9 @@ export function DefaultPermissionsTab() {
       value={SettingsTabs.DefaultPermissions}
       className="mt-3"
     >
-      <h2 className="text-2xl font-semibold">{t("defaultPermissions")}</h2>
+      <SettingsTabHeader icon={<ShieldLockFill size={16} />}>
+        {t("defaultPermissions")}
+      </SettingsTabHeader>
 
       <p className="my-3 text-neutral-700 dark:text-gray-200">{t("defaultPermissionsInfo")}</p>
 

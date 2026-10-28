@@ -7,12 +7,13 @@ import { toastMessage } from "lib/toastMessage";
 import useFetch from "lib/useFetch";
 import type { ActiveDeputy } from "state/ems-fd-state";
 import type { ActiveOfficer } from "state/leo-state";
+import type { ActiveDotWorker } from "state/dot-state";
 import { useModal } from "state/modalState";
 import { ModalIds } from "types/modal-ids";
 import { useTranslations } from "use-intl";
 
 interface Props {
-  unit: ActiveDeputy | ActiveOfficer;
+  unit: ActiveDeputy | ActiveOfficer | ActiveDotWorker;
 }
 
 export function PrivateMessagesButton(props: Props) {

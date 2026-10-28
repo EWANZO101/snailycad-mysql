@@ -1,6 +1,6 @@
 import { BodyParams, Controller, PathParams, UseBeforeEach } from "@tsed/common";
 import { IsAuth } from "middlewares/auth/is-auth";
-import { ContentType, Delete, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Post, Put, Tags } from "@tsed/schema";
 import { validateSchema } from "lib/data/validate-schema";
 import { NOTE_SCHEMA } from "@snailycad/schemas";
 import { prisma } from "lib/data/prisma";
@@ -10,13 +10,14 @@ import type { Citizen, RegisteredVehicle } from "@prisma/client";
 import type * as APITypes from "@snailycad/types/api";
 import type { z } from "zod";
 
+@Tags("Law Enforcement")
 @Controller("/notes")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
 export class NotesController {
   @Post("/")
   @UsePermissions({
-    permissions: [Permissions.Leo, Permissions.EmsFd, Permissions.Dispatch],
+    permissions: [Permissions.Leo, Permissions.EmsFd, Permissions.Dot, Permissions.Dispatch],
   })
   async addNoteToItem(@BodyParams() body: unknown): Promise<APITypes.PostNotesData> {
     const data = validateSchema(NOTE_SCHEMA, body);
@@ -34,7 +35,7 @@ export class NotesController {
 
   @Put("/:id")
   @UsePermissions({
-    permissions: [Permissions.Leo, Permissions.EmsFd, Permissions.Dispatch],
+    permissions: [Permissions.Leo, Permissions.EmsFd, Permissions.Dot, Permissions.Dispatch],
   })
   async editNoteFromItem(
     @PathParams("id") noteId: string,
@@ -54,7 +55,7 @@ export class NotesController {
 
   @Delete("/:id")
   @UsePermissions({
-    permissions: [Permissions.Leo, Permissions.EmsFd, Permissions.Dispatch],
+    permissions: [Permissions.Leo, Permissions.EmsFd, Permissions.Dot, Permissions.Dispatch],
   })
   async deleteNoteFromItem(
     @PathParams("id") noteId: string,

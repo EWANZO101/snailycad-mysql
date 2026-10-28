@@ -1,5 +1,5 @@
 import { Controller, UseBeforeEach } from "@tsed/common";
-import { ContentType, Delete, Description, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Post, Put, Tags } from "@tsed/schema";
 import { NotFound } from "@tsed/exceptions";
 import { BodyParams, PathParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
@@ -12,6 +12,7 @@ import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { officerOrDeputyToUnit } from "lib/leo/officerOrDeputyToUnit";
 import type * as APITypes from "@snailycad/types/api";
 
+@Tags("Law Enforcement")
 @Controller("/incidents/events")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

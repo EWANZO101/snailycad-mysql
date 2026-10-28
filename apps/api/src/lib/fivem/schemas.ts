@@ -141,7 +141,7 @@ export const FIVEM_DUTY_SCHEMA = z.object({
   characterId: CHARACTER_ID.nullish(),
   identifiers: IDENTIFIERS,
   onDuty: z.boolean(),
-  unitType: z.enum(["leo", "ems-fd"]),
+  unitType: z.enum(["leo", "ems-fd", "dot"]),
   /** prefer a unit in one of these departments (names or ids) */
   departments: z.array(z.string().trim().min(1).max(255)).max(20).nullish(),
   /** prefer the unit with this callsign ("1A-12", callsign + callsign2, or a badge number) */

@@ -9,11 +9,12 @@ import { SettingsFormField } from "components/form/SettingsFormField";
 import { toastMessage } from "lib/toastMessage";
 import type { PutCADMiscSettingsData } from "@snailycad/types/api";
 import Link from "next/link";
-import { BoxArrowUpRight, ChevronDown } from "react-bootstrap-icons";
+import { BoxArrowUpRight, ChevronDown, GeoAltFill } from "react-bootstrap-icons";
 import { Table, useTableState } from "components/shared/Table";
 import type { MiscCadSettings, LiveMapURL } from "@snailycad/types";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
 
 const TILE_NAMES = [
   "minimap_sea_0_0",
@@ -120,7 +121,7 @@ export function LiveMapTab() {
 
   return (
     <TabsContent aria-label={t("liveMapSettings")} value={SettingsTabs.LiveMap}>
-      <h2 className="mt-2 text-2xl font-semibold">{t("liveMapSettings")}</h2>
+      <SettingsTabHeader icon={<GeoAltFill size={16} />}>{t("liveMapSettings")}</SettingsTabHeader>
 
       <p className="my-3 text-neutral-700 dark:text-gray-400 max-w-2xl">
         {t("liveMapSettingsInfo")}

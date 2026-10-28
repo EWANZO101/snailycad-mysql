@@ -12,7 +12,7 @@ import { useTranslations } from "use-intl";
 import useFetch from "lib/useFetch";
 import { toastMessage } from "lib/toastMessage";
 
-const cardTypes: Record<"ems-fd" | "officer" | "dispatch", DashboardLayoutCardType[]> = {
+const cardTypes: Record<"ems-fd" | "officer" | "dispatch" | "dot", DashboardLayoutCardType[]> = {
   "ems-fd": [
     DashboardLayoutCardType.ACTIVE_CALLS,
     DashboardLayoutCardType.ACTIVE_DEPUTIES,
@@ -26,9 +26,15 @@ const cardTypes: Record<"ems-fd" | "officer" | "dispatch", DashboardLayoutCardTy
     DashboardLayoutCardType.ACTIVE_DEPUTIES,
     DashboardLayoutCardType.ACTIVE_INCIDENTS,
   ],
+  dot: [
+    DashboardLayoutCardType.ACTIVE_DOT,
+    DashboardLayoutCardType.ACTIVE_DEPUTIES,
+    DashboardLayoutCardType.ACTIVE_OFFICERS,
+  ],
   dispatch: [
     DashboardLayoutCardType.ACTIVE_OFFICERS,
     DashboardLayoutCardType.ACTIVE_DEPUTIES,
+    DashboardLayoutCardType.ACTIVE_DOT,
     DashboardLayoutCardType.ACTIVE_CALLS,
     DashboardLayoutCardType.ACTIVE_INCIDENTS,
     DashboardLayoutCardType.ACTIVE_BOLOS,
@@ -137,10 +143,14 @@ function getCardsType(pathname: string) {
     return "officer";
   }
 
+  if (pathname.includes("/dot")) {
+    return "dot";
+  }
+
   return "ems-fd";
 }
 
-function getColumnName(type: "ems-fd" | "officer" | "dispatch") {
+function getColumnName(type: "ems-fd" | "officer" | "dispatch" | "dot") {
   switch (type) {
     case "ems-fd": {
       return "emsFdLayoutOrder";
@@ -150,6 +160,9 @@ function getColumnName(type: "ems-fd" | "officer" | "dispatch") {
     }
     case "dispatch": {
       return "dispatchLayoutOrder";
+    }
+    case "dot": {
+      return "dotLayoutOrder";
     }
     default: {
       return null;

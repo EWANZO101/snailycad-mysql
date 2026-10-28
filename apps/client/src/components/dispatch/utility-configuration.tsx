@@ -12,6 +12,19 @@ import type {
   PostDispatchDispatchersStateData,
   PostDispatchSignal100Data,
 } from "@snailycad/types/api";
+import {
+  BuildingsFill,
+  CarFrontFill,
+  ExclamationOctagonFill,
+  GeoAltFill,
+  JournalText,
+  MegaphoneFill,
+  PersonBadge,
+  Power,
+  Sliders,
+  Soundwave,
+  TelephonePlusFill,
+} from "react-bootstrap-icons";
 
 import dynamic from "next/dynamic";
 import { useCall911State } from "state/dispatch/call-911-state";
@@ -42,6 +55,18 @@ const buttons: modalButtons.ModalButton[] = [
   modalButtons.create911CallBtn,
   modalButtons.notepadBtn,
   modalButtons.selectDepartmentBtn,
+];
+
+const buttonIcons = [
+  <PersonBadge key="name" size={15} />,
+  <CarFrontFill key="plate" size={15} />,
+  <ExclamationOctagonFill key="weapon" size={15} />,
+  <GeoAltFill key="address" size={15} />,
+  <Sliders key="custom-field" size={15} />,
+  <MegaphoneFill key="bolo" size={15} />,
+  <TelephonePlusFill key="911" size={15} />,
+  <JournalText key="notepad" size={15} />,
+  <BuildingsFill key="department" size={15} />,
 ];
 
 export function DispatchModalButtons() {
@@ -89,26 +114,47 @@ export function DispatchModalButtons() {
   }
 
   return (
-    <div className="modal-buttons-grid py-2 pb-3 px-4">
-      {buttons.map((button, idx) => (
-        <ModalButton disabled={!isActive} key={idx} button={button} />
-      ))}
+    <div className="px-4 py-2 pb-3">
+      <div className="modal-buttons-grid">
+        {buttons.map((button, idx) => (
+          <ModalButton disabled={!isActive} key={idx} button={button} icon={buttonIcons[idx]} />
+        ))}
+      </div>
 
-      <Button disabled={!isActive} onPress={handleSignal100} id="signal100">
-        {signal100Enabled ? t("Leo.disableSignal100") : t("Leo.enableSignal100")}
-      </Button>
-
-      {TONES ? (
-        <Button disabled={!isActive} onPress={() => modalState.openModal(ModalIds.Tones)}>
-          {t("Leo.tones")}
+      <div className="dispatch-status-row">
+        <Button
+          variant={signal100Enabled ? "default" : "danger"}
+          className="flex items-center gap-2"
+          disabled={!isActive}
+          onPress={handleSignal100}
+          id="signal100"
+        >
+          <MegaphoneFill size={15} />
+          {signal100Enabled ? t("Leo.disableSignal100") : t("Leo.enableSignal100")}
         </Button>
-      ) : null}
 
-      {features.ACTIVE_DISPATCHERS ? (
-        <Button onPress={handleStateChangeDispatcher}>
-          {isActive ? t("Leo.goOffDuty") : t("Leo.goOnDuty")}
-        </Button>
-      ) : null}
+        {TONES ? (
+          <Button
+            className="flex items-center gap-2"
+            disabled={!isActive}
+            onPress={() => modalState.openModal(ModalIds.Tones)}
+          >
+            <Soundwave size={15} />
+            {t("Leo.tones")}
+          </Button>
+        ) : null}
+
+        {features.ACTIVE_DISPATCHERS ? (
+          <Button
+            variant={isActive ? "amber" : "success"}
+            className="flex items-center gap-2"
+            onPress={handleStateChangeDispatcher}
+          >
+            <Power size={15} />
+            {isActive ? t("Leo.goOffDuty") : t("Leo.goOnDuty")}
+          </Button>
+        ) : null}
+      </div>
 
       {TONES ? <TonesModal types={[ActiveToneType.LEO, ActiveToneType.EMS_FD]} /> : null}
       {signal100Enabled ? null : <EnableSignal100Modal />}

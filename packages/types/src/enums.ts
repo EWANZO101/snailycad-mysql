@@ -60,6 +60,7 @@ export const Feature = {
   UNIT_PRIVATE_MESSAGES: "UNIT_PRIVATE_MESSAGES",
   RADIO: "RADIO",
   ERLC: "ERLC",
+  DOT: "DOT",
 } as const;
 
 export type Feature = (typeof Feature)[keyof typeof Feature];
@@ -116,6 +117,16 @@ export const WhitelistStatus = {
 } as const;
 
 export type WhitelistStatus = (typeof WhitelistStatus)[keyof typeof WhitelistStatus];
+
+/** which integration (if any) created a 911 call - MANUAL for ordinary dispatcher-created ones. */
+export const CallSource = {
+  MANUAL: "MANUAL",
+  FIVEM: "FIVEM",
+  ERLC: "ERLC",
+  OPS_PHONE: "OPS_PHONE",
+} as const;
+
+export type CallSource = (typeof CallSource)[keyof typeof CallSource];
 
 export const StatusViewMode = {
   FULL_ROW_COLOR: "FULL_ROW_COLOR",
@@ -187,6 +198,7 @@ export type ValueLicenseType = (typeof ValueLicenseType)[keyof typeof ValueLicen
 export const DepartmentType = {
   LEO: "LEO",
   EMS_FD: "EMS_FD",
+  DOT: "DOT",
 } as const;
 
 export type DepartmentType = (typeof DepartmentType)[keyof typeof DepartmentType];
@@ -358,6 +370,7 @@ export const DashboardLayoutCardType = {
   ACTIVE_WARRANTS: "ACTIVE_WARRANTS",
   ACTIVE_OFFICERS: "ACTIVE_OFFICERS",
   ACTIVE_DEPUTIES: "ACTIVE_DEPUTIES",
+  ACTIVE_DOT: "ACTIVE_DOT",
   ACTIVE_INCIDENTS: "ACTIVE_INCIDENTS",
 } as const;
 

@@ -1,6 +1,6 @@
 import { Context, Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams, PathParams } from "@tsed/platform-params";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { NotFound } from "@tsed/exceptions";
 import { ActiveToneType } from "@prisma/client";
 import { Feature, type User } from "@snailycad/types";
@@ -24,7 +24,7 @@ const TONE_PRESET_SCHEMA = z.object({
 });
 
 const PLAY_TONE_SCHEMA = z.object({
-  target: z.enum(["ALL", "LEO", "EMS_FD", "DEPARTMENT", "UNIT", "CALL"]),
+  target: z.enum(["ALL", "LEO", "EMS_FD", "DOT", "DEPARTMENT", "UNIT", "CALL"]),
   targetId: z.string().nullish(),
   description: z.string().max(355).nullish(),
 });
@@ -33,6 +33,7 @@ const tonePresetInclude = {
   department: { include: { value: true } },
 } as const;
 
+@Tags("Dispatch")
 @Controller("/tone-presets")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -50,6 +51,7 @@ export class TonePresetsController {
       Permissions.Dispatch,
       Permissions.Leo,
       Permissions.EmsFd,
+      Permissions.Dot,
       Permissions.ManageCADSettings,
     ],
   })
@@ -148,8 +150,10 @@ export class TonePresetsController {
           (assigned) =>
             assigned.officerId ??
             assigned.emsFdDeputyId ??
+            assigned.dotWorkerId ??
             assigned.combinedLeoId ??
-            assigned.combinedEmsFdId,
+            assigned.combinedEmsFdId ??
+            assigned.combinedDotId,
         )
         .filter((unitId): unitId is string => Boolean(unitId));
     }

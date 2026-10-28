@@ -1,5 +1,5 @@
 import { Context, Controller, UseBeforeEach } from "@tsed/common";
-import { ContentType, Delete, Description, Get } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Tags } from "@tsed/schema";
 import { QueryParams, BodyParams, PathParams } from "@tsed/platform-params";
 import { NotFound } from "@tsed/exceptions";
 import { prisma } from "lib/data/prisma";
@@ -43,6 +43,7 @@ const citizenInclude = {
   },
 } satisfies Prisma.CitizenInclude;
 
+@Tags("Law Enforcement")
 @Controller("/leo/jail")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

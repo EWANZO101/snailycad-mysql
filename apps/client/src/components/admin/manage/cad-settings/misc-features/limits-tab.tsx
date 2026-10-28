@@ -9,6 +9,8 @@ import { cleanValues } from "./other-misc-tab";
 import { toastMessage } from "lib/toastMessage";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { Rulers } from "react-bootstrap-icons";
 import type { MiscCadSettings } from "@snailycad/types";
 import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 
@@ -52,7 +54,7 @@ export function LimitsTab() {
 
   return (
     <TabsContent value={SettingsTabs.Limits}>
-      <h3 className="font-semibold text-2xl mb-3">{t("limits")}</h3>
+      <SettingsTabHeader icon={<Rulers size={16} />}>{t("limits")}</SettingsTabHeader>
 
       <Formik initialValues={initialValues} onSubmit={handleSubmit}>
         {({ errors, values, handleChange }) => (

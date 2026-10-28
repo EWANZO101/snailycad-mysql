@@ -2,7 +2,7 @@ import * as React from "react";
 import { Loader, Button, AsyncListSearchField, Item, Infofield, Status } from "@snailycad/ui";
 import { Modal } from "components/modal/Modal";
 import { useModal } from "state/modalState";
-import { Form, Formik } from "formik";
+import { Form, Formik, useFormikContext } from "formik";
 import useFetch from "lib/useFetch";
 import { ModalIds } from "types/modal-ids";
 import { useTranslations } from "use-intl";
@@ -28,6 +28,7 @@ export function WeaponSearchModal({ id = ModalIds.WeaponSearch }: Props) {
   const router = useRouter();
   const isLeo = router.pathname === "/officer";
   const { BUREAU_OF_FIREARMS } = useFeatureEnabled();
+  const payloadWeapon = modalState.getPayload<{ serialNumber?: string } | null>(id);
 
   React.useEffect(() => {
     if (!modalState.isOpen(id)) {
@@ -61,8 +62,8 @@ export function WeaponSearchModal({ id = ModalIds.WeaponSearch }: Props) {
   }
 
   const INITIAL_VALUES = {
-    searchValue: currentResult?.serialNumber ?? "",
-    serialNumber: currentResult?.serialNumber ?? "",
+    searchValue: currentResult?.serialNumber ?? payloadWeapon?.serialNumber ?? "",
+    serialNumber: currentResult?.serialNumber ?? payloadWeapon?.serialNumber ?? "",
   };
 
   return (
@@ -75,6 +76,7 @@ export function WeaponSearchModal({ id = ModalIds.WeaponSearch }: Props) {
       <Formik initialValues={INITIAL_VALUES} onSubmit={onSubmit}>
         {({ setValues, setFieldValue, errors, values, isValid }) => (
           <Form>
+            <AutoSubmit id={id} />
             <AsyncListSearchField<NonNullable<WeaponSearchResult>>
               allowsCustomValue
               autoFocus
@@ -207,4 +209,19 @@ export function WeaponSearchModal({ id = ModalIds.WeaponSearch }: Props) {
       ) : null}
     </Modal>
   );
+}
+
+/** a serial number passed when opening the window (e.g. from the quick search) is searched right away */
+function AutoSubmit({ id }: { id: ModalIds }) {
+  const modalState = useModal();
+  const payloadWeapon = modalState.getPayload<{ serialNumber?: string } | null>(id);
+  const { submitForm } = useFormikContext();
+
+  React.useEffect(() => {
+    if (payloadWeapon?.serialNumber) {
+      submitForm();
+    }
+  }, [payloadWeapon, submitForm]);
+
+  return null;
 }

@@ -1,5 +1,5 @@
 import { Controller } from "@tsed/di";
-import { Get, Post, Description, Delete, ContentType } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { WEAPON_SCHEMA_ARR } from "@snailycad/schemas/dist/admin/import/weapons";
 import {
@@ -21,6 +21,7 @@ import { Permissions, UsePermissions } from "middlewares/use-permissions";
 
 const weaponsInclude = { ...citizenInclude.weapons.include, citizen: true };
 
+@Tags("Admin: Import")
 @Controller("/admin/import/weapons")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

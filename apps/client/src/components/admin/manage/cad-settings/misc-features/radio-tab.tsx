@@ -5,6 +5,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DepartmentValue } from "@snailycad/types";
 import { Alert, Button, Loader, SelectField, SwitchField, TextField } from "@snailycad/ui";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { BroadcastPin } from "react-bootstrap-icons";
 import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 import useFetch from "lib/useFetch";
 
@@ -153,7 +155,7 @@ export function RadioTab() {
   return (
     <TabsContent value={SettingsTabs.Radio} className="mt-3">
       <header className="mb-4">
-        <h2 className="text-2xl font-semibold">{t("radio")}</h2>
+        <SettingsTabHeader icon={<BroadcastPin size={16} />}>{t("radio")}</SettingsTabHeader>
         <p className="mt-1 text-neutral-600 dark:text-gray-400">{t("adminIntro")}</p>
       </header>
 

@@ -12,6 +12,8 @@ import { toastMessage } from "lib/toastMessage";
 import type { PutCADMiscSettingsData } from "@snailycad/types/api";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { ThreeDots } from "react-bootstrap-icons";
 
 // infinity -> null, "" -> null
 export function cleanValues(values: Record<string, any>) {
@@ -82,7 +84,7 @@ export function OtherMiscTab() {
 
   return (
     <TabsContent value={SettingsTabs.Other} className="mt-3">
-      <h2 className="text-2xl font-semibold">{t("miscSettings")}</h2>
+      <SettingsTabHeader icon={<ThreeDots size={18} />}>{t("miscSettings")}</SettingsTabHeader>
 
       <Formik onSubmit={onSubmit} initialValues={INITIAL_VALUES}>
         {({ handleChange, errors, values }) => (

@@ -15,7 +15,15 @@ export async function assignUnitsToWarrant({ socket, warrantId, unitIds }: Optio
       NOT: { status: { shouldDo: ShouldDoType.SET_OFF_DUTY } },
     });
 
-    if (!unit || type === "ems-fd" || type === "combined-ems-fd") continue;
+    if (
+      !unit ||
+      type === "ems-fd" ||
+      type === "combined-ems-fd" ||
+      type === "dot" ||
+      type === "combined-dot"
+    ) {
+      continue;
+    }
 
     const types = {
       "combined-leo": "combinedLeoId",

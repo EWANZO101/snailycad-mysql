@@ -3,8 +3,10 @@ import {
   type StatusValue,
   type Officer,
   type EmsFdDeputy,
+  type DotWorker,
   type Citizen,
   type CombinedLeoUnit,
+  type CombinedDotUnit,
   type MiscCadSettings,
   type cad,
   DiscordWebhookType,
@@ -19,8 +21,9 @@ export interface HandlePanicButtonPressedOptions {
   socket: Socket;
   status?: StatusValue | null;
   unit: (
-    | ((Officer | EmsFdDeputy) & { citizen: Pick<Citizen, "name" | "surname"> })
+    | ((Officer | EmsFdDeputy | DotWorker) & { citizen: Pick<Citizen, "name" | "surname"> })
     | CombinedLeoUnit
+    | CombinedDotUnit
   ) & {
     status?: StatusValue | null;
   };

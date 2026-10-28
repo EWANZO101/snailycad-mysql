@@ -6,7 +6,7 @@ import {
   type PlatformMulterFile,
   Context,
 } from "@tsed/common";
-import { ContentType, Post } from "@tsed/schema";
+import { ContentType, Post, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { IsValidPath } from "middlewares/valid-path";
 import { BadRequest } from "@tsed/exceptions";
@@ -52,6 +52,7 @@ import type * as APITypes from "@snailycad/types/api";
 import { ExtendedBadRequest } from "~/exceptions/extended-bad-request";
 import generateBlurPlaceholder from "lib/images/generate-image-blur-data";
 
+@Tags("Admin: Values")
 @Controller("/admin/values/import/:path")
 @UseBeforeEach(IsAuth, IsValidPath)
 @ContentType("application/json")

@@ -4,7 +4,14 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { Title } from "components/shared/Title";
 import { useTranslations } from "use-intl";
 import Link from "next/link";
-import { ArrowLeft } from "react-bootstrap-icons";
+import {
+  ArrowLeft,
+  Gear,
+  Link45deg,
+  PlugFill,
+  ShieldLockFill,
+  Sliders,
+} from "react-bootstrap-icons";
 import { parseCadVersion } from "../AdminLayout";
 import { useSocketError } from "hooks/global/useSocketError";
 import { useRoleplayStopped } from "hooks/global/useRoleplayStopped";
@@ -66,7 +73,7 @@ export function CadSettingsLayout(props: { children: React.ReactNode }) {
 
           <CadSettingsSidebar />
 
-          <div className="ml-6 px-4 py-5 admin-dashboard-responsive">
+          <div className="ml-6 px-4 py-5 admin-dashboard-responsive admin-area">
             <Component enabled={roleplayStopped} audio={audio} />
             {showError ? <SocketErrorComponent /> : null}
             {cad?.version && isNewVersionAvailable ? (
@@ -95,6 +102,7 @@ function CadSettingsSidebar() {
   const SIDEBAR_ITEMS = [
     {
       name: t("general"),
+      icon: <Gear className="w-4 h-4" aria-hidden />,
       items: [
         SettingsTabs.GeneralSettings,
         SettingsTabs.WhitelistSettings,
@@ -104,6 +112,7 @@ function CadSettingsSidebar() {
     },
     {
       name: t("miscellaneous"),
+      icon: <Sliders className="w-4 h-4" aria-hidden />,
       items: [
         SettingsTabs.InactivityTimeouts,
         SettingsTabs.CitizenLicensePoints,
@@ -118,10 +127,12 @@ function CadSettingsSidebar() {
     },
     {
       name: t("permissions"),
+      icon: <ShieldLockFill className="w-4 h-4" aria-hidden />,
       items: [SettingsTabs.DiscordRoles, SettingsTabs.DefaultPermissions],
     },
     {
       name: t("integrations"),
+      icon: <PlugFill className="w-4 h-4" aria-hidden />,
       items: [
         SettingsTabs.LiveMap,
         SettingsTabs.APIToken,
@@ -133,6 +144,7 @@ function CadSettingsSidebar() {
     },
     {
       name: t("webhooks"),
+      icon: <Link45deg className="w-4 h-4" aria-hidden />,
       items: [SettingsTabs.DiscordWebhooks, SettingsTabs.RawWebhooks],
     },
   ];
@@ -157,7 +169,12 @@ function CadSettingsSidebar() {
 
         {SIDEBAR_ITEMS.map((category) => {
           return (
-            <SidebarSection marginTop="mt-4" icon={null} title={category.name} key={category.name}>
+            <SidebarSection
+              marginTop="mt-4"
+              icon={category.icon}
+              title={category.name}
+              key={category.name}
+            >
               {category.items.map((key) => (
                 <Tabs.Trigger asChild value={key} key={key}>
                   <li className="w-full cursor-pointer flex items-center justify-between transition-colors rounded-lg px-3 py-1.5 text-[15px] text-neutral-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-secondary/70 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:font-medium dark:data-[state=active]:bg-blue-500/15 dark:data-[state=active]:text-blue-200">

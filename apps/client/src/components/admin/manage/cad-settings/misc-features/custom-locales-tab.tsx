@@ -2,10 +2,11 @@ import * as React from "react";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { useTranslations } from "use-intl";
 import Link from "next/link";
-import { BoxArrowUpRight } from "react-bootstrap-icons";
+import { BoxArrowUpRight, Translate } from "react-bootstrap-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Loader, SelectField, TextField } from "@snailycad/ui";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
 import useFetch from "lib/useFetch";
 import { classNames } from "lib/classNames";
 import { toastMessage } from "lib/toastMessage";
@@ -148,7 +149,7 @@ export function CustomLocalesTab(_props: Props) {
   return (
     <TabsContent value={SettingsTabs.CustomLocales} className="mt-3">
       <header className="mb-4">
-        <h2 className="text-2xl font-semibold">{t("customLocales")}</h2>
+        <SettingsTabHeader icon={<Translate size={16} />}>{t("customLocales")}</SettingsTabHeader>
         <p className="mt-1 text-neutral-600 dark:text-gray-400">{t("customLocalesIntro")}</p>
       </header>
 

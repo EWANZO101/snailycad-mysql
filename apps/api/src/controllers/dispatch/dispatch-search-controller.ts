@@ -1,10 +1,11 @@
 import { Controller, UseBeforeEach } from "@tsed/common";
-import { ContentType, Description, Post } from "@tsed/schema";
+import { ContentType, Description, Post, Tags } from "@tsed/schema";
 import { BodyParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 
+@Tags("Dispatch")
 @Controller("/search")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

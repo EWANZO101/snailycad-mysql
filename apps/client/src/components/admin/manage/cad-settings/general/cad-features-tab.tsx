@@ -15,9 +15,10 @@ import { toastMessage } from "lib/toastMessage";
 import { DEFAULT_DISABLED_FEATURES, DEFAULT_FEATURE_OPTIONS } from "hooks/useFeatureEnabled";
 import type { PutCADFeaturesData } from "@snailycad/types/api";
 import Link from "next/link";
-import { BoxArrowUpRight } from "react-bootstrap-icons";
+import { BoxArrowUpRight, ToggleOn } from "react-bootstrap-icons";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
 import { classNames } from "lib/classNames";
 
 const featuresWithURL: string[] = [
@@ -91,6 +92,7 @@ const FEATURE_CATEGORIES: Record<Exclude<FeatureCategory, "other">, Feature[]> =
     Feature.ALLOW_MULTIPLE_UNITS_DEPARTMENTS_PER_USER,
     Feature.USER_DEFINED_CALLSIGN_COMBINED_UNIT,
     Feature.HOSPITAL_SERVICES,
+    Feature.DOT,
   ],
   dispatch: [
     Feature.CALLS_911,
@@ -238,7 +240,9 @@ export function CADFeaturesTab() {
   return (
     <TabsContent value={SettingsTabs.Features} className="mt-3">
       <header className="mb-4">
-        <h2 className="text-2xl font-semibold">{tFeature("enableOrDisableFeatures")}</h2>
+        <SettingsTabHeader icon={<ToggleOn size={20} />}>
+          {tFeature("enableOrDisableFeatures")}
+        </SettingsTabHeader>
         <p className="mt-1 text-neutral-600 dark:text-gray-400">{tFeature("featuresIntro")}</p>
       </header>
 

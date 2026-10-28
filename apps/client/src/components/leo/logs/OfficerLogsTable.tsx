@@ -4,14 +4,22 @@ import { useImageUrl } from "hooks/useImageUrl";
 import { makeUnitName } from "lib/utils";
 import { useTranslations } from "next-intl";
 import type { OfficerLogWithOfficer } from "src/pages/officer/my-officer-logs";
-import type { EmsFdDeputy, Officer, OfficerLog } from "@snailycad/types";
+import type { DotWorker, EmsFdDeputy, Officer, OfficerLog } from "@snailycad/types";
 import type { OfficerLogWithDeputy } from "src/pages/ems-fd/my-deputy-logs";
+import type { OfficerLogWithDotWorker } from "src/pages/dot/my-unit-logs";
 import { useGenerateCallsign } from "hooks/useGenerateCallsign";
-import type { GetMyDeputiesLogsData, GetMyOfficersLogsData } from "@snailycad/types/api";
+import type {
+  GetMyDeputiesLogsData,
+  GetMyOfficersLogsData,
+  GetMyDotWorkersLogsData,
+} from "@snailycad/types/api";
 import { ImageWrapper } from "components/shared/image-wrapper";
 import { FullDate } from "@snailycad/ui";
 
-type OfficerLogData = GetMyOfficersLogsData["logs"][number] | GetMyDeputiesLogsData["logs"][number];
+type OfficerLogData =
+  | GetMyOfficersLogsData["logs"][number]
+  | GetMyDeputiesLogsData["logs"][number]
+  | GetMyDotWorkersLogsData["logs"][number];
 
 type Props =
   | {
@@ -19,7 +27,7 @@ type Props =
       asyncTable: ReturnType<typeof useAsyncTable<any>>;
     }
   | {
-      unit: Officer | EmsFdDeputy | null;
+      unit: Officer | EmsFdDeputy | DotWorker | null;
       asyncTable: ReturnType<typeof useAsyncTable<any>>;
     };
 
@@ -80,8 +88,11 @@ export function OfficerLogsTable({ unit, asyncTable }: Props) {
   );
 }
 
-function getUnitFromLog(log: OfficerLog | OfficerLogWithDeputy | OfficerLogWithOfficer) {
+function getUnitFromLog(
+  log: OfficerLog | OfficerLogWithDeputy | OfficerLogWithOfficer | OfficerLogWithDotWorker,
+) {
   if ("officer" in log) return log.officer;
   if ("emsFdDeputy" in log) return log.emsFdDeputy;
+  if ("dotWorker" in log) return log.dotWorker;
   return null;
 }

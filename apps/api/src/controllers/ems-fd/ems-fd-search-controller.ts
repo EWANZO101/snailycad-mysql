@@ -1,5 +1,5 @@
 import { Controller, UseBeforeEach } from "@tsed/common";
-import { ContentType, Description, Post } from "@tsed/schema";
+import { ContentType, Description, Post, Tags } from "@tsed/schema";
 import { NotFound } from "@tsed/exceptions";
 import { BodyParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
@@ -14,6 +14,7 @@ const citizenSearchInclude = {
   officers: { include: { department: true } },
 };
 
+@Tags("EMS & Fire")
 @Controller("/search")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

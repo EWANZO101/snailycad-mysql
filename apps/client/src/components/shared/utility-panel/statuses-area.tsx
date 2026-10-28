@@ -9,6 +9,7 @@ import useFetch from "lib/useFetch";
 import { useRouter } from "next/router";
 import type { ActiveDeputy } from "state/ems-fd-state";
 import type { ActiveOfficer } from "state/leo-state";
+import type { ActiveDotWorker } from "state/dot-state";
 import { ModalIds } from "types/modal-ids";
 import {
   type CombinedEmsFdUnit,
@@ -27,7 +28,7 @@ import { useMounted } from "@casperiv/useful";
 import Link from "next/link";
 import { createValueDocumentationURL } from "src/pages/admin/values/[path]";
 
-interface Props<T extends ActiveOfficer | ActiveDeputy> {
+interface Props<T extends ActiveOfficer | ActiveDeputy | ActiveDotWorker> {
   initialData: T | null;
   activeUnit: T | null;
   units: T[];
@@ -36,7 +37,7 @@ interface Props<T extends ActiveOfficer | ActiveDeputy> {
 }
 
 const STATUS_UPDATE_SRC = "/sounds/status-update.mp3" as const;
-export function StatusesArea<T extends ActiveOfficer | ActiveDeputy>({
+export function StatusesArea<T extends ActiveOfficer | ActiveDeputy | ActiveDotWorker>({
   initialData,
   activeUnit: _activeUnit,
   units,
@@ -50,12 +51,15 @@ export function StatusesArea<T extends ActiveOfficer | ActiveDeputy>({
   const { user } = useAuth();
   const router = useRouter();
   const isEmsFd = router.pathname.includes("/ems-fd");
-  const modalId = isEmsFd ? ModalIds.SelectDeputy : ModalIds.SelectOfficer;
+  const isDot = router.pathname.includes("/dot");
+  const modalId = isEmsFd ? ModalIds.SelectDeputy : isDot ? ModalIds.SelectDotWorker : ModalIds.SelectOfficer;
   const updateEmsOrOfficerStatusEventName = isEmsFd
     ? SocketEvents.UpdateEmsFdStatus
-    : SocketEvents.UpdateOfficerStatus;
+    : isDot
+      ? SocketEvents.UpdateDotStatus
+      : SocketEvents.UpdateOfficerStatus;
 
-  const whatPagesType = isEmsFd ? WhatPages.EMS_FD : WhatPages.LEO;
+  const whatPagesType = isEmsFd || isDot ? WhatPages.EMS_FD : WhatPages.LEO;
   const activeUnit = isMounted ? _activeUnit : initialData;
 
   const shouldPlayStatusUpdateSound = user?.soundSettings?.statusUpdate ?? false;

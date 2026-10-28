@@ -10,6 +10,8 @@ import type { DeleteCADApiTokenData, PutCADApiTokenData } from "@snailycad/types
 import { getAPIUrl } from "@snailycad/utils/api-url";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { KeyFill } from "react-bootstrap-icons";
 
 export function ApiTokenTab() {
   const common = useTranslations("Common");
@@ -65,7 +67,7 @@ export function ApiTokenTab() {
 
   return (
     <TabsContent aria-label={t("apiToken")} value={SettingsTabs.APIToken}>
-      <h2 className="mt-2 text-2xl font-semibold">{t("publicAPIAccess")}</h2>
+      <SettingsTabHeader icon={<KeyFill size={16} />}>{t("publicAPIAccess")}</SettingsTabHeader>
 
       <Formik onSubmit={onSubmit} initialValues={INITIAL_VALUES}>
         {({ setFieldValue, values }) => (

@@ -1,5 +1,5 @@
 import { Controller } from "@tsed/di";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import {
   UPDATE_ASSIGNED_UNIT_SCHEMA,
   CALL_911_SCHEMA,
@@ -18,6 +18,7 @@ import {
   type cad,
   type User,
   type MiscCadSettings,
+  CallSource,
   ShouldDoType,
   type Prisma,
   type WhitelistStatus,
@@ -45,6 +46,7 @@ import { handleEndCall } from "lib/dispatch/911-calls/handle-end-911-call";
 import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 import { _leoProperties, assignedUnitsInclude, callInclude } from "utils/leo/includes";
 
+@Tags("Dispatch")
 @Controller("/911-calls")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -68,6 +70,7 @@ export class Calls911Controller {
     @QueryParams("department", String) department?: string,
     @QueryParams("division", String) division?: string,
     @QueryParams("assignedUnit", String) assignedUnit?: string,
+    @QueryParams("source", String) source?: CallSource,
   ): Promise<APITypes.Get911CallsData> {
     const inactivityFilter = getInactivityFilter(cad, "call911InactivityTimeout");
     const inactivityFilterWhere = includeEnded ? {} : inactivityFilter?.filter;
@@ -75,6 +78,7 @@ export class Calls911Controller {
     const where: Prisma.Call911WhereInput = {
       ...(inactivityFilterWhere ?? {}),
       ended: includeEnded ? undefined : false,
+      source: source && Object.values(CallSource).includes(source) ? source : undefined,
       OR: query
         ? [
             { descriptionData: { array_contains: query } },
@@ -108,7 +112,9 @@ export class Calls911Controller {
         { assignedUnits: { some: { id: assignedUnit } } },
         { assignedUnits: { some: { officerId: assignedUnit } } },
         { assignedUnits: { some: { emsFdDeputyId: assignedUnit } } },
+        { assignedUnits: { some: { dotWorkerId: assignedUnit } } },
         { assignedUnits: { some: { combinedLeoId: assignedUnit } } },
+        { assignedUnits: { some: { combinedDotId: assignedUnit } } },
       );
     }
 
@@ -134,7 +140,7 @@ export class Calls911Controller {
   @Get("/:id")
   @Description("Get a call by its id or caseNumber")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async getCallById(@PathParams("id") id: string): Promise<APITypes.Get911CallByIdData> {
     let where: Prisma.Call911WhereInput = {};
@@ -172,12 +178,21 @@ export class Calls911Controller {
     });
 
     const isFromDispatch = isFromDispatchHeader === "true" && hasDispatchPermissions;
+    // calls made with the CAD's global API token (what FiveM's resource authenticates with) get
+    // a synthetic `{ rank: "API_TOKEN" }` user in place of a real session - see
+    // setGlobalUserFromCADAPIToken in middlewares/auth/utils/get-user.ts. It's the only signal
+    // this endpoint has for "this came from FiveM" today.
+    const source =
+      (user as unknown as { rank?: string }).rank === "API_TOKEN"
+        ? CallSource.FIVEM
+        : CallSource.MANUAL;
 
     return create911Call({
       data,
       cad,
       user,
       isFromDispatch,
+      source,
       socket: this.socket,
     });
   }
@@ -477,7 +492,7 @@ export class Calls911Controller {
 
   @Post("/:type/:callId")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async assignToCall(
     @PathParams("type") callType: "assign" | "unassign",
@@ -505,8 +520,10 @@ export class Calls911Controller {
     const types = {
       "combined-leo": "combinedLeoId",
       "combined-ems-fd": "combinedEmsFdId",
+      "combined-dot": "combinedDotId",
       leo: "officerId",
       "ems-fd": "emsFdDeputyId",
+      dot: "dotWorkerId",
     };
 
     const existing = await prisma.assignedUnit.findFirst({
@@ -589,7 +606,7 @@ export class Calls911Controller {
 
   @Put("/:callId/assigned-units/:assignedUnitId")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async updateAssignedUnit(
     @PathParams("callId") callId: string,

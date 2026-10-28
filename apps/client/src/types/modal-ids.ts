@@ -59,6 +59,7 @@ export const enum ModalIds {
   MergeUnit = "MergeUnitModal",
   SelectMapServer = "SelectMapServerModal",
   EditDashboardLayout = "EditDashboardLayoutModal",
+  SetupWizard = "SetupWizardModal",
 
   ManageVehicleFlags = "ManageVehicleFlagsModal",
   ManageCitizenFlags = "ManageCitizenFlagsModal",
@@ -98,6 +99,7 @@ export const enum ModalIds {
   AlertPurgeIncidents = "AlertPurgeIncidents",
   PrivateMessage = "PrivateMessage",
   UnitMessages = "UnitMessages",
+  QuickSearch = "QuickSearch",
   DepartmentInfo = "DepartmentInfoModal",
 
   SearchMedicalRecord = "SearchMedicalRecordModal",
@@ -105,6 +107,9 @@ export const enum ModalIds {
   CreateDoctorVisit = "CreateDoctorVisitModal",
   SelectDeputy = "SelectDeputyModal",
   ManageDeputy = "ManageDeputyModal",
+  SelectDotWorker = "SelectDotWorkerModal",
+  ManageDotWorker = "ManageDotWorkerModal",
+  ManageDotWorkOrder = "ManageDotWorkOrderModal",
   ManageAOP = "ManageAOPModal",
   EnableSignal100 = "EnableSignal100Modal",
 
@@ -132,6 +137,7 @@ export const enum ModalIds {
   AlertDeleteBolo = "AlertDeleteBoloModal",
   AlertEnd911Call = "AlertEnd911CallModal",
   AlertDeleteDeputy = "AlertDeleteDeputyModal",
+  AlertDeleteDotWorker = "AlertDeleteDotWorkerModal",
   AlertDeleteTruckLog = "AlertDeleteTruckLogModal",
   AlertDeleteCallEvent = "AlertDeleteCallEventModal",
   AlertDeleteUser = "AlertDeleteUserModal",

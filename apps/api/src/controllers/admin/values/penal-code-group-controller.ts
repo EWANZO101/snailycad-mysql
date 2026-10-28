@@ -1,5 +1,5 @@
 import { BodyParams, Controller, PathParams, QueryParams, UseBeforeEach } from "@tsed/common";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { NotFound } from "@tsed/exceptions";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -8,6 +8,7 @@ import { validateSchema } from "lib/data/validate-schema";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import type * as APITypes from "@snailycad/types/api";
 
+@Tags("Admin: Values")
 @Controller("/admin/penal-code-group")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

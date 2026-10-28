@@ -1,5 +1,5 @@
 import { Controller } from "@tsed/di";
-import { Get, Description, ContentType } from "@tsed/schema";
+import { ContentType, Description, Get, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { glob } from "glob";
 import { join } from "node:path";
@@ -15,6 +15,7 @@ import { getCADVersion } from "@snailycad/utils/version";
 
 export const ONE_DAY = 60 * 60 * 24;
 
+@Tags("Admin")
 @Controller("/admin")
 @ContentType("application/json")
 export class AdminController {
@@ -73,6 +74,12 @@ export class AdminController {
       ],
     );
 
+    const [dotWorkersCount, onDutyDotWorkers, suspendedDotWorkers] = await prisma.$transaction([
+      prisma.dotWorker.count(),
+      prisma.dotWorker.count({ where: { NOT: { OR: filters } } }),
+      prisma.dotWorker.count({ where: { suspended: true } }),
+    ]);
+
     res.setHeader(
       "Cache-Control",
       `private, max-age=${ONE_DAY}, stale-while-revalidate=${ONE_DAY / 2}`,
@@ -97,6 +104,10 @@ export class AdminController {
       emsDeputiesCount,
       onDutyEmsDeputies,
       suspendedEmsFDDeputies,
+
+      dotWorkersCount,
+      onDutyDotWorkers,
+      suspendedDotWorkers,
 
       vehicles,
       impoundedVehicles,

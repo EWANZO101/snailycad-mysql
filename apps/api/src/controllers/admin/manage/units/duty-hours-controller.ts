@@ -3,13 +3,13 @@ import { BodyParams, Context, PathParams, QueryParams } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { NotFound } from "@tsed/exceptions";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
-import { ContentType, Description, Get, Put } from "@tsed/schema";
+import { ContentType, Description, Get, Put, Tags } from "@tsed/schema";
 import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger/server";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
 import { ExtendedBadRequest } from "~/exceptions/extended-bad-request";
-import { _leoProperties, unitProperties } from "utils/leo/includes";
+import { _leoProperties, unitProperties, dotWorkerProperties } from "utils/leo/includes";
 
 /**
  * Duty clocking reports (roadmap 11.1).
@@ -42,11 +42,12 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const DUTY_SESSION_UPDATE_TYPE =
   "UnitDutySessionUpdate" as AuditLogActionType.UnitDutySessionUpdate;
 
-type DutyUnitType = "LEO" | "EMS_FD";
+type DutyUnitType = "LEO" | "EMS_FD" | "DOT";
 
 interface UnitWeekRow {
   officerId: string | null;
   emsFdDeputyId: string | null;
+  dotWorkerId: string | null;
   weekStart: Date;
   seconds: number;
 }
@@ -54,6 +55,7 @@ interface UnitWeekRow {
 interface UnitStatsRow {
   officerId: string | null;
   emsFdDeputyId: string | null;
+  dotWorkerId: string | null;
   logUserId: string | null;
   sessionCount: number;
   openCount: number;
@@ -88,9 +90,14 @@ function utcTimestamp(date: Date) {
   return Prisma.sql`(${date.toISOString()}::timestamptz AT TIME ZONE 'UTC')`;
 }
 
-function getUnitKey(row: { officerId: string | null; emsFdDeputyId: string | null }) {
+function getUnitKey(row: {
+  officerId: string | null;
+  emsFdDeputyId: string | null;
+  dotWorkerId?: string | null;
+}) {
   if (row.officerId) return { id: row.officerId, type: "LEO" as DutyUnitType };
   if (row.emsFdDeputyId) return { id: row.emsFdDeputyId, type: "EMS_FD" as DutyUnitType };
+  if (row.dotWorkerId) return { id: row.dotWorkerId, type: "DOT" as DutyUnitType };
   return null;
 }
 
@@ -109,6 +116,7 @@ function mapSession(
 }
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/units/duty-hours")
 @ContentType("application/json")
 export class AdminDutyHoursController {
@@ -161,6 +169,7 @@ export class AdminDutyHoursController {
           l."id",
           l."officerId",
           l."emsFdDeputyId",
+          l."dotWorkerId",
           l."userId",
           l."startedAt",
           l."endedAt",
@@ -169,7 +178,7 @@ export class AdminDutyHoursController {
         FROM "OfficerLog" l
         WHERE l."startedAt" < ${pTo}
           AND COALESCE(l."endedAt", ${pNow}) > ${pFrom}
-          AND (l."officerId" IS NOT NULL OR l."emsFdDeputyId" IS NOT NULL)
+          AND (l."officerId" IS NOT NULL OR l."emsFdDeputyId" IS NOT NULL OR l."dotWorkerId" IS NOT NULL)
       )
     `;
 
@@ -184,17 +193,19 @@ export class AdminDutyHoursController {
         SELECT
           s."officerId",
           s."emsFdDeputyId",
+          s."dotWorkerId",
           w."weekStart",
           SUM(EXTRACT(EPOCH FROM (LEAST(s."clipEnd", w."weekEnd") - GREATEST(s."clipStart", w."weekStart"))))::float8 AS "seconds"
         FROM sessions s
         INNER JOIN weeks w ON s."clipStart" < w."weekEnd" AND s."clipEnd" > w."weekStart"
-        GROUP BY s."officerId", s."emsFdDeputyId", w."weekStart"
+        GROUP BY s."officerId", s."emsFdDeputyId", s."dotWorkerId", w."weekStart"
       `,
       prisma.$queryRaw<UnitStatsRow[]>`
         WITH ${sessionsCte}
         SELECT
           s."officerId",
           s."emsFdDeputyId",
+          s."dotWorkerId",
           MAX(s."userId") AS "logUserId",
           COUNT(*)::int AS "sessionCount",
           (COUNT(*) FILTER (WHERE s."endedAt" IS NULL))::int AS "openCount",
@@ -202,7 +213,7 @@ export class AdminDutyHoursController {
           MIN(s."startedAt") AS "firstSeen",
           MAX(COALESCE(s."endedAt", ${pNow})) AS "lastSeen"
         FROM sessions s
-        GROUP BY s."officerId", s."emsFdDeputyId"
+        GROUP BY s."officerId", s."emsFdDeputyId", s."dotWorkerId"
       `,
       prisma.$queryRaw<{ id: string }[]>`
         WITH ${sessionsCte}
@@ -217,12 +228,14 @@ export class AdminDutyHoursController {
 
     const officerIds = new Set<string>();
     const deputyIds = new Set<string>();
+    const dotWorkerIds = new Set<string>();
     for (const row of statsRows) {
       if (row.officerId) officerIds.add(row.officerId);
       else if (row.emsFdDeputyId) deputyIds.add(row.emsFdDeputyId);
+      else if (row.dotWorkerId) dotWorkerIds.add(row.dotWorkerId);
     }
 
-    const [officers, deputies, flaggedLogs] = await Promise.all([
+    const [officers, deputies, dotWorkers, flaggedLogs] = await Promise.all([
       officerIds.size
         ? prisma.officer.findMany({
             where: { id: { in: [...officerIds] } },
@@ -235,6 +248,12 @@ export class AdminDutyHoursController {
             include: unitProperties,
           })
         : [],
+      dotWorkerIds.size
+        ? prisma.dotWorker.findMany({
+            where: { id: { in: [...dotWorkerIds] } },
+            include: dotWorkerProperties,
+          })
+        : [],
       flaggedRows.length
         ? prisma.officerLog.findMany({
             where: { id: { in: flaggedRows.map((v) => v.id) } },
@@ -244,7 +263,7 @@ export class AdminDutyHoursController {
     ]);
 
     const unitsById = new Map<string, any>();
-    for (const unit of [...officers, ...deputies]) {
+    for (const unit of [...officers, ...deputies, ...dotWorkers]) {
       unitsById.set(unit.id, unit);
     }
 
@@ -271,6 +290,7 @@ export class AdminDutyHoursController {
       totalSeconds: number;
       leoSeconds: number;
       emsFdSeconds: number;
+      dotSeconds: number;
     }[] = [];
     for (let t = weekStart.getTime(); t < to.getTime(); t += WEEK_MS) {
       weeks.push({
@@ -279,6 +299,7 @@ export class AdminDutyHoursController {
         totalSeconds: 0,
         leoSeconds: 0,
         emsFdSeconds: 0,
+        dotSeconds: 0,
       });
     }
     const weekIndexByTime = new Map(weeks.map((week, idx) => [week.weekStart.getTime(), idx]));
@@ -302,6 +323,7 @@ export class AdminDutyHoursController {
       totalSeconds: number;
       leoSeconds: number;
       emsFdSeconds: number;
+      dotSeconds: number;
       sessionCount: number;
       openSessions: number;
       flaggedSessions: number;
@@ -343,7 +365,8 @@ export class AdminDutyHoursController {
       const week = weeks[weekIdx]!;
       week.totalSeconds += seconds;
       if (key.type === "LEO") week.leoSeconds += seconds;
-      else week.emsFdSeconds += seconds;
+      else if (key.type === "EMS_FD") week.emsFdSeconds += seconds;
+      else week.dotSeconds += seconds;
 
       const perWeek = unitWeekSeconds.get(key.id) ?? weeks.map(() => 0);
       perWeek[weekIdx] = (perWeek[weekIdx] ?? 0) + seconds;
@@ -364,7 +387,9 @@ export class AdminDutyHoursController {
     >();
 
     const logUserIds = new Map(
-      statsRows.map((row) => [row.officerId ?? row.emsFdDeputyId, row.logUserId] as const),
+      statsRows.map(
+        (row) => [row.officerId ?? row.emsFdDeputyId ?? row.dotWorkerId, row.logUserId] as const,
+      ),
     );
 
     for (const [unitId, entry] of unitEntries) {
@@ -377,6 +402,7 @@ export class AdminDutyHoursController {
         totalSeconds: 0,
         leoSeconds: 0,
         emsFdSeconds: 0,
+        dotSeconds: 0,
         sessionCount: 0,
         openSessions: 0,
         flaggedSessions: 0,
@@ -386,7 +412,8 @@ export class AdminDutyHoursController {
 
       user.totalSeconds += entry.totalSeconds;
       if (entry.type === "LEO") user.leoSeconds += entry.totalSeconds;
-      else user.emsFdSeconds += entry.totalSeconds;
+      else if (entry.type === "EMS_FD") user.emsFdSeconds += entry.totalSeconds;
+      else user.dotSeconds += entry.totalSeconds;
       user.sessionCount += entry.sessionCount;
       user.openSessions += entry.openSessions;
       user.flaggedSessions += entry.flaggedSessions;
@@ -425,6 +452,7 @@ export class AdminDutyHoursController {
       totalSeconds: 0,
       leoSeconds: 0,
       emsFdSeconds: 0,
+      dotSeconds: 0,
       sessionCount: 0,
       openSessions: 0,
       flaggedSessions: 0,
@@ -434,6 +462,7 @@ export class AdminDutyHoursController {
       totals.totalSeconds += user.totalSeconds;
       totals.leoSeconds += user.leoSeconds;
       totals.emsFdSeconds += user.emsFdSeconds;
+      totals.dotSeconds += user.dotSeconds;
       totals.sessionCount += user.sessionCount;
       totals.openSessions += user.openSessions;
       totals.flaggedSessions += user.flaggedSessions;
@@ -490,13 +519,15 @@ export class AdminDutyHoursController {
     const to = parseDate(rawTo) ?? now;
 
     const ownerWhere: Prisma.OfficerLogWhereInput = unitId
-      ? { OR: [{ officerId: unitId }, { emsFdDeputyId: unitId }] }
+      ? { OR: [{ officerId: unitId }, { emsFdDeputyId: unitId }, { dotWorkerId: unitId }] }
       : {
           OR: [
             { officer: { userId } },
             { emsFdDeputy: { userId } },
+            { dotWorker: { userId } },
             { userId, officer: { userId: null } },
             { userId, emsFdDeputy: { userId: null } },
+            { userId, dotWorker: { userId: null } },
           ],
         };
 
@@ -506,12 +537,19 @@ export class AdminDutyHoursController {
           ownerWhere,
           { startedAt: { lt: to } },
           { OR: [{ endedAt: null }, { endedAt: { gt: from } }] },
-          { OR: [{ officerId: { not: null } }, { emsFdDeputyId: { not: null } }] },
+          {
+            OR: [
+              { officerId: { not: null } },
+              { emsFdDeputyId: { not: null } },
+              { dotWorkerId: { not: null } },
+            ],
+          },
         ],
       },
       include: {
         officer: { include: _leoProperties },
         emsFdDeputy: { include: unitProperties },
+        dotWorker: { include: dotWorkerProperties },
       },
       orderBy: { startedAt: "desc" },
       take: MAX_SESSIONS,
@@ -523,9 +561,9 @@ export class AdminDutyHoursController {
         id: log.id,
         startedAt: log.startedAt,
         endedAt: log.endedAt,
-        type: (log.officerId ? "LEO" : "EMS_FD") as DutyUnitType,
-        unitId: log.officerId ?? log.emsFdDeputyId,
-        unit: log.officer ?? log.emsFdDeputy ?? null,
+        type: (log.officerId ? "LEO" : log.emsFdDeputyId ? "EMS_FD" : "DOT") as DutyUnitType,
+        unitId: log.officerId ?? log.emsFdDeputyId ?? log.dotWorkerId,
+        unit: log.officer ?? log.emsFdDeputy ?? log.dotWorker ?? null,
         ...mapSession(log, now, maxSessionHours),
       })),
     };
@@ -583,7 +621,9 @@ export class AdminDutyHoursController {
 
     const unitWhere: Prisma.OfficerLogWhereInput = log.officerId
       ? { officerId: log.officerId }
-      : { emsFdDeputyId: log.emsFdDeputyId };
+      : log.emsFdDeputyId
+        ? { emsFdDeputyId: log.emsFdDeputyId }
+        : { dotWorkerId: log.dotWorkerId };
 
     const overlapping = await prisma.officerLog.findFirst({
       where: {

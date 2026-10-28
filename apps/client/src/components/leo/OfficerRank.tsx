@@ -1,10 +1,10 @@
-import type { EmsFdDeputy, Officer } from "@snailycad/types";
+import type { DotWorker, EmsFdDeputy, Officer } from "@snailycad/types";
 import { isUnitOfficer } from "@snailycad/utils";
 import { ImageWrapper } from "components/shared/image-wrapper";
 import { useImageUrl } from "hooks/useImageUrl";
 import { useTranslations } from "next-intl";
 
-export function OfficerRank({ unit }: { unit: Officer | EmsFdDeputy }) {
+export function OfficerRank({ unit }: { unit: Officer | EmsFdDeputy | DotWorker }) {
   const common = useTranslations("Common");
   const rank = unit.rank?.value ?? common("none");
   const { makeImageUrl } = useImageUrl();

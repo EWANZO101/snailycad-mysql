@@ -20,7 +20,7 @@ interface Options {
 
 export async function assignUnitsInvolvedToIncident(options: Options) {
   const unitsInvolved = options.incident.unitsInvolved.map((u) =>
-    String(u.officerId ?? u.emsFdDeputyId ?? u.combinedLeoId),
+    String(u.officerId ?? u.emsFdDeputyId ?? u.dotWorkerId ?? u.combinedLeoId),
   );
 
   const disconnectConnectArr = manyToManyHelper(unitsInvolved, options.unitIds, {
@@ -63,6 +63,7 @@ export async function assignUnitsInvolvedToIncident(options: Options) {
   if (options.socket) {
     await options.socket.emitUpdateOfficerStatus();
     await options.socket.emitUpdateDeputyStatus();
+    await options.socket.emitUpdateDotStatus();
   }
 }
 
@@ -70,8 +71,10 @@ export async function handleDeleteInvolvedUnit(options: handleCreateInvolvedUnit
   const prismaNames = {
     officerId: "officer",
     emsFdDeputyId: "emsFdDeputy",
+    dotWorkerId: "dotWorker",
     combinedLeoId: "combinedLeoUnit",
     combinedEmsFdId: "combinedEmsFdUnit",
+    combinedDotId: "combinedDotUnit",
   } as const;
 
   const incidentKey = options.type === "leo" ? "incidentId" : "emsFdIncidentId";
@@ -81,8 +84,10 @@ export async function handleDeleteInvolvedUnit(options: handleCreateInvolvedUnit
       OR: [
         { officerId: options.unitId },
         { emsFdDeputyId: options.unitId },
+        { dotWorkerId: options.unitId },
         { combinedLeoId: options.unitId },
         { combinedEmsFdId: options.unitId },
+        { combinedDotId: options.unitId },
       ],
     },
   });
@@ -132,8 +137,10 @@ async function handleCreateInvolvedUnit(options: handleCreateInvolvedUnitOptions
   const types = {
     leo: "officerId",
     "ems-fd": "emsFdDeputyId",
+    dot: "dotWorkerId",
     "combined-leo": "combinedLeoId",
     "combined-ems-fd": "combinedEmsFdId",
+    "combined-dot": "combinedDotId",
   };
 
   if (!unit) {
@@ -155,8 +162,10 @@ async function handleCreateInvolvedUnit(options: handleCreateInvolvedUnitOptions
   const prismaNames = {
     leo: "officer",
     "ems-fd": "emsFdDeputy",
+    dot: "dotWorker",
     "combined-leo": "combinedLeoUnit",
     "combined-ems-fd": "combinedEmsFdUnit",
+    "combined-dot": "combinedDotUnit",
   } as const;
   const prismaModelName = prismaNames[type];
 

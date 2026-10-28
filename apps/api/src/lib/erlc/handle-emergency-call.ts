@@ -1,4 +1,4 @@
-import { DepartmentType, Feature, type ErlcSettings, Prisma } from "@prisma/client";
+import { CallSource, DepartmentType, Feature, type ErlcSettings, Prisma } from "@prisma/client";
 import { CALL_911_SCHEMA } from "@snailycad/schemas";
 import { prisma } from "~/lib/data/prisma";
 import { createTowCall } from "~/lib/calls/create-tow-taxi-call";
@@ -114,6 +114,7 @@ export async function handleErlcEmergencyCall(options: {
       cad,
       user: null,
       isFromDispatch: false,
+      source: CallSource.ERLC,
       socket,
       async onCreated(call911) {
         await prisma.call911Event.create({

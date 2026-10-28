@@ -3,6 +3,8 @@ import { TabsContent } from "@radix-ui/react-tabs";
 import type { GetBlacklistedWordsData } from "@snailycad/types/api";
 import { Button, FullDate } from "@snailycad/ui";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { SlashCircleFill } from "react-bootstrap-icons";
 import { Table, useAsyncTable, useTableState } from "components/shared/Table";
 import { useTemporaryItem } from "hooks/shared/useTemporaryItem";
 import useFetch from "lib/useFetch";
@@ -63,7 +65,9 @@ export function BlacklistedWordsTab() {
     <TabsContent value={SettingsTabs.BlacklistedWords}>
       <header className="mb-3 flex items-start justify-between">
         <div>
-          <h2 className="font-semibold text-2xl">{t("blacklistedWords")}</h2>
+          <SettingsTabHeader icon={<SlashCircleFill size={16} />}>
+            {t("blacklistedWords")}
+          </SettingsTabHeader>
           <p className="text-neutral-700 dark:text-gray-400">{t("blacklistedWordsDescription")}</p>
         </div>
 

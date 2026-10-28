@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { Controller } from "@tsed/di";
 import { BodyParams, Req } from "@tsed/common";
-import { ContentType, Description, Post } from "@tsed/schema";
+import { ContentType, Description, Post, Tags } from "@tsed/schema";
 import { BadRequest, NotFound, TooManyRequests, Unauthorized } from "@tsed/exceptions";
 import { z } from "zod";
 import { prisma } from "lib/data/prisma";
@@ -77,6 +77,7 @@ const WEBHOOK_BODY = z.object({
   data: z.any().optional(),
 });
 
+@Tags("Integrations")
 @Controller("/integrations/ops-phone")
 @ContentType("application/json")
 export class OpsPhoneWebhookController {

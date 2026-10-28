@@ -8,6 +8,8 @@ import type {
   EmsFdDeputy,
   LeoIncident,
   CombinedEmsFdUnit,
+  DotWorker,
+  CombinedDotUnit,
 } from "@snailycad/types";
 import { shallow } from "zustand/shallow";
 import { createWithEqualityFn } from "zustand/traditional";
@@ -27,6 +29,9 @@ interface DispatchState {
   activeDeputies: (EmsFdDeputy | CombinedEmsFdUnit)[];
   setActiveDeputies(deputies: (EmsFdDeputy | CombinedEmsFdUnit)[]): void;
 
+  activeDotUnits: (DotWorker | CombinedDotUnit)[];
+  setActiveDotUnits(units: (DotWorker | CombinedDotUnit)[]): void;
+
   activeIncidents: LeoIncident[];
   setActiveIncidents(incidents: LeoIncident[]): void;
 
@@ -44,6 +49,9 @@ export const useDispatchState = createWithEqualityFn<DispatchState>()(
 
     activeDeputies: [],
     setActiveDeputies: (deputies) => set({ activeDeputies: deputies }),
+
+    activeDotUnits: [],
+    setActiveDotUnits: (units) => set({ activeDotUnits: units }),
 
     activeIncidents: [],
     setActiveIncidents: (incidents) => set({ activeIncidents: incidents }),

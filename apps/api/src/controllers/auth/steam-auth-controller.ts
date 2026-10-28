@@ -6,7 +6,7 @@ import { URL } from "node:url";
 import { prisma } from "lib/data/prisma";
 import { Rank, type User, WhitelistStatus } from "@prisma/client";
 import { IsAuth } from "middlewares/auth/is-auth";
-import { ContentType, Description } from "@tsed/schema";
+import { ContentType, Description, Tags } from "@tsed/schema";
 import { request } from "undici";
 import { findRedirectURL } from "./discord-auth-controller";
 import { getSessionUser } from "lib/auth/getSessionUser";
@@ -20,6 +20,7 @@ const callbackUrl = makeCallbackURL(getAPIUrl());
 const STEAM_API_KEY = process.env.STEAM_API_KEY;
 export const STEAM_API_URL = "https://api.steampowered.com";
 
+@Tags("Authentication")
 @Controller("/auth/steam")
 @ContentType("application/json")
 @IsFeatureEnabled({ feature: [Feature.STEAM_OAUTH] })
@@ -45,6 +46,16 @@ export class SteamOAuthController {
 
     const rawSteamId = identity?.replace("https://steamcommunity.com/openid/id/", "");
     if (!rawSteamId) {
+      return res.redirect(`${redirectURL}/auth/login?error=invalidCode`);
+    }
+
+    // OpenID 2.0 positive assertions aren't self-verifying: a client can submit any
+    // openid.identity it wants without ever talking to Steam. We must play back the exact
+    // parameters Steam sent to its check_authentication endpoint and get `is_valid:true`
+    // before trusting the claimed identity - otherwise anyone can log in/register/link as
+    // any Steam ID just by calling this callback directly (no Steam interaction required).
+    const isValidAssertion = await verifySteamOpenIdAssertion(query);
+    if (!isValidAssertion) {
       return res.redirect(`${redirectURL}/auth/login?error=invalidCode`);
     }
 
@@ -184,6 +195,39 @@ interface SteamData {
   steamid: string;
   personaname: string;
   profileurl: string;
+}
+
+const STEAM_OPENID_PROVIDER_URL = "https://steamcommunity.com/openid/login";
+
+/**
+ * OpenID 2.0 positive assertions are not self-verifying: the relying party must replay the
+ * exact parameters the provider sent back to it, with `openid.mode` switched to
+ * "check_authentication", and trust the identity only if the provider confirms `is_valid:true`.
+ * Skipping this lets anyone claim to be any Steam ID without ever authenticating with Steam.
+ */
+async function verifySteamOpenIdAssertion(query: Record<string, unknown>): Promise<boolean> {
+  if (query["openid.ns"] !== "http://specs.openid.net/auth/2.0") {
+    return false;
+  }
+
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (key.startsWith("openid.") && typeof value === "string") {
+      params.set(key, value);
+    }
+  }
+  params.set("openid.mode", "check_authentication");
+
+  const isValid = await request(STEAM_OPENID_PROVIDER_URL, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  })
+    .then((v) => v.body.text())
+    .then((body) => /(^|\n)is_valid\s*:\s*true(\r?\n|$)/.test(body))
+    .catch(() => false);
+
+  return isValid;
 }
 
 async function getSteamData(steamId: string): Promise<SteamData | null> {

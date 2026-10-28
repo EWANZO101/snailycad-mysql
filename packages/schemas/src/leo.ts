@@ -173,3 +173,6 @@ export const LEO_PANIC_BUTTON_SCHEMA = PANIC_BUTTON_SCHEMA.extend({
 export const EMS_FD_PANIC_BUTTON_SCHEMA = PANIC_BUTTON_SCHEMA.extend({
   deputyId: z.string().min(2),
 });
+export const DOT_PANIC_BUTTON_SCHEMA = PANIC_BUTTON_SCHEMA.extend({
+  dotWorkerId: z.string().min(2),
+});

@@ -1,6 +1,8 @@
 import type {
   CombinedEmsFdUnit,
   CombinedLeoUnit,
+  CombinedDotUnit,
+  DotWorker,
   EmsFdDeputy,
   Officer,
   User,
@@ -70,7 +72,7 @@ export type PlayerDataEventPayload = PlayerDataEvent["payload"][number] & {
   identifier: string;
 };
 export interface MapPlayer extends User, PlayerDataEventPayload {
-  unit: EmsFdDeputy | Officer | CombinedLeoUnit | CombinedEmsFdUnit | null;
+  unit: EmsFdDeputy | Officer | CombinedLeoUnit | CombinedEmsFdUnit | DotWorker | CombinedDotUnit | null;
   convertedSteamId: string | null;
   discordId: string | null;
   ref: Marker | null;

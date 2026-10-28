@@ -56,18 +56,21 @@ export function isDispatcher(user: RadioUser) {
 export function hasRadioAccess(user: RadioUser) {
   return hasPermission({
     userToCheck: asPartialUser(user),
-    permissionsToCheck: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissionsToCheck: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   });
 }
 
-/** department ids of all the user's LEO and EMS-FD units */
+/** department ids of all the user's LEO, EMS-FD and DOT units */
 async function userDepartments(userId: string) {
-  const [officers, deputies] = await Promise.all([
+  const [officers, deputies, dotWorkers] = await Promise.all([
     prisma.officer.findMany({ where: { userId }, select: { departmentId: true } }),
     prisma.emsFdDeputy.findMany({ where: { userId }, select: { departmentId: true } }),
+    prisma.dotWorker.findMany({ where: { userId }, select: { departmentId: true } }),
   ]);
   return new Set(
-    [...officers, ...deputies].map((unit) => unit.departmentId).filter((id): id is string => !!id),
+    [...officers, ...deputies, ...dotWorkers]
+      .map((unit) => unit.departmentId)
+      .filter((id): id is string => !!id),
   );
 }
 

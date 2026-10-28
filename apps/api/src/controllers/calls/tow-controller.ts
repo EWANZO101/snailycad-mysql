@@ -7,7 +7,7 @@ import {
   Context,
   UseBeforeEach,
 } from "@tsed/common";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { TOW_SCHEMA, UPDATE_TOW_SCHEMA } from "@snailycad/schemas";
 import { NotFound } from "@tsed/exceptions";
@@ -38,6 +38,7 @@ import { notifyOpsPhoneTowTaxi } from "lib/ops-phone/back-channel";
 
 export { towIncludes };
 
+@Tags("911 Calls")
 @Controller("/tow")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

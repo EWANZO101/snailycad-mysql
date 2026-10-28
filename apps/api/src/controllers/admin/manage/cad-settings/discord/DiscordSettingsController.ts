@@ -1,6 +1,6 @@
 import process from "node:process";
 import { BodyParams, Context, Controller, UseBeforeEach } from "@tsed/common";
-import { ContentType, Get, Post } from "@tsed/schema";
+import { ContentType, Get, Post, Tags } from "@tsed/schema";
 import { type RESTGetAPIGuildRolesResult, Routes } from "discord-api-types/v10";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { prisma } from "lib/data/prisma";
@@ -19,6 +19,7 @@ import { parseDiscordGuildIds } from "lib/discord/utils";
 const guildId = process.env.DISCORD_SERVER_ID;
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/cad-settings/discord/roles")
 @ContentType("application/json")
 export class DiscordSettingsController {

@@ -1,5 +1,5 @@
 import { QueryParams, Controller, UseBeforeEach, UseBefore, UseAfter } from "@tsed/common";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { LEO_PANIC_BUTTON_SCHEMA, SWITCH_CALLSIGN_SCHEMA } from "@snailycad/schemas";
 import { BodyParams, Context, PathParams } from "@tsed/platform-params";
 import { BadRequest, NotFound } from "@tsed/exceptions";
@@ -26,6 +26,7 @@ import { HandleInactivity } from "middlewares/handle-inactivity";
 import { userProperties } from "~/lib/auth/getSessionUser";
 import { recordsLogsInclude } from "../admin/manage/citizens/records-logs-controller";
 
+@Tags("Law Enforcement")
 @Controller("/leo")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -38,7 +39,7 @@ export class LeoController {
   @UseBefore(ActiveOfficer)
   @Get("/active-officer")
   @UsePermissions({
-    permissions: [Permissions.Leo, Permissions.Dispatch, Permissions.EmsFd],
+    permissions: [Permissions.Leo, Permissions.Dispatch, Permissions.EmsFd, Permissions.Dot],
   })
   async getActiveOfficer(
     @Context("activeOfficer") activeOfficer: CombinedLeoUnit | Officer,
@@ -50,7 +51,7 @@ export class LeoController {
   @Description("Get all the active officers")
   @UseAfter(HandleInactivity)
   @UsePermissions({
-    permissions: [Permissions.Leo, Permissions.Dispatch, Permissions.EmsFd],
+    permissions: [Permissions.Leo, Permissions.Dispatch, Permissions.EmsFd, Permissions.Dot],
   })
   async getActiveOfficers(
     @Context("user") user: User,
@@ -281,14 +282,14 @@ export class LeoController {
   @Get("/qualifications/:unitId")
   @Description("Get a unit's awards and qualifications")
   @UsePermissions({
-    permissions: [Permissions.Leo, Permissions.Dispatch, Permissions.EmsFd],
+    permissions: [Permissions.Leo, Permissions.Dispatch, Permissions.EmsFd, Permissions.Dot],
   })
   async getUnitQualifications(
     @PathParams("unitId") unitId: string,
   ): Promise<APITypes.GetUnitQualificationsByUnitIdData> {
     const { type, unit } = await findUnit(unitId);
 
-    if (type === "combined-leo" || type === "combined-ems-fd") {
+    if (type === "combined-leo" || type === "combined-ems-fd" || type === "combined-dot") {
       throw new BadRequest("combinedNotSupported");
     }
 
@@ -299,6 +300,7 @@ export class LeoController {
     const types = {
       leo: "officerId",
       "ems-fd": "emsFdDeputyId",
+      dot: "dotWorkerId",
     };
 
     const data = await prisma.unitQualification.findMany({

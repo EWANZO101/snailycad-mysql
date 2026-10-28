@@ -1,6 +1,6 @@
 import { Controller } from "@tsed/di";
 import { BodyParams, Req } from "@tsed/common";
-import { ContentType, Description, Post } from "@tsed/schema";
+import { ContentType, Description, Post, Tags } from "@tsed/schema";
 import { BadRequest, NotFound, TooManyRequests, Unauthorized } from "@tsed/exceptions";
 import { Feature, Rank, WhitelistStatus } from "@prisma/client";
 import { hashSync, genSaltSync } from "bcrypt";
@@ -95,6 +95,7 @@ const USER_SELECT = {
   User2FA: { select: { id: true } },
 } as const;
 
+@Tags("Account Recovery")
 @Controller("/recovery")
 @ContentType("application/json")
 export class RecoveryController {

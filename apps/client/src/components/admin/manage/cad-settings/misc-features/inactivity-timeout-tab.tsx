@@ -3,6 +3,8 @@ import type { MiscCadSettings } from "@snailycad/types";
 import type { PutCADMiscSettingsData } from "@snailycad/types/api";
 import { Button, Input, Loader } from "@snailycad/ui";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { ClockFill } from "react-bootstrap-icons";
 import { SettingsFormField } from "components/form/SettingsFormField";
 import { useAuth } from "context/AuthContext";
 import { Form, Formik } from "formik";
@@ -49,7 +51,9 @@ export function InactivityTimeoutTab() {
 
   return (
     <TabsContent value={SettingsTabs.InactivityTimeouts}>
-      <h2 className="font-semibold text-2xl mb-3">{t("inactivityTimeouts")}</h2>
+      <SettingsTabHeader icon={<ClockFill size={16} />}>
+        {t("inactivityTimeouts")}
+      </SettingsTabHeader>
 
       <Formik initialValues={initialValues} onSubmit={handleSubmit}>
         {({ errors, values, handleChange }) => (

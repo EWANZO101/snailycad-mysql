@@ -2,7 +2,7 @@ import { assertNotDemoAccount } from "lib/demo/demo-mode";
 import { Context, Res, BodyParams, QueryParams } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { UseBefore } from "@tsed/platform-middlewares";
-import { ContentType, Delete, Description, Patch, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Patch, Post, Put, Tags } from "@tsed/schema";
 import { Cookie } from "@snailycad/config";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -31,7 +31,9 @@ import type * as APITypes from "@snailycad/types/api";
 import { User } from "@snailycad/types";
 import { getActiveOfficer } from "~/lib/leo/activeOfficer";
 import { getActiveDeputy } from "~/lib/get-active-ems-fd-deputy";
+import { getActiveDotWorker } from "~/lib/get-active-dot-worker";
 
+@Tags("Authentication")
 @Controller("/user")
 @UseBefore(IsAuth)
 @ContentType("application/json")
@@ -52,14 +54,16 @@ export class UserController {
     const cadWithoutDiscordRoles = { ...cad, discordRoles: undefined };
 
     if (includeActiveUnit) {
-      const [officer, deputy] = await Promise.all([
+      const [officer, deputy, dotWorker] = await Promise.all([
         getActiveOfficer({ user, ctx }).catch(() => null),
         getActiveDeputy({ user, ctx }).catch(() => null),
+        getActiveDotWorker({ user, ctx }).catch(() => null),
       ]);
 
-      const unit = (officer ?? deputy ?? null) as
+      const unit = (officer ?? deputy ?? dotWorker ?? null) as
         | APITypes.GetActiveOfficerData
         | APITypes.GetEmsFdActiveDeputy
+        | APITypes.GetDotActiveWorker
         | null;
 
       return { ...user, unit, cad: cadWithoutDiscordRoles };
@@ -238,6 +242,35 @@ export class UserController {
       ]);
 
       await this.socket.emitUpdateDeputyStatus();
+    }
+
+    const dotWorker = await prisma.dotWorker.findFirst({
+      where: {
+        userId,
+        status: { NOT: { shouldDo: ShouldDoType.SET_OFF_DUTY } },
+      },
+    });
+
+    if (dotWorker) {
+      await handleStartEndOfficerLog({
+        unit: dotWorker,
+        shouldDo: "SET_OFF_DUTY",
+        socket: this.socket,
+        userId,
+        type: "dot",
+      });
+
+      await prisma.$transaction([
+        prisma.dotWorker.update({
+          where: { id: dotWorker.id },
+          data: { statusId: null, activeCallId: null },
+        }),
+        prisma.dispatchChat.deleteMany({
+          where: { unitId: dotWorker.id },
+        }),
+      ]);
+
+      await this.socket.emitUpdateDotStatus();
     }
 
     return true;

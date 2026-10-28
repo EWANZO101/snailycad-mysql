@@ -16,9 +16,10 @@ type ButtonProps = Pick<
 interface Props extends ButtonProps {
   button: ModalButton;
   unit?: ActiveOfficer | EmsFdDeputy | null;
+  icon?: React.ReactNode;
 }
 
-export function ModalButton({ button: buttonFn, unit, ...buttonProps }: Props) {
+export function ModalButton({ button: buttonFn, unit, icon, ...buttonProps }: Props) {
   const t = useTranslations();
   const features = useFeatureEnabled();
   const { hasActiveDispatchers } = useActiveDispatchers();
@@ -43,8 +44,9 @@ export function ModalButton({ button: buttonFn, unit, ...buttonProps }: Props) {
       onPress={() => modalState.openModal(button.modalId)}
       type="button"
       {...buttonProps}
-      className="text-base"
+      className={icon ? "text-base flex items-center gap-2" : "text-base"}
     >
+      {icon}
       {t(button.nameKey.join("."))}
     </Button>
   );

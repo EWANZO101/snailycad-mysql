@@ -5,16 +5,16 @@ import { InfoCircleFill } from "react-bootstrap-icons";
 import { useActiveUnitsState } from "state/active-unit-state";
 
 interface Props {
-  type: "leo" | "ems-fd";
+  type: "leo" | "ems-fd" | "dot";
   isLoading: boolean;
   totalCount: number;
 }
 
 export function ActiveUnitsSearch({ totalCount, isLoading, type }: Props) {
   const t = useTranslations("Leo");
-  const setSearchType = type === "leo" ? "leoSearch" : "emsSearch";
-  const showFiltersType: "showLeoFilters" | "showEmsFilters" =
-    type === "leo" ? "showLeoFilters" : "showEmsFilters";
+  const setSearchType = type === "leo" ? "leoSearch" : type === "dot" ? "dotSearch" : "emsSearch";
+  const showFiltersType: "showLeoFilters" | "showEmsFilters" | "showDotFilters" =
+    type === "leo" ? "showLeoFilters" : type === "dot" ? "showDotFilters" : "showEmsFilters";
 
   const common = useTranslations("Common");
   const {

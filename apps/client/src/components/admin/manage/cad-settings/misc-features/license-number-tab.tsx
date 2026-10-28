@@ -2,6 +2,8 @@ import { TabsContent } from "@radix-ui/react-tabs";
 import type { PutCADMiscSettingsData } from "@snailycad/types/api";
 import { Button, Input, Loader } from "@snailycad/ui";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { CardText } from "react-bootstrap-icons";
 import { SettingsFormField } from "components/form/SettingsFormField";
 import { useAuth } from "context/AuthContext";
 import { Form, Formik } from "formik";
@@ -49,7 +51,9 @@ export function LicenseNumbersTab() {
   return (
     <TabsContent value={SettingsTabs.CitizenLicensePoints}>
       <header className="mb-3">
-        <h2 className="font-semibold text-2xl">{t("citizenLicenseNumbers")}</h2>
+        <SettingsTabHeader icon={<CardText size={18} />}>
+          {t("citizenLicenseNumbers")}
+        </SettingsTabHeader>
         <p className="text-neutral-700 dark:text-gray-400">
           {t("citizenLicenseNumbersDescription")}
         </p>

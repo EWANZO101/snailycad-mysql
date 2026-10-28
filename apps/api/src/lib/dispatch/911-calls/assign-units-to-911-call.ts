@@ -21,7 +21,7 @@ interface Options {
 export async function assignUnitsTo911Call(options: Options) {
   const disconnectConnectArr = manyToManyHelper(
     options.call.assignedUnits.map((u) =>
-      String(u.officerId || u.emsFdDeputyId || u.combinedLeoId),
+      String(u.officerId || u.emsFdDeputyId || u.dotWorkerId || u.combinedLeoId),
     ),
     options.unitIds.map((v) => v.id),
     { showUpsert: false },
@@ -83,6 +83,7 @@ export async function assignUnitsTo911Call(options: Options) {
   if (options.socket) {
     await options.socket.emitUpdateOfficerStatus();
     await options.socket.emitUpdateDeputyStatus();
+    await options.socket.emitUpdateDotStatus();
   }
 }
 
@@ -92,8 +93,10 @@ export async function handleDeleteAssignedUnit(
   const prismaNames = {
     officerId: "officer",
     emsFdDeputyId: "emsFdDeputy",
+    dotWorkerId: "dotWorker",
     combinedLeoId: "combinedLeoUnit",
     combinedEmsFdId: "combinedEmsFdUnit",
+    combinedDotId: "combinedDotUnit",
   } as const;
 
   const assignedUnit = await prisma.assignedUnit.findFirst({
@@ -102,8 +105,10 @@ export async function handleDeleteAssignedUnit(
       OR: [
         { officerId: options.unitId },
         { emsFdDeputyId: options.unitId },
+        { dotWorkerId: options.unitId },
         { combinedLeoId: options.unitId },
         { combinedEmsFdId: options.unitId },
+        { combinedDotId: options.unitId },
       ],
     },
     include: assignedUnitsInclude.include,
@@ -149,8 +154,10 @@ async function handleCreateAssignedUnit(options: HandleCreateAssignedUnitOptions
   const types = {
     leo: "officerId",
     "ems-fd": "emsFdDeputyId",
+    dot: "dotWorkerId",
     "combined-leo": "combinedLeoId",
     "combined-ems-fd": "combinedEmsFdId",
+    "combined-dot": "combinedDotId",
   };
 
   if (!unit) {
@@ -172,8 +179,10 @@ async function handleCreateAssignedUnit(options: HandleCreateAssignedUnitOptions
   const prismaNames = {
     leo: "officer",
     "ems-fd": "emsFdDeputy",
+    dot: "dotWorker",
     "combined-leo": "combinedLeoUnit",
     "combined-ems-fd": "combinedEmsFdUnit",
+    "combined-dot": "combinedDotUnit",
   } as const;
   const prismaModelName = prismaNames[type];
 

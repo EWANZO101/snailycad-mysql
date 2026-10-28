@@ -10,6 +10,8 @@ import { toastMessage } from "lib/toastMessage";
 import type { GetCADDiscordWebhooksData, PostCADDiscordWebhooksData } from "@snailycad/types/api";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { Link45deg } from "react-bootstrap-icons";
 import { Select } from "components/form/Select";
 import { SettingsFormField } from "components/form/SettingsFormField";
 
@@ -110,7 +112,9 @@ export function DiscordWebhooksTab() {
     <TabsContent value={SettingsTabs.DiscordWebhooks}>
       <header>
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">{t("discordWebhooks")}</h2>
+          <SettingsTabHeader icon={<Link45deg size={18} />}>
+            {t("discordWebhooks")}
+          </SettingsTabHeader>
 
           <Button onPress={refreshChannels} className="h-fit min-w-fit">
             {t("refreshChannels")}

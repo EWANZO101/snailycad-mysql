@@ -1,4 +1,4 @@
-import { DepartmentType, Feature, type OpsPhoneSettings, Prisma } from "@prisma/client";
+import { CallSource, DepartmentType, Feature, type OpsPhoneSettings, Prisma } from "@prisma/client";
 import { CALL_911_SCHEMA } from "@snailycad/schemas";
 import { z } from "zod";
 import { prisma } from "~/lib/data/prisma";
@@ -111,6 +111,7 @@ export async function handleOpsPhoneServiceRequest(options: {
         cad,
         user: null,
         isFromDispatch: false,
+        source: CallSource.OPS_PHONE,
         socket,
         async onCreated(call) {
           await prisma.call911Event.create({

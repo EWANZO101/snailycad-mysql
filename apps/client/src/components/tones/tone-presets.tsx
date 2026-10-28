@@ -5,12 +5,14 @@ import {
   ActiveToneType,
   type CombinedEmsFdUnit,
   type CombinedLeoUnit,
+  type CombinedDotUnit,
   type DepartmentValue,
   type EmsFdDeputy,
   type Officer,
+  type DotWorker,
 } from "@snailycad/types";
 import { Button, Loader, SelectField, TextField } from "@snailycad/ui";
-import { isUnitCombined, isUnitCombinedEmsFd, isUnitOfficer } from "@snailycad/utils";
+import { isUnitCombined, isUnitCombinedEmsFd, isUnitCombinedDot, isUnitOfficer } from "@snailycad/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "use-intl";
 import { useValues } from "context/ValuesContext";
@@ -33,7 +35,7 @@ export interface TonePreset {
   position: number;
 }
 
-type ToneTarget = "ALL" | "LEO" | "EMS_FD" | "DEPARTMENT" | "UNIT" | "CALL";
+type ToneTarget = "ALL" | "LEO" | "EMS_FD" | "DOT" | "DEPARTMENT" | "UNIT" | "CALL";
 
 interface PlayToneEvent {
   tone: { id: string; name: string; sound: string };
@@ -44,7 +46,7 @@ interface PlayToneEvent {
   sentBy: string;
 }
 
-type ActiveUnit = Officer | EmsFdDeputy | CombinedLeoUnit | CombinedEmsFdUnit;
+type ActiveUnit = Officer | EmsFdDeputy | DotWorker | CombinedLeoUnit | CombinedEmsFdUnit | CombinedDotUnit;
 
 export function useTonePresets(enabled = true) {
   const { TONES } = useFeatureEnabled();
@@ -63,6 +65,7 @@ export function useTonePresets(enabled = true) {
 function getUnitDepartmentIds(unit: ActiveUnit) {
   if (isUnitCombined(unit)) return unit.officers.map((officer) => officer.departmentId);
   if (isUnitCombinedEmsFd(unit)) return unit.deputies.map((deputy) => deputy.departmentId);
+  if (isUnitCombinedDot(unit)) return unit.workers.map((worker) => worker.departmentId);
   return [unit.departmentId];
 }
 
@@ -74,6 +77,8 @@ function isToneForUnit(event: PlayToneEvent, unit: ActiveUnit, type: ActiveToneT
       return type === ActiveToneType.LEO;
     case "EMS_FD":
       return type === ActiveToneType.EMS_FD;
+    case "DOT":
+      return type === ActiveToneType.SHARED;
     case "DEPARTMENT":
       return getUnitDepartmentIds(unit).includes(event.departmentId);
     case "UNIT":

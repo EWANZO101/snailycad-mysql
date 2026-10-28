@@ -46,7 +46,7 @@ export function AdminLayout({ children, className, permissions }: Props) {
         <div className="flex">
           <AdminSidebar />
 
-          <div className="ml-6 px-4 py-5 admin-dashboard-responsive">
+          <div className="ml-6 px-4 py-5 admin-dashboard-responsive admin-area">
             <Component enabled={roleplayStopped} audio={audio} />
             {showError ? <SocketErrorComponent /> : null}
             {cad?.version && isNewVersionAvailable ? (

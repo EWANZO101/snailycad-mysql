@@ -21,6 +21,8 @@ import { toastMessage } from "lib/toastMessage";
 import type { PutCADSettingsData } from "@snailycad/types/api";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { Gear } from "react-bootstrap-icons";
 
 import timeZones from "./timezones.json";
 
@@ -129,7 +131,7 @@ export function GeneralSettingsTab() {
 
   return (
     <TabsContent value={SettingsTabs.GeneralSettings}>
-      <h2 className="text-2xl font-semibold">{t("generalSettings")}</h2>
+      <SettingsTabHeader icon={<Gear size={18} />}>{t("generalSettings")}</SettingsTabHeader>
 
       <Formik validate={validate} onSubmit={onSubmit} initialValues={INITIAL_VALUES}>
         {({ handleSubmit, handleChange, setFieldValue, values, errors }) => (

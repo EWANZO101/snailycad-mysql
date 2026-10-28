@@ -1,6 +1,6 @@
 import { Controller, UseBeforeEach } from "@tsed/common";
 import { BodyParams, PathParams } from "@tsed/platform-params";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { NotFound } from "@tsed/exceptions";
 import { RadioTransport } from "@prisma/client";
 import { z } from "zod";
@@ -29,6 +29,7 @@ const channelInclude = {
   departments: { include: { value: true } },
 } as const;
 
+@Tags("Admin: Manage")
 @Controller("/admin/manage/cad-settings/radio")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

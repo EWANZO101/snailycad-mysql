@@ -6,7 +6,7 @@ import {
   type PlatformMulterFile,
   UseAfter,
 } from "@tsed/common";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import {
   DOCTOR_VISIT_SCHEMA,
   EMS_FD_PANIC_BUTTON_SCHEMA,
@@ -48,6 +48,7 @@ import { unitProperties, combinedEmsFdUnitProperties } from "utils/leo/includes"
 import { sendDiscordWebhook } from "~/lib/discord/webhooks";
 import { createWhere } from "../leo/create-where-obj";
 
+@Tags("EMS & Fire")
 @Controller("/ems-fd")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -195,7 +196,7 @@ export class EmsFdController {
   @Use(ActiveDeputy)
   @Get("/active-deputy")
   @UsePermissions({
-    permissions: [Permissions.EmsFd, Permissions.Leo, Permissions.Dispatch],
+    permissions: [Permissions.EmsFd, Permissions.Dot, Permissions.Leo, Permissions.Dispatch],
   })
   async getActiveDeputy(
     @Context("activeDeputy") activeDeputy: EmsFdDeputy,
@@ -206,7 +207,7 @@ export class EmsFdController {
   @Get("/active-deputies")
   @Description("Get all the active EMS/FD deputies")
   @UsePermissions({
-    permissions: [Permissions.EmsFd, Permissions.Leo, Permissions.Dispatch],
+    permissions: [Permissions.EmsFd, Permissions.Dot, Permissions.Leo, Permissions.Dispatch],
   })
   @UseAfter(HandleInactivity)
   async getActiveDeputies(

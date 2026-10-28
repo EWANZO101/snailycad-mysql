@@ -137,7 +137,12 @@ export interface PostDispatchDispatchersStateData {
  * @method PUT
  * @route /dispatch/radio-channel
  */
-export type PutDispatchRadioChannelData = Types.Officer | Types.EmsFdDeputy | Types.CombinedLeoUnit;
+export type PutDispatchRadioChannelData =
+  | Types.Officer
+  | Types.EmsFdDeputy
+  | Types.DotWorker
+  | Types.CombinedLeoUnit
+  | Types.CombinedDotUnit;
 
 /**
  * @method GET
@@ -161,7 +166,13 @@ export type DeleteDispatchTonesData = boolean;
  * @method PUT
  * @route /dispatch/status/:unitId
  */
-export type PutDispatchStatusByUnitId = Types.Officer | Types.EmsFdDeputy | Types.CombinedLeoUnit;
+export type PutDispatchStatusByUnitId =
+  | Types.Officer
+  | Types.EmsFdDeputy
+  | Types.DotWorker
+  | Types.CombinedLeoUnit
+  | Types.CombinedEmsFdUnit
+  | Types.CombinedDotUnit;
 
 /**
  * @method POST
@@ -177,6 +188,12 @@ export type PostDispatchStatusMergeDeputies = Types.CombinedEmsFdUnit;
 
 /**
  * @method POST
+ * @route /dispatch/status/merge/dot
+ */
+export type PostDispatchStatusMergeDotWorkers = Types.CombinedDotUnit;
+
+/**
+ * @method POST
  * @route /dispatch/status/unmerge/:id
  */
 export type PostDispatchStatusUnmergeUnitById = boolean;
@@ -186,4 +203,6 @@ export type PostDispatchUnitsSearchData = (
   | Types.CombinedLeoUnit
   | Types.EmsFdDeputy
   | Types.CombinedEmsFdUnit
+  | Types.DotWorker
+  | Types.CombinedDotUnit
 )[];

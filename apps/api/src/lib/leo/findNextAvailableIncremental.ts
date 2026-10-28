@@ -2,15 +2,17 @@ import { prisma } from "lib/data/prisma";
 import { findFirstSmallestInArray } from "utils/findFirstSmallestInArray";
 
 interface Options {
-  type: "leo" | "ems-fd" | "combined-leo" | "combined-ems-fd";
+  type: "leo" | "ems-fd" | "dot" | "combined-leo" | "combined-ems-fd" | "combined-dot";
 }
 
 export async function findNextAvailableIncremental(options: Options) {
   const prismaNames = {
     leo: "officer",
     "ems-fd": "emsFdDeputy",
+    dot: "dotWorker",
     "combined-leo": "combinedLeoUnit",
     "combined-ems-fd": "combinedEmsFdUnit",
+    "combined-dot": "combinedDotUnit",
   };
   const t = prismaNames[options.type];
 

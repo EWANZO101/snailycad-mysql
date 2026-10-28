@@ -2,6 +2,7 @@ import {
   type cad,
   type Call911,
   type MiscCadSettings,
+  CallSource,
   DiscordWebhookType,
   Feature,
   WhitelistStatus,
@@ -28,6 +29,9 @@ interface Create911CallOptions {
   /** the user creating the call. `null` for calls created by an integration (e.g. ops-phone) */
   user: { id: string; locale?: string | null } | null;
   isFromDispatch: boolean;
+  /** which integration (if any) actually created this call - shown as a badge/filter in the
+   *  calls table. Defaults to MANUAL for ordinary dispatcher-created calls. */
+  source?: CallSource;
   /** runs right after the call row exists, before the socket/webhooks fire (e.g. add an event) */
   onCreated?(call: Call911): Promise<void>;
 }
@@ -63,6 +67,7 @@ export async function create911Call(options: Create911CallOptions) {
       userId: user?.id || undefined,
       situationCodeId: data.situationCode ?? null,
       viaDispatch: options.isFromDispatch,
+      source: options.source ?? CallSource.MANUAL,
       typeId: data.type,
       extraFields: data.extraFields || undefined,
       status: callStatus,

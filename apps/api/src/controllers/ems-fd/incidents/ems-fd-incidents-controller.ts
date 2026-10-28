@@ -1,5 +1,5 @@
 import { Controller, UseBefore, UseBeforeEach } from "@tsed/common";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { NotFound, InternalServerError, BadRequest } from "@tsed/exceptions";
 import { QueryParams, BodyParams, Context, PathParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
@@ -57,6 +57,7 @@ function reportFields(data: z.infer<typeof EMS_FD_INCIDENT_SCHEMA>) {
   };
 }
 
+@Tags("EMS & Fire")
 @Controller("/ems-fd/incidents")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -236,7 +237,7 @@ export class IncidentController {
 
   @Post("/:type/:incidentId")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async assignToIncident(
     @PathParams("type") assignType: "assign" | "unassign",
@@ -264,8 +265,10 @@ export class IncidentController {
     const types = {
       "combined-leo": "combinedLeoId",
       "combined-ems-fd": "combinedEmsFdId",
+      "combined-dot": "combinedDotId",
       leo: "officerId",
       "ems-fd": "emsFdDeputyId",
+      dot: "dotWorkerId",
     };
 
     const existing = await prisma.incidentInvolvedUnit.findFirst({
@@ -299,8 +302,10 @@ export class IncidentController {
     const prismaNames = {
       leo: "officer",
       "ems-fd": "emsFdDeputy",
+      dot: "dotWorker",
       "combined-leo": "combinedLeoUnit",
       "combined-ems-fd": "combinedEmsFdUnit",
+      "combined-dot": "combinedDotUnit",
     } as const;
     const prismaName = prismaNames[type];
 

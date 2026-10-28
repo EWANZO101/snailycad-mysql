@@ -1,10 +1,12 @@
-import type { CombinedLeoUnit, EmsFdDeputy, Officer } from "@prisma/client";
+import type { CombinedLeoUnit, CombinedDotUnit, DotWorker, EmsFdDeputy, Officer } from "@prisma/client";
 import { prisma } from "lib/data/prisma";
 
 interface Options {
   incidentId: string;
   type: "assign" | "unassign";
-  unit: Pick<EmsFdDeputy | Officer | CombinedLeoUnit, "id"> & { activeIncidentId?: string | null };
+  unit: Pick<EmsFdDeputy | Officer | DotWorker | CombinedLeoUnit | CombinedDotUnit, "id"> & {
+    activeIncidentId?: string | null;
+  };
   force?: boolean;
 }
 
@@ -36,6 +38,8 @@ export async function getNextIncidentId(options: Options) {
           { emsFdDeputyId: options.unit.id },
           { combinedLeoId: options.unit.id },
           { combinedEmsFdId: options.unit.id },
+          { dotWorkerId: options.unit.id },
+          { combinedDotId: options.unit.id },
         ],
       },
     });

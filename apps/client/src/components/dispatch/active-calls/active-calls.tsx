@@ -24,6 +24,8 @@ import { useCall911State } from "state/dispatch/call-911-state";
 import { useActiveCalls } from "hooks/realtime/use-active-calls";
 import { Manage911CallModal } from "./modals/manage-911-call-modal";
 import { DispatchCallTowModal } from "./modals/call-tow-modal";
+import { CallSourceTabs } from "./call-source-tabs";
+import { CallSourceBadge } from "./call-source-badge";
 
 interface Props {
   initialData: Get911CallsData;
@@ -136,6 +138,7 @@ function Active911Calls({ initialData }: Props) {
       {audio.addedToCallAudio}
       {audio.incomingCallAudio}
       <ActiveCallsHeader asyncTable={asyncTable} calls={calls} />
+      <CallSourceTabs asyncTable={asyncTable} />
 
       <div className="px-4">
         {!hasCalls ? (
@@ -158,6 +161,7 @@ function Active911Calls({ initialData }: Props) {
                   ),
                 },
                 caseNumber: `#${call.caseNumber}`,
+                source: <CallSourceBadge source={call.source} />,
                 type: call.type?.value.value ?? common("none"),
                 priority: call.type?.priority ?? common("none"),
                 status: <Status fallback="—">{call.status}</Status>,
@@ -187,6 +191,7 @@ function Active911Calls({ initialData }: Props) {
             })}
             columns={[
               { header: "#", accessorKey: "caseNumber" },
+              { header: t("source"), accessorKey: "source" },
               isDispatch ? { header: t("status"), accessorKey: "status" } : null,
               { header: t("caller"), accessorKey: "name" },
               { header: common("type"), accessorKey: "type" },

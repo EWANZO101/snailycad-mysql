@@ -9,6 +9,8 @@ import { cleanValues } from "./other-misc-tab";
 import { toastMessage } from "lib/toastMessage";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { FileEarmarkText } from "react-bootstrap-icons";
 import type { MiscCadSettings } from "@snailycad/types";
 
 export const CALLSIGN_TEMPLATE_VARIABLES = (
@@ -80,7 +82,9 @@ export function TemplateTab() {
 
   return (
     <TabsContent value={SettingsTabs.Templates}>
-      <h3 className="font-semibold text-2xl mb-3">{t("templateSection")}</h3>
+      <SettingsTabHeader icon={<FileEarmarkText size={16} />}>
+        {t("templateSection")}
+      </SettingsTabHeader>
 
       <Formik initialValues={initialValues} onSubmit={handleSubmit}>
         {({ errors, values, handleChange }) => (

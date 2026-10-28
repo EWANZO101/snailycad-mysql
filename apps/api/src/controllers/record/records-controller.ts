@@ -1,4 +1,4 @@
-import { ContentType, Delete, Description, Get, Header, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Header, Post, Put, Tags } from "@tsed/schema";
 import {
   CREATE_TICKET_SCHEMA,
   CREATE_WARRANT_SCHEMA,
@@ -64,6 +64,7 @@ export const assignedOfficersInclude = {
 };
 
 @UseBeforeEach(IsAuth)
+@Tags("Records")
 @Controller("/records")
 @ContentType("application/json")
 export class RecordsController {

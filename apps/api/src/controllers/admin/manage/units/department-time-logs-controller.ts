@@ -2,20 +2,21 @@ import { Prisma } from "@prisma/client";
 import { QueryParams } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
-import { ContentType, Description, Get } from "@tsed/schema";
+import { ContentType, Description, Get, Tags } from "@tsed/schema";
 import { createWhere } from "controllers/leo/create-where-obj";
 import differenceInHours from "date-fns/differenceInHours";
 import type * as APITypes from "@snailycad/types/api";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { UsePermissions, Permissions } from "middlewares/use-permissions";
-import { _leoProperties, unitProperties } from "utils/leo/includes";
+import { _leoProperties, unitProperties, dotWorkerProperties } from "utils/leo/includes";
 import { getFirstOrderBy } from "~/utils/order-by";
 
 export const ACCEPT_DECLINE_TYPES = ["ACCEPT", "DECLINE"] as const;
 export type AcceptDeclineType = (typeof ACCEPT_DECLINE_TYPES)[number];
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/units/department-time-logs")
 @ContentType("application/json")
 export class AdminManageUnitsController {
@@ -55,11 +56,16 @@ export class AdminManageUnitsController {
       where.OR = [
         { officer: createWhere({ query, pendingOnly: false, type: "OFFICER" }) },
         { emsFdDeputy: createWhere({ query, pendingOnly: false, type: "DEPUTY" }) },
+        { dotWorker: createWhere({ query, pendingOnly: false, type: "DOT_WORKER" }) },
       ];
     }
 
     const officerLogs = await prisma.officerLog.findMany({
-      include: { officer: { include: _leoProperties }, emsFdDeputy: { include: unitProperties } },
+      include: {
+        officer: { include: _leoProperties },
+        emsFdDeputy: { include: unitProperties },
+        dotWorker: { include: dotWorkerProperties },
+      },
       where,
     });
 
@@ -79,7 +85,7 @@ export class AdminManageUnitsController {
     for (const log of officerLogs) {
       if (log.endedAt === null) continue;
 
-      const unitId = log.officerId || log.emsFdDeputyId;
+      const unitId = log.officerId || log.emsFdDeputyId || log.dotWorkerId;
       if (!unitId) continue;
 
       const unit = groupedByUnit.get(unitId);
@@ -108,7 +114,7 @@ export class AdminManageUnitsController {
           firstSeen,
           lastSeen,
           unitId,
-          unit: log.officer || log.emsFdDeputy || null,
+          unit: log.officer || log.emsFdDeputy || log.dotWorker || null,
           hours: unit.hours + hours,
         };
 
@@ -126,7 +132,7 @@ export class AdminManageUnitsController {
         unitId,
         lastSeen,
         firstSeen,
-        unit: log.officer || log.emsFdDeputy || null,
+        unit: log.officer || log.emsFdDeputy || log.dotWorker || null,
         hours,
       };
       groupedByUnit.set(unitId, newUnit);
@@ -210,6 +216,13 @@ export class AdminManageUnitsController {
                 },
               },
             },
+            {
+              dotWorker: {
+                department: {
+                  value: { value: { contains: query, mode: Prisma.QueryMode.insensitive } },
+                },
+              },
+            },
           ],
         }
       : undefined;
@@ -218,6 +231,7 @@ export class AdminManageUnitsController {
       include: {
         officer: { include: departmentInclude },
         emsFdDeputy: { include: departmentInclude },
+        dotWorker: { include: departmentInclude },
       },
       orderBy: { createdAt: "desc" },
       where,
@@ -231,7 +245,8 @@ export class AdminManageUnitsController {
     for (const log of officerLogs) {
       if (log.endedAt === null) continue;
 
-      const departmentId = log.officer?.departmentId || log.emsFdDeputy?.departmentId;
+      const departmentId =
+        log.officer?.departmentId || log.emsFdDeputy?.departmentId || log.dotWorker?.departmentId;
       if (!departmentId) continue;
 
       const unitHours = groupedByDepartment.get(departmentId)?.hours ?? 0;
@@ -239,7 +254,7 @@ export class AdminManageUnitsController {
 
       const newDepartment = {
         departmentId,
-        department: log.officer?.department || log.emsFdDeputy?.department || null,
+        department: log.officer?.department || log.emsFdDeputy?.department || log.dotWorker?.department || null,
         hours: unitHours + hours,
       };
 

@@ -11,6 +11,8 @@ import type { GetCADDiscordWebhooksData, PostCADDiscordWebhooksData } from "@sna
 import { useQuery } from "@tanstack/react-query";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { CodeSlash } from "react-bootstrap-icons";
 
 export function RawWebhooksTab() {
   const [fetchError, setFetchError] = React.useState<string | null>(null);
@@ -74,7 +76,7 @@ export function RawWebhooksTab() {
   return (
     <TabsContent value={SettingsTabs.RawWebhooks}>
       <header>
-        <h2 className="text-2xl font-semibold">{t("rawWebhooks")}</h2>
+        <SettingsTabHeader icon={<CodeSlash size={16} />}>{t("rawWebhooks")}</SettingsTabHeader>
         <p className="my-3 text-neutral-700 dark:text-gray-400 max-w-2xl">{t("rawWebhooksInfo")}</p>
       </header>
 

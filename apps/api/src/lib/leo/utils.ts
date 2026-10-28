@@ -15,7 +15,7 @@ import type { DisconnectOrConnect } from "lib/data/many-to-many";
 import type { z } from "zod";
 
 interface MaxDepartmentOptions {
-  type: "emsFdDeputy" | "officer";
+  type: "emsFdDeputy" | "officer" | "dotWorker";
   userId: string;
   cad: cad & { features?: Record<Feature, boolean>; miscCadSettings: MiscCadSettings };
   departmentId: string;
@@ -154,8 +154,10 @@ export function getPrismaNameActiveCallIncident(options: GetPrismaNameActiveCall
   const prismaNames = {
     officerId: "officer",
     emsFdDeputyId: "emsFdDeputy",
+    dotWorkerId: "dotWorker",
     combinedLeoId: "combinedLeoUnit",
     combinedEmsFdId: "combinedEmsFdUnit",
+    combinedDotId: "combinedDotUnit",
   } as const;
 
   let prismaName: (typeof prismaNames)[keyof typeof prismaNames] | null = null;

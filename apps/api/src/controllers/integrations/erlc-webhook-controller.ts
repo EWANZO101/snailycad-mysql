@@ -1,6 +1,6 @@
 import { Controller } from "@tsed/di";
 import { Req } from "@tsed/common";
-import { ContentType, Description, Post } from "@tsed/schema";
+import { ContentType, Description, Post, Tags } from "@tsed/schema";
 import { NotFound, TooManyRequests, Unauthorized } from "@tsed/exceptions";
 import { Feature } from "@prisma/client";
 import { prisma } from "lib/data/prisma";
@@ -49,6 +49,7 @@ function header(req: Req, name: string) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+@Tags("Integrations")
 @Controller("/integrations/erlc")
 @ContentType("application/json")
 export class ErlcWebhookController {

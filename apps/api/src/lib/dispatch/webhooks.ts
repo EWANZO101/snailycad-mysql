@@ -1,8 +1,10 @@
 import {
   type Officer,
   type EmsFdDeputy,
+  type DotWorker,
   type Citizen,
   type CombinedLeoUnit,
+  type CombinedDotUnit,
   type MiscCadSettings,
   type StatusValue,
   type Value,
@@ -16,10 +18,11 @@ import { getTranslator } from "utils/get-translator";
 type V<T> = T & { value: Value };
 
 export type Unit = { status: V<StatusValue> | null } & (
-  | ((Officer | EmsFdDeputy) & {
+  | ((Officer | EmsFdDeputy | DotWorker) & {
       citizen: Pick<Citizen, "name" | "surname">;
     })
   | CombinedLeoUnit
+  | CombinedDotUnit
 );
 
 interface CreateWebhookDataOptions<Unit> {

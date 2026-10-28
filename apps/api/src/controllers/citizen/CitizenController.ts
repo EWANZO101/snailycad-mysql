@@ -1,6 +1,6 @@
 import { UseBeforeEach, Context, MultipartFile, type PlatformMulterFile } from "@tsed/common";
 import { Controller } from "@tsed/di";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { QueryParams, BodyParams, PathParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -98,6 +98,7 @@ export const citizenIncludeWithRecords = {
   },
 };
 
+@Tags("Citizens")
 @Controller("/citizen")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

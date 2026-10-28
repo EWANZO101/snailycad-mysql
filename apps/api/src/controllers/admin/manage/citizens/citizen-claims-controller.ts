@@ -1,7 +1,7 @@
 import { Controller } from "@tsed/di";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-params";
-import { ContentType, Description, Get, Put } from "@tsed/schema";
+import { ContentType, Description, Get, Put, Tags } from "@tsed/schema";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { type User, WhitelistStatus } from "@prisma/client";
 import { z } from "zod";
@@ -34,6 +34,7 @@ const claimInclude = {
 } as const;
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/citizen-claims")
 @ContentType("application/json")
 export class AdminManageCitizenClaimsController {

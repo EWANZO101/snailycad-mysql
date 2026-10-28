@@ -1,5 +1,12 @@
 import * as React from "react";
-import type { CombinedEmsFdUnit, CombinedLeoUnit, EmsFdDeputy, Officer } from "@snailycad/types";
+import type {
+  CombinedEmsFdUnit,
+  CombinedLeoUnit,
+  EmsFdDeputy,
+  Officer,
+  DotWorker,
+  CombinedDotUnit,
+} from "@snailycad/types";
 import { Loader, Button, SelectField, TextField } from "@snailycad/ui";
 import { Modal } from "components/modal/Modal";
 import { Form, Formik } from "formik";
@@ -40,11 +47,12 @@ function useRadioChannels(enabled: boolean) {
 }
 
 interface Props {
-  unit: Officer | EmsFdDeputy | CombinedLeoUnit | CombinedEmsFdUnit;
+  unit: Officer | EmsFdDeputy | CombinedLeoUnit | CombinedEmsFdUnit | DotWorker | CombinedDotUnit;
+  type?: "leo" | "ems-fd" | "dot";
   onClose?(): void;
 }
 
-export function UnitRadioChannelModal({ unit, onClose }: Props) {
+export function UnitRadioChannelModal({ unit, type, onClose }: Props) {
   const [isOpen, setIsOpen] = React.useState(false);
   const { state, execute } = useFetch();
   const common = useTranslations("Common");
@@ -52,8 +60,10 @@ export function UnitRadioChannelModal({ unit, onClose }: Props) {
   const dispatchState = useDispatchState((state) => ({
     setActiveOfficers: state.setActiveOfficers,
     setActiveDeputies: state.setActiveDeputies,
+    setActiveDotUnits: state.setActiveDotUnits,
     activeOfficers: state.activeOfficers,
     activeDeputies: state.activeDeputies,
+    activeDotUnits: state.activeDotUnits,
   }));
   const { hasActiveDispatchers } = useActiveDispatchers();
   const { RADIO } = useFeatureEnabled();
@@ -70,6 +80,18 @@ export function UnitRadioChannelModal({ unit, onClose }: Props) {
   }
 
   function handleStateChange(json: any) {
+    if (type === "dot") {
+      dispatchState.setActiveDotUnits(
+        dispatchState.activeDotUnits.map((worker) => {
+          if (worker.id === unit.id) {
+            return { ...worker, ...json };
+          }
+          return worker;
+        }),
+      );
+      return;
+    }
+
     const isCombined = isUnitCombined(unit) || isUnitCombinedEmsFd(unit);
 
     if (!isCombined) {

@@ -7,7 +7,7 @@ import {
   QueryParams,
   UseBeforeEach,
 } from "@tsed/common";
-import { ContentType, Delete, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { validateSchema } from "lib/data/validate-schema";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -18,6 +18,7 @@ import { NotFound } from "@tsed/exceptions";
 import type * as APITypes from "@snailycad/types/api";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
 
+@Tags("Court")
 @Controller("/courthouse-posts")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

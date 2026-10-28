@@ -76,6 +76,7 @@ if (process.env.NODE_ENV === "development") {
     {
       path: "/api-docs",
       specVersion: "3.0.3",
+      cssPath: join(rootDir, "swagger-theme/dark.css"),
       spec: {
         info: {
           title: "SnailyCAD API Documentation",

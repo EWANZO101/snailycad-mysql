@@ -10,5 +10,6 @@ export * from "./dispatch";
 export * from "./leo";
 export * from "./records";
 export * from "./ems-fd";
+export * from "./dot";
 export * from "./truck-log";
 export * from "./court";

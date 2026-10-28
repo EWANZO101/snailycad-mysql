@@ -1,10 +1,12 @@
-import type { CombinedLeoUnit, EmsFdDeputy, Officer } from "@prisma/client";
+import type { CombinedLeoUnit, CombinedDotUnit, DotWorker, EmsFdDeputy, Officer } from "@prisma/client";
 import { prisma } from "~/lib/data/prisma";
 
 interface Options {
   callId: string;
   type: "assign" | "unassign";
-  unit: Pick<EmsFdDeputy | Officer | CombinedLeoUnit, "id"> & { activeCallId?: string | null };
+  unit: Pick<EmsFdDeputy | Officer | DotWorker | CombinedLeoUnit | CombinedDotUnit, "id"> & {
+    activeCallId?: string | null;
+  };
   force?: boolean;
 }
 
@@ -32,6 +34,8 @@ export async function getNextActive911CallId(options: Options) {
           { combinedLeoId: options.unit.id },
           { combinedEmsFdId: options.unit.id },
           { emsFdDeputyId: options.unit.id },
+          { dotWorkerId: options.unit.id },
+          { combinedDotId: options.unit.id },
         ],
       },
     });

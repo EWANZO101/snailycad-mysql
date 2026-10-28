@@ -7,7 +7,7 @@ import {
   UseBeforeEach,
   QueryParams,
 } from "@tsed/common";
-import { Description, Delete, Get, Post, Put, ContentType } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { TOW_SCHEMA, UPDATE_TOW_SCHEMA } from "@snailycad/schemas";
 import { NotFound } from "@tsed/exceptions";
@@ -22,6 +22,7 @@ import { notifyOpsPhoneTowTaxi } from "lib/ops-phone/back-channel";
 import type * as APITypes from "@snailycad/types/api";
 import { IsFeatureEnabled } from "middlewares/is-enabled";
 
+@Tags("911 Calls")
 @Controller("/taxi")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

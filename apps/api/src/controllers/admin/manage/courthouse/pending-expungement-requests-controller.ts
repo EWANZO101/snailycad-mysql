@@ -3,7 +3,7 @@ import { Controller } from "@tsed/di";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import { UseBeforeEach } from "@tsed/platform-middlewares";
 import { BodyParams, Context, PathParams } from "@tsed/platform-params";
-import { ContentType, Description, Get, Put } from "@tsed/schema";
+import { ContentType, Description, Get, Put, Tags } from "@tsed/schema";
 import { expungementRequestInclude } from "controllers/court/ExpungementRequestsController";
 import { prisma } from "lib/data/prisma";
 import { syncCitizensArrestedStatus } from "lib/leo/jail";
@@ -14,6 +14,7 @@ import { AuditLogActionType, createAuditLogEntry } from "@snailycad/audit-logger
 import { sendExpungementRequestStatusWebhook } from "lib/discord/extra-webhooks";
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/expungement-requests")
 @ContentType("application/json")
 export class AdminManageExpungementRequests {

@@ -1,10 +1,10 @@
-import { type EmsFdDeputy, type Officer, WhitelistStatus } from "@snailycad/types";
+import { type DotWorker, type EmsFdDeputy, type Officer, WhitelistStatus } from "@snailycad/types";
 import { Button, HoverCard, HoverCardContent, HoverCardTrigger, Status } from "@snailycad/ui";
 import { useTranslations } from "next-intl";
 import { Info } from "react-bootstrap-icons";
 
 interface Props {
-  unit: EmsFdDeputy | Officer;
+  unit: EmsFdDeputy | Officer | DotWorker;
 }
 
 export function UnitDepartmentStatus({ unit }: Props) {

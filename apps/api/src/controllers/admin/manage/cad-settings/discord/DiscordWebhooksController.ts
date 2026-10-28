@@ -1,6 +1,6 @@
 import process from "node:process";
 import { BodyParams, Context, Controller, UseBeforeEach } from "@tsed/common";
-import { ContentType, Get, Post } from "@tsed/schema";
+import { ContentType, Get, Post, Tags } from "@tsed/schema";
 import {
   type APITextChannel,
   ChannelType,
@@ -31,6 +31,7 @@ import { parseDiscordGuildIds } from "lib/discord/utils";
 const guildId = process.env.DISCORD_SERVER_ID;
 
 @UseBeforeEach(IsAuth)
+@Tags("Admin: Manage")
 @Controller("/admin/manage/cad-settings/discord/webhooks")
 @ContentType("application/json")
 export class DiscordWebhooksController {

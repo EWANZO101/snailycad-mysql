@@ -1,5 +1,5 @@
 import { Controller, UseBeforeEach, Context } from "@tsed/common";
-import { ContentType, Description, Post } from "@tsed/schema";
+import { ContentType, Description, Post, Tags } from "@tsed/schema";
 import { NotFound } from "@tsed/exceptions";
 import { BodyParams, QueryParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
@@ -138,6 +138,7 @@ const weaponsInclude = {
   flags: true,
 };
 
+@Tags("Law Enforcement")
 @Controller("/search")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

@@ -2,6 +2,7 @@ import type * as Prisma from "./prisma/index";
 import type * as Types from "./index.js";
 import type { GetEmsFdActiveDeputy } from "./api.js";
 import type { GetActiveOfficerData } from "./api.js";
+import type { GetDotActiveWorker } from "./api.js";
 
 export * from "./api/admin.js";
 export * from "./api/dispatch.js";
@@ -9,6 +10,7 @@ export * from "./api/courthouse.js";
 export * from "./api/search.js";
 export * from "./api/leo.js";
 export * from "./api/ems-fd.js";
+export * from "./api/dot.js";
 export * from "./api/cad-settings.js";
 export * from "./api/values.js";
 export * from "./api/bleeter.js";
@@ -119,7 +121,7 @@ export type DeleteDisable2FAData = boolean;
 export type GetUserData = Types.User & {
   apiToken?: Prisma.ApiToken | null;
   cad: Prisma.cad;
-  unit?: GetActiveOfficerData | GetEmsFdActiveDeputy | null;
+  unit?: GetActiveOfficerData | GetEmsFdActiveDeputy | GetDotActiveWorker | null;
 };
 
 /**

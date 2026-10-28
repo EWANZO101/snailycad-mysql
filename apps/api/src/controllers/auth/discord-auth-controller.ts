@@ -12,7 +12,7 @@ import { getDefaultPermissionsForNewUser } from "./auth-controller";
 import { IsAuth } from "middlewares/auth/is-auth";
 import { DISCORD_API_URL } from "lib/discord/config";
 import { updateMemberRolesLogin } from "lib/discord/auth";
-import { ContentType, Description } from "@tsed/schema";
+import { ContentType, Description, Tags } from "@tsed/schema";
 import { isFeatureEnabled } from "lib/upsert-cad";
 import { setUserTokenCookies } from "lib/auth/setUserTokenCookies";
 import { sendUserRegisteredWebhook } from "lib/discord/extra-webhooks";
@@ -39,6 +39,7 @@ const DISCORD_AUTHORIZED_COOKIE_EXPIRES_MS = 60 * 60 * 24 * 365 * 1000; // 1 yea
  */
 const PROMPT_NONE_RETRY_ERRORS = ["consent_required", "interaction_required", "login_required"];
 
+@Tags("Authentication")
 @Controller("/auth/discord")
 @ContentType("application/json")
 @IsFeatureEnabled({ feature: [Feature.DISCORD_AUTH] })

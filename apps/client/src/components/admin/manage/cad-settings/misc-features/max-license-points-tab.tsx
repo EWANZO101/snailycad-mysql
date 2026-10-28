@@ -10,6 +10,8 @@ import { useAuth } from "context/AuthContext";
 import { Form, Formik } from "formik";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { SettingsTabHeader } from "components/admin/cad-settings/settings-tab-header";
+import { ExclamationTriangleFill } from "react-bootstrap-icons";
 
 export function MaxLicensePointsSection() {
   const t = useTranslations("MiscSettingsTab");
@@ -49,7 +51,9 @@ export function MaxLicensePointsSection() {
   return (
     <TabsContent value={SettingsTabs.MaxLicensePoints}>
       <header className="mb-3">
-        <h3 className="font-semibold text-2xl">{t("maxLicensePoints")}</h3>
+        <SettingsTabHeader icon={<ExclamationTriangleFill size={16} />}>
+          {t("maxLicensePoints")}
+        </SettingsTabHeader>
         <p className="text-neutral-700 dark:text-gray-400">{t("maxLicensePointsDescription")}</p>
       </header>
 

@@ -1,9 +1,21 @@
 import * as React from "react";
 import { useListener } from "@casperiv/use-socket.io";
 import { SocketEvents } from "@snailycad/config";
-import type { CombinedEmsFdUnit, CombinedLeoUnit, EmsFdDeputy, Officer } from "@snailycad/types";
+import type {
+  CombinedEmsFdUnit,
+  CombinedLeoUnit,
+  CombinedDotUnit,
+  EmsFdDeputy,
+  Officer,
+  DotWorker,
+} from "@snailycad/types";
 import { Button, FullDate, Loader, SelectField, TextField } from "@snailycad/ui";
-import { isUnitCombined, isUnitCombinedEmsFd, isUnitOfficer } from "@snailycad/utils";
+import {
+  isUnitCombined,
+  isUnitCombinedEmsFd,
+  isUnitCombinedDot,
+  isUnitOfficer,
+} from "@snailycad/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "use-intl";
 import { Modal } from "components/modal/Modal";
@@ -17,8 +29,14 @@ import { makeUnitName } from "lib/utils";
 import { useModal } from "state/modalState";
 import { ModalIds } from "types/modal-ids";
 
-type Unit = Officer | EmsFdDeputy;
-type ActiveUnit = Officer | EmsFdDeputy | CombinedLeoUnit | CombinedEmsFdUnit;
+type Unit = Officer | EmsFdDeputy | DotWorker;
+type ActiveUnit =
+  | Officer
+  | EmsFdDeputy
+  | DotWorker
+  | CombinedLeoUnit
+  | CombinedEmsFdUnit
+  | CombinedDotUnit;
 
 interface UnitMessage {
   id: string;
@@ -49,6 +67,9 @@ export function useOwnMessagingUnitId(activeUnit: ActiveUnit | null | undefined)
   }
   if (isUnitCombinedEmsFd(activeUnit)) {
     return activeUnit.deputies.find((deputy) => deputy.userId === user.id)?.id ?? null;
+  }
+  if (isUnitCombinedDot(activeUnit)) {
+    return activeUnit.workers.find((worker) => worker.userId === user.id)?.id ?? null;
   }
   return activeUnit.id;
 }

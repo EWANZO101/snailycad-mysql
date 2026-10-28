@@ -1,6 +1,6 @@
 import { Context, Req } from "@tsed/common";
 import { Controller } from "@tsed/di";
-import { ContentType, Get, Post } from "@tsed/schema";
+import { ContentType, Get, Post, Tags } from "@tsed/schema";
 import { BodyParams, PathParams } from "@tsed/platform-params";
 import { prisma } from "lib/data/prisma";
 import { Socket } from "services/socket-service";
@@ -13,6 +13,8 @@ import {
   unitProperties,
   combinedUnitProperties,
   combinedEmsFdUnitProperties,
+  dotWorkerProperties,
+  combinedDotUnitProperties,
   callInclude,
 } from "utils/leo/includes";
 import { findUnit } from "lib/leo/findUnit";
@@ -20,6 +22,7 @@ import { hasPermission } from "@snailycad/permissions";
 import { type User } from "@snailycad/types";
 import { getActiveOfficer } from "lib/leo/activeOfficer";
 import { getActiveDeputy } from "lib/get-active-ems-fd-deputy";
+import { getActiveDotWorker } from "lib/get-active-dot-worker";
 import { ExtendedBadRequest } from "~/exceptions/extended-bad-request";
 import { validateSchema } from "lib/data/validate-schema";
 import { PRIVATE_MESSAGE_SCHEMA } from "@snailycad/schemas";
@@ -35,10 +38,13 @@ const dispatchChatIncludes = Prisma.validator<Prisma.DispatchChatSelect>()({
       deputy: { include: unitProperties },
       combinedEmsFdUnit: { include: combinedEmsFdUnitProperties },
       officer: { include: leoProperties },
+      dotWorker: { include: dotWorkerProperties },
+      combinedDotUnit: { include: combinedDotUnitProperties },
     },
   },
 });
 
+@Tags("Dispatch")
 @Controller("/dispatch/private-message")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -50,7 +56,7 @@ export class DispatchPrivateMessagesController {
 
   @Get("/:unitId")
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   async getPrivateMessagesForUnit(
     @PathParams("unitId") unitId: string,
@@ -67,13 +73,14 @@ export class DispatchPrivateMessagesController {
       });
 
     if (!isDispatch) {
-      const [activeOfficer, activeDeputy] = await Promise.all([
+      const [activeOfficer, activeDeputy, activeDotWorker] = await Promise.all([
         getActiveOfficer({ ctx, user, req: request }).catch(() => null),
         getActiveDeputy({ ctx, user, req: request }).catch(() => null),
+        getActiveDotWorker({ ctx, user, req: request }).catch(() => null),
       ]);
 
       const { unit } = await findUnit(unitId);
-      const activeUnit = activeOfficer ?? activeDeputy;
+      const activeUnit = activeOfficer ?? activeDeputy ?? activeDotWorker;
 
       if (unit?.id !== activeUnit?.id) {
         throw new ExtendedBadRequest({ message: "onlyDispatchCanStartPrivateMessage" });
@@ -93,7 +100,7 @@ export class DispatchPrivateMessagesController {
   }
 
   @UsePermissions({
-    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd],
+    permissions: [Permissions.Dispatch, Permissions.Leo, Permissions.EmsFd, Permissions.Dot],
   })
   @Post("/:unitId")
   async createPrivateMessage(
@@ -117,17 +124,20 @@ export class DispatchPrivateMessagesController {
     const types = {
       leo: "officerId",
       "ems-fd": "emsFdDeputyId",
+      dot: "dotWorkerId",
       "combined-ems-fd": "combinedEmsFdId",
       "combined-leo": "combinedLeoId",
+      "combined-dot": "combinedDotId",
     } as const;
 
     if (!isDispatch) {
-      const [activeOfficer, activeDeputy] = await Promise.all([
+      const [activeOfficer, activeDeputy, activeDotWorker] = await Promise.all([
         getActiveOfficer({ ctx, user, req: request }).catch(() => null),
         getActiveDeputy({ ctx, user, req: request }).catch(() => null),
+        getActiveDotWorker({ ctx, user, req: request }).catch(() => null),
       ]);
 
-      const activeUnit = activeOfficer ?? activeDeputy;
+      const activeUnit = activeOfficer ?? activeDeputy ?? activeDotWorker;
       if (unit?.id !== activeUnit?.id) {
         throw new ExtendedBadRequest({ message: "onlyDispatchCanStartPrivateMessage" });
       }
@@ -213,6 +223,8 @@ function createChatCreatorUnit(chat: { creator?: any }) {
     chat.creator?.deputy ??
     chat.creator?.combinedUnit ??
     chat.creator?.combinedEmsFdUnit ??
+    chat.creator?.dotWorker ??
+    chat.creator?.combinedDotUnit ??
     null
   );
 }

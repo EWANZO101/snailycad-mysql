@@ -25,6 +25,7 @@ import type {
   GetBolosData,
   GetDispatchData,
   GetEmsFdActiveDeputies,
+  GetDotActiveWorkers,
   GetUserData,
 } from "@snailycad/types/api";
 import { UtilityPanel } from "components/shared/utility-panel/utility-panel";
@@ -33,7 +34,9 @@ import { useActiveDispatcherState } from "state/dispatch/active-dispatcher-state
 import { Infofield } from "@snailycad/ui";
 import { ActiveOfficers } from "components/dispatch/active-units/officers/active-officers";
 import { ActiveDeputies } from "components/dispatch/active-units/deputies/active-deputies";
+import { ActiveDotUnits } from "components/dispatch/active-units/dot/active-dot-units";
 import { useAuth } from "context/AuthContext";
+import { DispatchStats } from "components/dispatch/dispatch-stats";
 
 const ActiveIncidents = dynamic(async () => {
   return (await import("components/dispatch/active-incidents/active-incidents")).ActiveIncidents;
@@ -64,6 +67,7 @@ const Modals = {
 export interface DispatchPageProps extends GetDispatchData {
   activeDeputies: GetEmsFdActiveDeputies;
   activeOfficers: GetActiveOfficersData;
+  activeDotUnits: GetDotActiveWorkers;
   calls: Get911CallsData;
   bolos: GetBolosData;
   session: GetUserData | null;
@@ -92,7 +96,7 @@ export default function DispatchDashboard(props: DispatchPageProps) {
   const state = useDispatchState();
   const set911Calls = useCall911State((state) => state.setCalls);
   const t = useTranslations("Leo");
-  const { CALLS_911, ACTIVE_INCIDENTS } = useFeatureEnabled();
+  const { CALLS_911, ACTIVE_INCIDENTS, DOT } = useFeatureEnabled();
   const { user } = useAuth();
   const session = user ?? props.session;
 
@@ -104,6 +108,7 @@ export default function DispatchDashboard(props: DispatchPageProps) {
 
     state.setActiveDeputies(props.activeDeputies);
     state.setActiveOfficers(props.activeOfficers);
+    state.setActiveDotUnits(props.activeDotUnits);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props]);
@@ -118,6 +123,11 @@ export default function DispatchDashboard(props: DispatchPageProps) {
       type: DashboardLayoutCardType.ACTIVE_DEPUTIES,
       isEnabled: true,
       children: <ActiveDeputies initialDeputies={props.activeDeputies} />,
+    },
+    {
+      type: DashboardLayoutCardType.ACTIVE_DOT,
+      isEnabled: DOT,
+      children: <ActiveDotUnits initialWorkers={props.activeDotUnits} />,
     },
     {
       type: DashboardLayoutCardType.ACTIVE_CALLS,
@@ -142,15 +152,49 @@ export default function DispatchDashboard(props: DispatchPageProps) {
     return layoutOrder.indexOf(a.type) - layoutOrder.indexOf(b.type);
   });
 
+  const mainColumnTypes: DashboardLayoutCardType[] = [
+    DashboardLayoutCardType.ACTIVE_CALLS,
+    DashboardLayoutCardType.ACTIVE_INCIDENTS,
+  ];
+  const mainColumnCards = sortedCards.filter((card) => mainColumnTypes.includes(card.type));
+  const unitsColumnCards = sortedCards.filter((card) => !mainColumnTypes.includes(card.type));
+
   return (
     <Layout permissions={{ permissions: [Permissions.Dispatch] }} className="dark:text-white">
       <Title renderLayoutTitle={false}>{t("dispatch")}</Title>
 
-      <DispatchHeader userActiveDispatcher={props.userActiveDispatcher} />
+      <div className="dispatch-console">
+        <DispatchHeader userActiveDispatcher={props.userActiveDispatcher} />
 
-      {sortedCards.map((card) =>
-        card.isEnabled ? <React.Fragment key={card.type}>{card.children}</React.Fragment> : null,
-      )}
+        <DispatchStats />
+
+        <div className="dispatch-grid">
+          <div className="dispatch-col">
+            {mainColumnCards.map((card) =>
+              card.isEnabled ? (
+                <div
+                  key={card.type}
+                  className={`dispatch-panel dispatch-panel-${card.type.toLowerCase()}`}
+                >
+                  {card.children}
+                </div>
+              ) : null,
+            )}
+          </div>
+          <div className="dispatch-col">
+            {unitsColumnCards.map((card) =>
+              card.isEnabled ? (
+                <div
+                  key={card.type}
+                  className={`dispatch-panel dispatch-panel-${card.type.toLowerCase()}`}
+                >
+                  {card.children}
+                </div>
+              ) : null,
+            )}
+          </div>
+        </div>
+      </div>
 
       <DispatchModals />
     </Layout>
@@ -205,7 +249,7 @@ function DispatchModals() {
 
 export const getServerSideProps: GetServerSideProps = async ({ req, locale }) => {
   const user = await getSessionUser(req);
-  const [values, calls, bolos, activeDispatcherData, activeOfficers, activeDeputies] =
+  const [values, calls, bolos, activeDispatcherData, activeOfficers, activeDeputies, activeDotUnits] =
     await requestAll(req, [
       ["/admin/values/codes_10", []],
       ["/911-calls", { calls: [], totalCount: 0 }],
@@ -213,6 +257,7 @@ export const getServerSideProps: GetServerSideProps = async ({ req, locale }) =>
       ["/dispatch", { activeDispatchersCount: 0, userActiveDispatcher: null }],
       ["/leo/active-officers", []],
       ["/ems-fd/active-deputies", []],
+      ["/dot/active-dot-workers", []],
     ]);
 
   return {
@@ -223,13 +268,14 @@ export const getServerSideProps: GetServerSideProps = async ({ req, locale }) =>
       values,
       activeOfficers,
       activeDeputies,
+      activeDotUnits,
 
       userActiveDispatcher: activeDispatcherData.userActiveDispatcher ?? null,
       activeDispatchersCount: activeDispatcherData.activeDispatchersCount ?? 0,
 
       messages: {
         ...(await getTranslations(
-          ["citizen", "truck-logs", "ems-fd", "leo", "calls", "common", "radio"],
+          ["citizen", "truck-logs", "ems-fd", "dot", "leo", "calls", "common", "radio"],
           user?.locale ?? locale,
         )),
       },

@@ -6,19 +6,22 @@ import { useTranslations } from "use-intl";
 import { useLeoState } from "state/leo-state";
 
 import { useEmsFdState } from "state/ems-fd-state";
+import { useDotState } from "state/dot-state";
 import { useRouter } from "next/router";
 import { Table, useTableState } from "components/shared/Table";
 
 export function DepartmentInformationModal() {
   const activeOfficer = useLeoState((state) => state.activeOfficer);
   const activeEmsFdDeputy = useEmsFdState((state) => state.activeDeputy);
+  const activeDotWorker = useDotState((state) => state.activeWorker);
 
   const modalState = useModal();
   const common = useTranslations("Common");
   const t = useTranslations("Leo");
   const router = useRouter();
   const isLeo = router.pathname.startsWith("/officer");
-  const activeUnit = isLeo ? activeOfficer : activeEmsFdDeputy;
+  const isDot = router.pathname.startsWith("/dot");
+  const activeUnit = isLeo ? activeOfficer : isDot ? activeDotWorker : activeEmsFdDeputy;
   const links = activeUnit?.department?.links ?? [];
   const tableState = useTableState();
 

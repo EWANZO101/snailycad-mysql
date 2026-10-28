@@ -50,6 +50,10 @@ export enum Permissions {
   ManageDeadCitizens = "ManageDeadCitizens",
   SetUserDefinedCallsignOnEmsFd = "SetUserDefinedCallsignOnEmsFd",
 
+  // dot (department of transportation)
+  Dot = "Dot",
+  SetUserDefinedCallsignOnDot = "SetUserDefinedCallsignOnDot",
+
   //  citizen related
   ViewTaxiCalls = "ViewTaxiCalls",
   ManageTaxiCalls = "ManageTaxiCalls",

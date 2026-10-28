@@ -1,0 +1,15 @@
+{
+  "extends": "/home/snaily-cadv4/apps/api/tsconfig.json",
+  "compilerOptions": { "incremental": false },
+  "include": [],
+  "files": [
+    "/home/snaily-cadv4/apps/api/src/lib/leo/jail.ts",
+    "/home/snaily-cadv4/apps/api/src/controllers/leo/jail-controller.ts",
+    "/home/snaily-cadv4/apps/api/src/lib/leo/records/upsert-record.ts",
+    "/home/snaily-cadv4/apps/api/src/controllers/record/records-controller.ts",
+    "/home/snaily-cadv4/apps/api/src/controllers/admin/manage/courthouse/pending-expungement-requests-controller.ts",
+    "/home/snaily-cadv4/apps/api/src/controllers/leo/search/SearchController.ts",
+    "/home/snaily-cadv4/apps/api/src/controllers/dispatch/911-calls/calls-911-controller.ts",
+    "/home/snaily-cadv4/apps/api/src/controllers/ems-fd/incidents/ems-fd-incidents-controller.ts"
+  ]
+}

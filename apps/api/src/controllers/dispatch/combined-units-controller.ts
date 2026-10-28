@@ -1,11 +1,12 @@
 import { Controller } from "@tsed/di";
 import { BodyParams, Context, PathParams, UseBeforeEach } from "@tsed/common";
-import { ContentType, Description, Post } from "@tsed/schema";
+import { ContentType, Description, Post, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { BadRequest, NotFound } from "@tsed/exceptions";
 import {
   type CombinedEmsFdUnit,
   type CombinedLeoUnit,
+  type CombinedDotUnit,
   Feature,
   ShouldDoType,
   WhatPages,
@@ -20,8 +21,13 @@ import { getNextIncidentId } from "lib/incidents/get-next-incident-id";
 import { validateSchema } from "lib/data/validate-schema";
 import { MERGE_UNIT_SCHEMA } from "@snailycad/schemas";
 import { isFeatureEnabled } from "lib/upsert-cad";
-import { combinedUnitProperties, combinedEmsFdUnitProperties } from "utils/leo/includes";
+import {
+  combinedUnitProperties,
+  combinedEmsFdUnitProperties,
+  combinedDotUnitProperties,
+} from "utils/leo/includes";
 
+@Tags("Dispatch")
 @Controller("/dispatch/status")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")
@@ -259,6 +265,119 @@ export class CombinedUnitsController {
     return last as APITypes.PostDispatchStatusMergeDeputies;
   }
 
+  @Post("/merge/dot")
+  @Description(
+    "Merge DOT workers into a combined/merged unit via their ids. `entry: true` means it that worker will be the main unit.",
+  )
+  @UsePermissions({
+    permissions: [Permissions.Dispatch, Permissions.Dot],
+  })
+  async mergeDotWorkers(
+    @BodyParams() body: unknown,
+    @Context("cad") cad: { features?: Record<Feature, boolean> },
+  ): Promise<APITypes.PostDispatchStatusMergeDotWorkers> {
+    const data = validateSchema(MERGE_UNIT_SCHEMA, body);
+
+    const workers = await prisma.$transaction(
+      data.ids.map((worker) => {
+        return prisma.dotWorker.findFirst({
+          where: {
+            id: worker.id,
+          },
+        });
+      }),
+    );
+
+    if (workers.includes(null)) {
+      throw new BadRequest("dotWorkerNotFoundInArray");
+    }
+
+    const existing = workers.some((v) => v?.combinedDotUnitId);
+    if (existing) {
+      throw new BadRequest("dotWorkerAlreadyMerged");
+    }
+
+    const entryWorkerId = data.ids.find((v) => v.entry)?.id;
+    if (!entryWorkerId) {
+      throw new BadRequest("noEntryDotWorker");
+    }
+
+    const entryWorker = await prisma.dotWorker.findUnique({
+      where: { id: entryWorkerId },
+      include: { division: true },
+    });
+
+    if (!entryWorker) {
+      throw new BadRequest("noEntryDotWorker");
+    }
+
+    const status = await prisma.statusValue.findFirst({
+      where: {
+        shouldDo: ShouldDoType.SET_ON_DUTY,
+        whatPages: { isEmpty: true },
+      },
+      select: { id: true },
+    });
+
+    const emergencyVehicle = data.vehicleId
+      ? await prisma.emergencyVehicleValue.findUnique({ where: { id: data.vehicleId } })
+      : null;
+
+    const isUserDefinedCallsignEnabled = isFeatureEnabled({
+      defaultReturn: false,
+      feature: Feature.USER_DEFINED_CALLSIGN_COMBINED_UNIT,
+      features: cad.features,
+    });
+
+    if (isUserDefinedCallsignEnabled) {
+      const existing = await prisma.combinedDotUnit.findFirst({
+        where: { userDefinedCallsign: { equals: data.userDefinedCallsign, mode: "insensitive" } },
+      });
+
+      if (existing) {
+        throw new BadRequest("userDefinedCallsignAlreadyExists");
+      }
+    }
+
+    const nextInt = await findNextAvailableIncremental({ type: "combined-dot" });
+    const combinedUnit = await prisma.combinedDotUnit.create({
+      data: {
+        statusId: status?.id ?? null,
+        callsign: entryWorker.callsign,
+        callsign2: entryWorker.callsign2,
+        departmentId: entryWorker.departmentId,
+        incremental: nextInt,
+        pairedUnitTemplate: entryWorker.division?.pairedUnitTemplate ?? null,
+        activeVehicleId: emergencyVehicle?.id ?? null,
+        userDefinedCallsign: isUserDefinedCallsignEnabled ? data.userDefinedCallsign || null : null,
+      },
+    });
+
+    const combinedUnits = await Promise.all(
+      data.ids.map(async ({ id: workerId }, idx) => {
+        await prisma.dotWorker.update({
+          where: { id: workerId },
+          data: { statusId: null },
+        });
+
+        return prisma.combinedDotUnit.update({
+          where: {
+            id: combinedUnit.id,
+          },
+          data: {
+            workers: { connect: { id: workerId } },
+          },
+          include: idx === data.ids.length - 1 ? combinedDotUnitProperties : undefined,
+        });
+      }),
+    );
+
+    const last = combinedUnits[combinedUnits.length - 1];
+    await this.socket.emitUpdateDotStatus();
+
+    return last as APITypes.PostDispatchStatusMergeDotWorkers;
+  }
+
   @Post("/unmerge/:id")
   @Description("Unmerge officers by the combinedUnitId")
   @UsePermissions({
@@ -270,6 +389,7 @@ export class CombinedUnitsController {
     let unit:
       | (CombinedLeoUnit & { officers: any[] })
       | (CombinedEmsFdUnit & { deputies: any[] })
+      | (CombinedDotUnit & { workers: any[] })
       | null = await prisma.combinedLeoUnit.findFirst({
       where: { id: unitId },
       include: { officers: { select: { id: true } } },
@@ -283,14 +403,24 @@ export class CombinedUnitsController {
     }
 
     if (!unit) {
+      unit = await prisma.combinedDotUnit.findFirst({
+        where: { id: unitId },
+        include: { workers: { select: { id: true } } },
+      });
+    }
+
+    if (!unit) {
       throw new NotFound("notFound");
     }
 
-    const pageType = "officers" in unit ? WhatPages.LEO : WhatPages.EMS_FD;
+    const pageType =
+      "officers" in unit ? WhatPages.LEO : "deputies" in unit ? WhatPages.EMS_FD : undefined;
     const onDutyStatusCode = await prisma.statusValue.findFirst({
       where: {
         shouldDo: ShouldDoType.SET_ON_DUTY,
-        OR: [{ whatPages: { isEmpty: true } }, { whatPages: { has: pageType } }],
+        OR: pageType
+          ? [{ whatPages: { isEmpty: true } }, { whatPages: { has: pageType } }]
+          : [{ whatPages: { isEmpty: true } }],
       },
     });
 
@@ -309,10 +439,17 @@ export class CombinedUnitsController {
       }),
     ]);
 
-    const units = "officers" in unit ? unit.officers : unit.deputies;
-    const prismaModelName = "officers" in unit ? "officer" : "emsFdDeputy";
-    const combinedPrismaModelName = "officers" in unit ? "combinedLeoUnit" : "combinedEmsFdUnit";
-    const prismaKey = "officers" in unit ? "combinedLeoId" : "combinedEmsFdId";
+    const units = "officers" in unit ? unit.officers : "deputies" in unit ? unit.deputies : unit.workers;
+    const prismaModelName =
+      "officers" in unit ? "officer" : "deputies" in unit ? "emsFdDeputy" : "dotWorker";
+    const combinedPrismaModelName =
+      "officers" in unit
+        ? "combinedLeoUnit"
+        : "deputies" in unit
+          ? "combinedEmsFdUnit"
+          : "combinedDotUnit";
+    const prismaKey =
+      "officers" in unit ? "combinedLeoId" : "deputies" in unit ? "combinedEmsFdId" : "combinedDotId";
 
     await prisma.$transaction(
       units.map(({ id }) => {
@@ -339,6 +476,7 @@ export class CombinedUnitsController {
 
     await this.socket.emitUpdateOfficerStatus();
     await this.socket.emitUpdateDeputyStatus();
+    await this.socket.emitUpdateDotStatus();
 
     return true;
   }

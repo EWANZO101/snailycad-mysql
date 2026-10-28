@@ -1,6 +1,7 @@
 import {
   type EmsFdDeputy,
   type Officer,
+  type DotWorker,
   QualificationValueType,
   type UnitQualification,
 } from "@snailycad/types";
@@ -11,7 +12,7 @@ import { classNames } from "lib/classNames";
 import { useTranslations } from "next-intl";
 
 interface Props {
-  unit: (EmsFdDeputy | Officer) & { qualifications?: UnitQualification[] };
+  unit: (EmsFdDeputy | Officer | DotWorker) & { qualifications?: UnitQualification[] };
 }
 
 export function UnitQualificationsTable({ unit }: Props) {

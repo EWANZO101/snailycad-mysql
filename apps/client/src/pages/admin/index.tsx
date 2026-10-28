@@ -1,3 +1,4 @@
+import * as React from "react";
 import { AdminLayout } from "components/admin/AdminLayout";
 import { getSessionUser } from "lib/auth";
 import { getTranslations } from "lib/getTranslation";
@@ -8,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { Title } from "components/shared/Title";
 import { defaultPermissions } from "@snailycad/permissions";
 import type { GetAdminDashboardData } from "@snailycad/types/api";
-import { Alert } from "@snailycad/ui";
+import { Alert, Button, Loader } from "@snailycad/ui";
 import { Fira_Mono } from "next/font/google";
 import { classNames } from "lib/classNames";
 import { RecoveryTokenCard } from "components/admin/recovery-token-card";
@@ -19,14 +20,21 @@ import { useQuery } from "@tanstack/react-query";
 import { usePermission } from "hooks/usePermission";
 import { Permissions } from "@snailycad/permissions";
 import {
+  ArrowClockwise,
   ArrowRightShort,
+  CarFrontFill,
   DatabaseGear,
   Gear,
+  HeartPulseFill,
+  Images,
   JournalText,
   People,
   PersonBadge,
   PersonVcard,
+  ShieldFill,
 } from "react-bootstrap-icons";
+import { SetupWizardCard } from "components/admin/setup-wizard/setup-wizard-card";
+import { SetupWizardModal } from "components/admin/setup-wizard/setup-wizard-modal";
 
 const firaMonoFont = Fira_Mono({
   weight: ["500", "700"],
@@ -38,34 +46,68 @@ interface Props {
   counts: GetAdminDashboardData | null;
 }
 
-export default function Admin({ counts }: Props) {
+const STATS_RETRY_DELAYS_MS = [800, 2500, 6000];
+
+export default function Admin({ counts: initialCounts }: Props) {
   const t = useTranslations("Management");
+  const { execute } = useFetch();
+  const [counts, setCounts] = React.useState(initialCounts);
+  const [isRetrying, setIsRetrying] = React.useState(false);
+  const retryCountRef = React.useRef(0);
 
-  if (!counts) {
-    return (
-      <AdminLayout
-        permissions={{
-          permissions: [
-            ...defaultPermissions.allDefaultAdminPermissions,
-            ...defaultPermissions.defaultCourthousePermissions,
-            ...defaultPermissions.defaultScopedAdminPermissions,
-          ],
-        }}
-      >
-        <Title>{t("adminDashboard")}</Title>
+  const fetchStats = React.useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!options?.silent) setIsRetrying(true);
 
-        <RecoveryTokenCard />
+      const { json } = await execute<GetAdminDashboardData>({
+        path: "/admin",
+        noToast: options?.silent,
+      });
 
-        <UpdateCadCard />
+      setIsRetrying(false);
 
-        <Alert
-          type="error"
-          message={t("unableToLoadStatisticsMessage")}
-          title={t("unableToLoadStatisticsTitle")}
-        />
-      </AdminLayout>
-    );
-  }
+      if (json && typeof json === "object" && "activeUsers" in json) {
+        setCounts(json);
+        return true;
+      }
+
+      return false;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // the admin dashboard's stats can transiently fail to load server-side (e.g. a brief
+  // window right after the CAD restarts/updates) - rather than leaving the admin stuck
+  // looking at a dead end, retry a few times in the background before asking them to.
+  React.useEffect(() => {
+    if (initialCounts) return;
+
+    let cancelled = false;
+    let timeout: ReturnType<typeof setTimeout>;
+
+    function scheduleNext() {
+      if (cancelled || retryCountRef.current >= STATS_RETRY_DELAYS_MS.length) return;
+
+      const delay = STATS_RETRY_DELAYS_MS[retryCountRef.current]!;
+      retryCountRef.current += 1;
+
+      timeout = setTimeout(async () => {
+        if (cancelled) return;
+        const succeeded = await fetchStats({ silent: true });
+        if (!succeeded) scheduleNext();
+      }, delay);
+    }
+
+    scheduleNext();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+    // only ever schedule the background retry chain off the initial SSR result
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <AdminLayout
@@ -82,18 +124,42 @@ export default function Admin({ counts }: Props) {
         <p className="text-neutral-600 dark:text-gray-400">{t("adminDashboardDescription")}</p>
       </header>
 
-      <RecoveryTokenCard />
+      <div className="admin-console">
+        <SetupWizardCard />
 
-      <UpdateCadCard />
+        <RecoveryTokenCard />
 
-      <NeedsAttention pendingUsers={counts.pendingUsers} />
+        <UpdateCadCard />
 
-      <SectionHeading>{t("overview")}</SectionHeading>
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 mb-8">
-        <StatCard
+        {counts ? null : (
+          <Alert
+            type="error"
+            title={t("unableToLoadStatisticsTitle")}
+            message={t("unableToLoadStatisticsMessage")}
+          >
+            <Button
+              className="mt-2 flex items-center gap-2"
+              disabled={isRetrying}
+              onPress={() => fetchStats()}
+            >
+              {isRetrying ? <Loader /> : <ArrowClockwise />}
+              Try again
+            </Button>
+          </Alert>
+        )}
+
+        {counts ? <NeedsAttention pendingUsers={counts.pendingUsers} /> : null}
+
+        {counts ? (
+          <>
+            <SectionHeading>{t("overview")}</SectionHeading>
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 mb-8">
+              <StatCard
           title={t("users")}
           value={counts.activeUsers}
           valueLabel={t("active")}
+          icon={<People size={16} />}
+          accent="blue"
           details={[
             { label: t("pending"), value: counts.pendingUsers },
             { label: t("banned"), value: counts.bannedUsers },
@@ -103,6 +169,8 @@ export default function Admin({ counts }: Props) {
           title={t("citizens")}
           value={counts.createdCitizens}
           valueLabel={t("created")}
+          icon={<PersonVcard size={16} />}
+          accent="purple"
           details={[
             { label: t("inBolo"), value: counts.citizensInBolo, total: counts.createdCitizens },
             { label: t("arrested"), value: counts.arrestCitizens, total: counts.createdCitizens },
@@ -113,6 +181,8 @@ export default function Admin({ counts }: Props) {
           title={t("vehicles")}
           value={counts.vehicles}
           valueLabel={t("registered")}
+          icon={<CarFrontFill size={16} />}
+          accent="amber"
           details={[
             { label: t("inBolo"), value: counts.vehiclesInBOLO, total: counts.vehicles },
             { label: t("impounded"), value: counts.impoundedVehicles, total: counts.vehicles },
@@ -122,6 +192,8 @@ export default function Admin({ counts }: Props) {
           title={t("leo")}
           value={counts.officerCount}
           valueLabel={t("total")}
+          icon={<ShieldFill size={16} />}
+          accent="green"
           details={[
             { label: t("onDuty"), value: counts.onDutyOfficers, total: counts.officerCount },
             { label: t("suspended"), value: counts.suspendedOfficers, total: counts.officerCount },
@@ -131,6 +203,8 @@ export default function Admin({ counts }: Props) {
           title={t("emsFd")}
           value={counts.emsDeputiesCount}
           valueLabel={t("total")}
+          icon={<HeartPulseFill size={16} />}
+          accent="pink"
           details={[
             {
               label: t("onDuty"),
@@ -148,6 +222,8 @@ export default function Admin({ counts }: Props) {
           title={t("images")}
           value={counts.imageData.count}
           valueLabel={t("total")}
+          icon={<Images size={16} />}
+          accent="gray"
           details={[
             {
               label: t("storageUsed"),
@@ -155,9 +231,14 @@ export default function Admin({ counts }: Props) {
             },
           ]}
         />
+            </div>
+          </>
+        ) : null}
+
+        <QuickLinks />
       </div>
 
-      <QuickLinks />
+      <SetupWizardModal />
     </AdminLayout>
   );
 }
@@ -176,20 +257,47 @@ interface StatDetail {
   total?: number;
 }
 
+const STAT_ACCENT_CLASSES = {
+  blue: "border-l-blue-500 dark:border-l-blue-400 text-blue-600 dark:text-blue-400 bg-blue-500/10",
+  purple:
+    "border-l-purple-500 dark:border-l-purple-400 text-purple-600 dark:text-purple-400 bg-purple-500/10",
+  amber:
+    "border-l-amber-500 dark:border-l-amber-400 text-amber-600 dark:text-amber-400 bg-amber-500/10",
+  green:
+    "border-l-green-500 dark:border-l-green-400 text-green-600 dark:text-green-400 bg-green-500/10",
+  pink: "border-l-pink-500 dark:border-l-pink-400 text-pink-600 dark:text-pink-400 bg-pink-500/10",
+  gray: "border-l-neutral-500 dark:border-l-gray-400 text-neutral-600 dark:text-gray-300 bg-neutral-500/10",
+} as const;
+
 function StatCard({
   title,
   value,
   valueLabel,
   details,
+  icon,
+  accent,
 }: {
   title: string;
   value: number | string;
   valueLabel: string;
   details: StatDetail[];
+  icon: React.ReactNode;
+  accent: keyof typeof STAT_ACCENT_CLASSES;
 }) {
+  const accentClasses = STAT_ACCENT_CLASSES[accent];
+  const [borderClasses, colorClasses] = [
+    accentClasses.split(" ").slice(0, 2).join(" "),
+    accentClasses.split(" ").slice(2).join(" "),
+  ];
+
   return (
-    <section className="card p-4 flex flex-col">
-      <h3 className="text-sm font-medium text-neutral-600 dark:text-gray-400">{title}</h3>
+    <section className={classNames("card p-4 flex flex-col border-l-[3px]", borderClasses)}>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-neutral-600 dark:text-gray-400">{title}</h3>
+        <span className={classNames("flex items-center justify-center w-8 h-8 rounded-lg shrink-0", colorClasses)}>
+          {icon}
+        </span>
+      </div>
       <p className="mt-1 flex items-baseline gap-2">
         <span className={classNames("text-3xl font-semibold", firaMonoFont.className)}>
           {value}
@@ -302,6 +410,15 @@ function NeedsAttention({ pendingUsers }: { pendingUsers: number }) {
   );
 }
 
+const QUICK_LINK_COLOR_CLASSES = {
+  blue: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200",
+  purple: "bg-purple-50 text-purple-700 dark:bg-purple-500/15 dark:text-purple-200",
+  green: "bg-green-50 text-green-700 dark:bg-green-500/15 dark:text-green-200",
+  amber: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200",
+  pink: "bg-pink-50 text-pink-700 dark:bg-pink-500/15 dark:text-pink-200",
+  gray: "bg-gray-100 text-gray-700 dark:bg-secondary dark:text-gray-300",
+} as const;
+
 function QuickLinks() {
   const t = useTranslations("Management");
   const { hasPermissions } = usePermission();
@@ -312,6 +429,7 @@ function QuickLinks() {
       title: t("MANAGE_USERS"),
       description: t("quickLinkUsers"),
       icon: <People aria-hidden className="w-5 h-5" />,
+      color: "blue",
       permissions: [Permissions.ViewUsers, Permissions.ManageUsers, Permissions.ManagePendingUsers],
     },
     {
@@ -319,6 +437,7 @@ function QuickLinks() {
       title: t("MANAGE_CITIZENS"),
       description: t("quickLinkCitizens"),
       icon: <PersonVcard aria-hidden className="w-5 h-5" />,
+      color: "purple",
       permissions: [Permissions.ViewCitizens, Permissions.ManageCitizens],
     },
     {
@@ -326,6 +445,7 @@ function QuickLinks() {
       title: t("MANAGE_UNITS"),
       description: t("quickLinkUnits"),
       icon: <PersonBadge aria-hidden className="w-5 h-5" />,
+      color: "green",
       permissions: [Permissions.ViewUnits, Permissions.ManageUnits],
     },
     {
@@ -333,6 +453,7 @@ function QuickLinks() {
       title: t("MANAGE_CAD_SETTINGS"),
       description: t("quickLinkCadSettings"),
       icon: <Gear aria-hidden className="w-5 h-5" />,
+      color: "gray",
       permissions: [Permissions.ManageCADSettings],
     },
     {
@@ -340,6 +461,7 @@ function QuickLinks() {
       title: t("quickLinkValuesTitle"),
       description: t("quickLinkValues"),
       icon: <DatabaseGear aria-hidden className="w-5 h-5" />,
+      color: "amber",
       permissions: defaultPermissions.defaultValuePermissions,
     },
     {
@@ -347,9 +469,17 @@ function QuickLinks() {
       title: t("MANAGE_AUDIT_LOGS"),
       description: t("quickLinkAuditLogs"),
       icon: <JournalText aria-hidden className="w-5 h-5" />,
+      color: "pink",
       permissions: defaultPermissions.allDefaultAdminPermissions,
     },
-  ].filter((link) => hasPermissions(link.permissions));
+  ].filter((link) => hasPermissions(link.permissions)) as Array<{
+    href: string;
+    title: string;
+    description: string;
+    icon: React.ReactNode;
+    color: keyof typeof QUICK_LINK_COLOR_CLASSES;
+    permissions: Permissions[];
+  }>;
 
   if (links.length <= 0) return null;
 
@@ -363,7 +493,12 @@ function QuickLinks() {
             href={link.href}
             className="card group flex items-start gap-3 p-4 hover:border-blue-400 dark:hover:border-blue-500/60 transition-colors"
           >
-            <span className="mt-0.5 rounded-lg p-2 bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
+            <span
+              className={classNames(
+                "mt-0.5 rounded-lg p-2",
+                QUICK_LINK_COLOR_CLASSES[link.color],
+              )}
+            >
               {link.icon}
             </span>
             <span className="flex flex-col">

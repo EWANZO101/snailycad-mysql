@@ -12,7 +12,7 @@ import {
 } from "@tsed/common";
 import { Controller } from "@tsed/di";
 import { NotFound } from "@tsed/exceptions";
-import { ContentType, Delete, Description, Get, Post, Put } from "@tsed/schema";
+import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { validateSchema } from "lib/data/validate-schema";
 import { IsAuth } from "middlewares/auth/is-auth";
@@ -30,6 +30,7 @@ import {
   assertCanChangePermissions,
 } from "lib/auth/permission-escalation";
 
+@Tags("Admin: Manage")
 @Controller("/admin/manage/custom-roles")
 @UseBeforeEach(IsAuth)
 @ContentType("application/json")

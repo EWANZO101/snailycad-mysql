@@ -10,8 +10,10 @@ import {
   ShouldDoType,
   type Officer,
   type CombinedLeoUnit,
+  type CombinedDotUnit,
   type IncidentEvent,
   type EmsFdDeputy,
+  type DotWorker,
   type Warrant,
   type ActiveTone,
   type DispatchChat,
@@ -21,6 +23,8 @@ import { prisma } from "lib/data/prisma";
 import {
   combinedEmsFdUnitProperties,
   combinedUnitProperties,
+  combinedDotUnitProperties,
+  dotWorkerProperties,
   leoProperties,
   unitProperties,
 } from "utils/leo/includes";
@@ -144,6 +148,24 @@ export class Socket {
     this.io.sockets.emit(SocketEvents.UpdateEmsFdStatus, [...combinedEmsFdDeputies, ...deputies]);
   }
 
+  async emitUpdateDotStatus() {
+    const [dotWorkers, combinedDotUnits] = await prisma.$transaction([
+      prisma.dotWorker.findMany({
+        orderBy: { updatedAt: "desc" },
+        where: {
+          status: { NOT: { shouldDo: ShouldDoType.SET_OFF_DUTY } },
+        },
+        include: dotWorkerProperties,
+      }),
+      prisma.combinedDotUnit.findMany({
+        orderBy: { updatedAt: "desc" },
+        include: combinedDotUnitProperties,
+      }),
+    ]);
+
+    this.io.sockets.emit(SocketEvents.UpdateDotStatus, [...combinedDotUnits, ...dotWorkers]);
+  }
+
   emitUserBanned(userId: string) {
     this.io.sockets.emit(SocketEvents.UserBanned, userId);
   }
@@ -171,8 +193,10 @@ export class Socket {
   emitPanicButtonLeo(
     unit:
       | CombinedLeoUnit
+      | CombinedDotUnit
       | (Officer & { citizen: Pick<Citizen, "name" | "surname"> })
       | (EmsFdDeputy & { citizen: Pick<Citizen, "name" | "surname"> })
+      | (DotWorker & { citizen: Pick<Citizen, "name" | "surname"> })
       | null,
     miscCadSettings: MiscCadSettings,
     type?: "ON" | "OFF",
@@ -214,7 +238,7 @@ export class Socket {
 
   emitPlayTone(data: {
     tone: { id: string; name: string; sound: string };
-    target: "ALL" | "LEO" | "EMS_FD" | "DEPARTMENT" | "UNIT" | "CALL";
+    target: "ALL" | "LEO" | "EMS_FD" | "DOT" | "DEPARTMENT" | "UNIT" | "CALL";
     unitIds: string[] | null;
     departmentId: string | null;
     description: string | null;

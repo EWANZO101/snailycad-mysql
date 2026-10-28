@@ -6,6 +6,7 @@ import { classNames } from "lib/classNames";
 import { CitizenDropdown } from "./dropdowns/citizen-dropdown";
 import { OfficerDropdown } from "./dropdowns/officer-dropdown";
 import { EmsFdDropdown } from "./dropdowns/ems-fd-dropdown";
+import { DotDropdown } from "./dropdowns/dot-dropdown";
 import { useFeatureEnabled } from "hooks/useFeatureEnabled";
 import { TowDropdown } from "./dropdowns/tow-dropdown";
 import { DispatchDropdown } from "./dropdowns/dispatch-dropdown";
@@ -13,6 +14,7 @@ import { useTranslations } from "next-intl";
 import { useImageUrl } from "hooks/useImageUrl";
 import { useViewport } from "@casperiv/useful/hooks/useViewport";
 import { AccountDropdown } from "./dropdowns/account-dropdown";
+import { QuickSearch } from "components/shared/quick-search/quick-search";
 import Head from "next/head";
 import { usePermission } from "hooks/usePermission";
 import { defaultPermissions, Permissions } from "@snailycad/permissions";
@@ -39,7 +41,7 @@ export function Nav({ maxWidth, isAccountPending }: Props) {
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   const { user, cad } = useAuth();
-  const { TOW, COURTHOUSE } = useFeatureEnabled();
+  const { TOW, COURTHOUSE, DOT } = useFeatureEnabled();
   const router = useRouter();
   const t = useTranslations("Nav");
   const isActive = (route: string) => router.pathname.startsWith(route);
@@ -123,6 +125,8 @@ export function Nav({ maxWidth, isAccountPending }: Props) {
 
                 {hasPermissions([Permissions.EmsFd]) ? <EmsFdDropdown /> : null}
 
+                {hasPermissions([Permissions.Dot]) && DOT ? <DotDropdown /> : null}
+
                 {hasPermissions([Permissions.LiveMap, Permissions.Dispatch]) ? (
                   <DispatchDropdown />
                 ) : null}
@@ -152,7 +156,8 @@ export function Nav({ maxWidth, isAccountPending }: Props) {
             )}
           </div>
 
-          <div>
+          <div className="flex items-center gap-2">
+            {user && !isAccountPending ? <QuickSearch /> : null}
             <AccountDropdown isAccountPending={isAccountPending} />
           </div>
         </div>

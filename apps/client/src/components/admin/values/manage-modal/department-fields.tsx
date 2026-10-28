@@ -12,6 +12,7 @@ import { FormField } from "components/form/FormField";
 export const DEPARTMENT_LABELS = {
   [DepartmentType.LEO]: "LEO",
   [DepartmentType.EMS_FD]: "EMS/FD",
+  [DepartmentType.DOT]: "DOT",
 };
 const DEPARTMENT_TYPES = Object.values(DepartmentType).map((v) => ({
   label: DEPARTMENT_LABELS[v] as string,
