@@ -16,6 +16,12 @@ export const CAD_SETTINGS_SCHEMA = z.object({
   authScreenHeaderImageId: z.any().or(z.string()).optional(),
   cadOGDescription: z.string().nullish(),
   loginNotice: z.string().max(1000).nullish(),
+  // empty = the default "911". Letters, digits, spaces and dashes only. Owner only (checked by the API)
+  emergencyNumber: z
+    .string()
+    .max(12)
+    .regex(/^[\p{L}\p{N} -]*$/u)
+    .nullish(),
 });
 
 export const LIVE_MAP_SETTINGS = z.object({

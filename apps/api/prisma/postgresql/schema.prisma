@@ -60,6 +60,8 @@ model MiscCadSettings {
   cadOGDescription          String?        @db.Text
   // shown under the login and register forms; empty = the default help text
   loginNotice               String?        @db.Text
+  // shown instead of "911" everywhere in the CAD; set by the owner, empty = 911
+  emergencyNumber           String?        @db.VarChar(12)
   heightPrefix              String         @default("cm") @db.VarChar(255)
   weightPrefix              String         @default("kg") @db.VarChar(255)
   maxCitizensPerUser        Int?

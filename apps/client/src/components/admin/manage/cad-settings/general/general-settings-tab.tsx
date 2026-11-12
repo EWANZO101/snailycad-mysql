@@ -21,6 +21,8 @@ import { toastMessage } from "lib/toastMessage";
 import type { PutCADSettingsData } from "@snailycad/types/api";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { SettingsTabs } from "components/admin/cad-settings/layout";
+import { Rank } from "@snailycad/types";
+import { EMERGENCY_NUMBER_PRESETS, sanitizeEmergencyNumber } from "lib/emergency-number";
 
 import timeZones from "./timezones.json";
 
@@ -30,7 +32,8 @@ export function GeneralSettingsTab() {
   const [bgId, setBgId] = React.useState<(File | string) | null>(null);
 
   const { state, execute } = useFetch();
-  const { cad, setCad } = useAuth();
+  const { cad, setCad, user } = useAuth();
+  const isOwner = user?.rank === Rank.OWNER;
   const { AOP } = useFeatureEnabled();
   const t = useTranslations("CadSettings");
   const common = useTranslations("Common");
@@ -124,6 +127,7 @@ export function GeneralSettingsTab() {
     roleplayEnabled: cad.miscCadSettings?.roleplayEnabled ?? true,
     cadOGDescription: cad.miscCadSettings?.cadOGDescription ?? "",
     loginNotice: cad.miscCadSettings?.loginNotice ?? "",
+    emergencyNumber: cad.miscCadSettings?.emergencyNumber ?? "",
     timeZone: cad?.timeZone ?? null,
   };
 
@@ -172,6 +176,32 @@ export function GeneralSettingsTab() {
                 onChange={handleChange}
                 maxLength={1000}
               />
+            </SettingsFormField>
+
+            <SettingsFormField
+              label={t("emergencyNumber")}
+              description={isOwner ? t("emergencyNumberDescription") : t("emergencyNumberOwnerOnly")}
+              errorMessage={errors.emergencyNumber}
+              optional
+            >
+              <Input
+                name="emergencyNumber"
+                value={values.emergencyNumber}
+                placeholder="911"
+                maxLength={12}
+                disabled={!isOwner}
+                list="emergency-number-presets"
+                onChange={(event) =>
+                  setFieldValue("emergencyNumber", sanitizeEmergencyNumber(event.target.value))
+                }
+              />
+              <datalist id="emergency-number-presets">
+                {EMERGENCY_NUMBER_PRESETS.map((preset) => (
+                  <option key={preset.value} value={preset.value}>
+                    {preset.label}
+                  </option>
+                ))}
+              </datalist>
             </SettingsFormField>
 
             <SettingsFormField

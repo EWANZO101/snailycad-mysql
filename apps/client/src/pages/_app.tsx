@@ -64,8 +64,11 @@ export default function App({ Component, router, pageProps, ...rest }: AppProps)
     };
   }, [router.events]);
 
-  // "911" in every translation follows the user's chosen emergency number (e.g. 999 or 112)
-  const messages = useEmergencyNumberMessages(pageProps.messages);
+  // "911" in every translation follows the CAD's emergency number (e.g. 999 or 112), set by the owner
+  const messages = useEmergencyNumberMessages(
+    pageProps.messages,
+    cad?.miscCadSettings?.emergencyNumber,
+  );
 
   React.useEffect(() => {
     // set error map for localized form error messages

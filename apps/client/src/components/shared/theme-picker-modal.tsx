@@ -11,12 +11,6 @@ import {
   getSavedUiTheme,
   saveUiTheme,
 } from "lib/ui-theme";
-import {
-  EMERGENCY_NUMBER_PRESETS,
-  getSavedEmergencyNumber,
-  sanitizeEmergencyNumber,
-  saveEmergencyNumber,
-} from "lib/emergency-number";
 
 const THEMES: { id: UiTheme; name: string; description: string; colors: string[] }[] = [
   {
@@ -60,12 +54,9 @@ export function ThemePickerModal() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<UiTheme>("new");
-  const [emergencyNumber, setEmergencyNumber] = React.useState("911");
-  const isPreset = EMERGENCY_NUMBER_PRESETS.some((preset) => preset.value === emergencyNumber);
 
   React.useEffect(() => {
     if (!user) return;
-    setEmergencyNumber(getSavedEmergencyNumber());
     const saved = getSavedUiTheme();
     if (saved) {
       setSelected(saved);
@@ -77,7 +68,6 @@ export function ThemePickerModal() {
   React.useEffect(() => {
     function handleOpen() {
       setSelected(getSavedUiTheme() ?? "new");
-      setEmergencyNumber(getSavedEmergencyNumber());
       setIsOpen(true);
     }
 
@@ -92,7 +82,6 @@ export function ThemePickerModal() {
   }
 
   function handleSave() {
-    saveEmergencyNumber(emergencyNumber);
     saveUiTheme(selected);
     setIsOpen(false);
   }
@@ -148,56 +137,6 @@ export function ThemePickerModal() {
         })}
       </div>
 
-      <section className="mt-6">
-        <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-gray-400">
-          Emergency number
-        </h3>
-        <p className="mb-3 text-sm text-neutral-600 dark:text-gray-400">
-          Shown everywhere the CAD says 911, like &quot;{emergencyNumber || "911"} calls&quot;.
-        </p>
-
-        <div role="radiogroup" aria-label="Emergency number" className="flex flex-wrap gap-2">
-          {EMERGENCY_NUMBER_PRESETS.map((preset) => (
-            <button
-              key={preset.value}
-              type="button"
-              role="radio"
-              aria-checked={emergencyNumber === preset.value}
-              onClick={() => setEmergencyNumber(preset.value)}
-              className={classNames(
-                "px-3 py-1.5 rounded-lg border text-sm transition-colors",
-                emergencyNumber === preset.value
-                  ? "border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-500/15 dark:text-blue-100"
-                  : "border-gray-200 hover:bg-gray-100 dark:border-quaternary dark:hover:bg-secondary",
-              )}
-            >
-              {preset.label}
-            </button>
-          ))}
-          <label
-            className={classNames(
-              "flex items-center gap-2 px-3 py-1 rounded-lg border text-sm",
-              !isPreset
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-500/15"
-                : "border-gray-200 dark:border-quaternary",
-            )}
-          >
-            Custom
-            <input
-              type="text"
-              inputMode="text"
-              maxLength={12}
-              aria-label="Custom emergency number"
-              value={isPreset ? "" : emergencyNumber}
-              placeholder="e.g. 100"
-              onChange={(event) =>
-                setEmergencyNumber(sanitizeEmergencyNumber(event.target.value) || "")
-              }
-              className="w-20 px-2 py-0.5 rounded-md border outline-none bg-white dark:bg-secondary border-gray-200 dark:border-quinary focus:border-blue-500"
-            />
-          </label>
-        </div>
-      </section>
 
       <footer className="flex justify-end mt-6">
         <Button variant="blue" onPress={handleSave}>

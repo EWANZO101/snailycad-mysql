@@ -2,6 +2,9 @@
   "CadSettings": {
     "loginNotice": "Login page notice",
     "loginNoticeDescription": "Shown under the login and register forms, e.g. where players get help (your Discord or staff). Leave empty for the default text.",
+    "emergencyNumber": "Emergency number",
+    "emergencyNumberDescription": "Shown everywhere the CAD says 911, for every user (e.g. 999 in the UK, 112 in the EU). Leave empty for 911. Only the CAD owner can change this.",
+    "emergencyNumberOwnerOnly": "Shown everywhere the CAD says 911, for every user. Only the CAD owner can change this.",
     "templateSection": "Modelos",
     "callsignTemplate": "Modelo de Indicativo",
     "callsignTemplateInfo": "Este é o modelo para indicativos de unidade. Você pode usar as seguintes variáveis: {variables}",
