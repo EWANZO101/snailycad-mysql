@@ -151,12 +151,12 @@ export function ImportPostgresTab() {
         source: getSource(),
         mode,
         confirmation,
-        copyEnv: mode === "replace" && check?.envChanges != null && copyEnv,
+        copyEnv: mode === "replace" && (check?.envChanges ?? null) !== null && copyEnv,
         copyEncryptionToken:
           mode === "replace" &&
           check?.encryptionToken === "different" &&
           // copying the .env copies the encryption key too
-          !(check?.envChanges != null && copyEnv) &&
+          !(check.envChanges !== null && copyEnv) &&
           copyToken,
       },
       noToast: true,
@@ -327,7 +327,7 @@ export function ImportPostgresTab() {
                     title={t("replaceWarningTitle")}
                     message={t("replaceWarningMessage")}
                   />
-                  {check.envChanges != null ? (
+                  {check.envChanges !== null ? (
                     <div className="mb-3">
                       <SwitchField isSelected={copyEnv} onChange={setCopyEnv}>
                         {t("copyEnv")}
@@ -342,7 +342,7 @@ export function ImportPostgresTab() {
                     </div>
                   ) : null}
                   {check.encryptionToken === "different" &&
-                  !(check.envChanges != null && copyEnv) ? (
+                  !(check.envChanges !== null && copyEnv) ? (
                     <SwitchField isSelected={copyToken} onChange={setCopyToken}>
                       {t("copyEncryptionToken")}
                     </SwitchField>

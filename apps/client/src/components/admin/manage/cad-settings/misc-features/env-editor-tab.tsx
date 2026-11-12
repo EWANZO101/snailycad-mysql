@@ -83,7 +83,7 @@ export function EnvEditorTab() {
       setError(translateError(error));
       return;
     }
-    if (json && "isAllowed" in json) {
+    if ("isAllowed" in json) {
       setData(json);
       setContent(json.content ?? "");
       if (json.settings) {
