@@ -29,6 +29,7 @@ export enum SettingsTabs {
   TonePresets = "TONE_PRESETS",
   Radio = "RADIO",
   ImportPostgres = "IMPORT_POSTGRES",
+  EnvEditor = "ENV_EDITOR",
 
   /** integrations */
   LiveMap = "LIVE_MAP",
@@ -119,6 +120,7 @@ function CadSettingsSidebar() {
         SettingsTabs.TonePresets,
         SettingsTabs.Radio,
         SettingsTabs.ImportPostgres,
+        SettingsTabs.EnvEditor,
       ],
     },
     {

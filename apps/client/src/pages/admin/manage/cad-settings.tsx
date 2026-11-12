@@ -128,6 +128,12 @@ const Tabs = {
         .ImportPostgresTab,
     { ssr: false },
   ),
+  EnvEditorTab: dynamic(
+    async () =>
+      (await import("components/admin/manage/cad-settings/misc-features/env-editor-tab"))
+        .EnvEditorTab,
+    { ssr: false },
+  ),
   BlacklistedWordsTab: dynamic(
     async () =>
       (await import("components/admin/manage/cad-settings/general/blacklisted-words-tab"))
@@ -167,6 +173,7 @@ export default function CadSettings(props: Props) {
       <Tabs.TonesTab />
       <Tabs.RadioTab />
       <Tabs.ImportPostgresTab />
+      <Tabs.EnvEditorTab />
     </CadSettingsLayout>
   );
 }

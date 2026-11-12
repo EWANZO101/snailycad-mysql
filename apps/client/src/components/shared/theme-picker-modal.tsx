@@ -137,7 +137,6 @@ export function ThemePickerModal() {
         })}
       </div>
 
-
       <footer className="flex justify-end mt-6">
         <Button variant="blue" onPress={handleSave}>
           Save

@@ -20,6 +20,8 @@ interface CheckResult {
   duplicateUsernames: string[];
   existingValues: number;
   encryptionToken: "matches" | "different" | "unknown";
+  /** .env settings a replace import with copyEnv would change; null without a .env source */
+  envChanges: string[] | null;
   problems: string[];
   canImport: boolean;
 }
@@ -70,6 +72,7 @@ export function ImportPostgresTab() {
   const [error, setError] = React.useState<string | null>(null);
   const [confirmation, setConfirmation] = React.useState("");
   const [copyToken, setCopyToken] = React.useState(true);
+  const [copyEnv, setCopyEnv] = React.useState(true);
   const [job, setJob] = React.useState<ImportJob | null>(null);
   const [signedOut, setSignedOut] = React.useState(false);
 
@@ -148,8 +151,13 @@ export function ImportPostgresTab() {
         source: getSource(),
         mode,
         confirmation,
+        copyEnv: mode === "replace" && (check?.envChanges ?? null) !== null && copyEnv,
         copyEncryptionToken:
-          mode === "replace" && check?.encryptionToken === "different" && copyToken,
+          mode === "replace" &&
+          check?.encryptionToken === "different" &&
+          // copying the .env copies the encryption key too
+          !(check.envChanges !== null && copyEnv) &&
+          copyToken,
       },
       noToast: true,
     });
@@ -319,7 +327,22 @@ export function ImportPostgresTab() {
                     title={t("replaceWarningTitle")}
                     message={t("replaceWarningMessage")}
                   />
-                  {check.encryptionToken === "different" ? (
+                  {check.envChanges !== null ? (
+                    <div className="mb-3">
+                      <SwitchField isSelected={copyEnv} onChange={setCopyEnv}>
+                        {t("copyEnv")}
+                      </SwitchField>
+                      {copyEnv ? (
+                        <p className="mt-1 text-sm text-neutral-700 dark:text-gray-400">
+                          {check.envChanges.length
+                            ? t("copyEnvChanges", { keys: check.envChanges.join(", ") })
+                            : t("copyEnvNone")}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {check.encryptionToken === "different" &&
+                  !(check.envChanges !== null && copyEnv) ? (
                     <SwitchField isSelected={copyToken} onChange={setCopyToken}>
                       {t("copyEncryptionToken")}
                     </SwitchField>
