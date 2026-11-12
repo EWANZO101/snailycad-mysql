@@ -1,0 +1,21 @@
+[Unit]
+Description=SnailyCAD radio <-> Discord bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# change these two paths to where the CAD is
+WorkingDirectory=/opt/snailycad/integrations/discord-bridge
+ExecStart=/usr/bin/node src/index.mjs config.json
+Restart=always
+RestartSec=5
+# runs fine without root; create the user with: useradd --system --no-create-home snailybridge
+User=snailybridge
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
