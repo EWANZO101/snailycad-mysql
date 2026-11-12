@@ -116,8 +116,10 @@ Ideas:
 
 - **Radio logger**: record every channel to files with timestamps (one listen-only connection per
   channel).
-- **Discord bridge**: a Discord bot that joins a voice channel and a radio channel and passes
-  audio both ways (Discord's 48 kHz Opus ⇄ 16 kHz mu-law).
+- **Discord bridge**: ready to use in
+  [`integrations/discord-bridge`](../../integrations/discord-bridge/README.md): a Discord bot that
+  links a voice channel to a radio channel both ways, with each Discord speaker on the radio under
+  their own name.
 - **Hardware gateway**: a Raspberry Pi with a USB sound card wired to a real radio: VOX or a GPIO
   push-to-talk becomes `ptt`, the speaker output becomes frames.
 - **Another game**: anything with HTTP + WebSocket (Garry's Mod, RedM, Arma, a Minecraft plugin)

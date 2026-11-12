@@ -1,0 +1,16 @@
+{
+  "cadApi": "https://cad-api.example.com/v1",
+  "cadApiToken": "your CAD API token (Admin > CAD Settings > API Token)",
+  "discordToken": "your Discord bot token",
+  "bridges": [
+    {
+      "name": "Dispatch",
+      "guildId": "123456789012345678",
+      "voiceChannelId": "123456789012345678",
+      "radioChannel": "Dispatch 1",
+      "talkFromDiscord": true,
+      "allowedRoleIds": [],
+      "volume": 1
+    }
+  ]
+}

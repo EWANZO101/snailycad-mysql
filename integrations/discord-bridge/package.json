@@ -1,0 +1,25 @@
+{
+  "name": "snailycad-discord-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Links Discord voice channels to SnailyCAD radio channels, both ways.",
+  "type": "module",
+  "main": "src/index.mjs",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "node src/index.mjs",
+    "test": "node --test \"tests/*.test.mjs\""
+  },
+  "dependencies": {
+    "@discordjs/voice": "0.19.2",
+    "discord.js": "14.28.1",
+    "opusscript": "0.0.8",
+    "prism-media": "1.3.5",
+    "ws": "8.22.2"
+  },
+  "optionalDependencies": {
+    "@discordjs/opus": "0.11.0"
+  }
+}
