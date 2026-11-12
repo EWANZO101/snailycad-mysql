@@ -1052,12 +1052,23 @@ function RadioSettings({ hub, onClose }: { hub: RadioHub; onClose(): void }) {
   const { preferences } = hub;
   const [listening, setListening] = React.useState(false);
   const [devices, setDevices] = React.useState<MediaDeviceInfo[]>([]);
+  const [outputs, setOutputs] = React.useState<MediaDeviceInfo[]>([]);
+  const canPickOutput =
+    typeof AudioContext !== "undefined" && "setSinkId" in AudioContext.prototype;
 
   React.useEffect(() => {
     void navigator.mediaDevices
       ?.enumerateDevices()
-      .then((list) => setDevices(list.filter((device) => device.kind === "audioinput")))
-      .catch(() => setDevices([]));
+      .then((list) => {
+        setDevices(list.filter((device) => device.kind === "audioinput"));
+        setOutputs(
+          list.filter((device) => device.kind === "audiooutput" && device.deviceId !== "default"),
+        );
+      })
+      .catch(() => {
+        setDevices([]);
+        setOutputs([]);
+      });
   }, []);
 
   React.useEffect(() => {
@@ -1140,6 +1151,69 @@ function RadioSettings({ hub, onClose }: { hub: RadioHub; onClose(): void }) {
             ))}
           </select>
         </label>
+        <label className="flex items-center justify-between gap-2">
+          <span>{t("outputDevice")}</span>
+          {canPickOutput ? (
+            <select
+              className={selectClassName}
+              value={preferences.outputDeviceId ?? ""}
+              onChange={(event) =>
+                hub.updatePreferences({ outputDeviceId: event.target.value || null })
+              }
+            >
+              <option value="">{t("defaultOutput")}</option>
+              {outputs.map((device) => (
+                <option key={device.deviceId} value={device.deviceId}>
+                  {device.label || device.deviceId.slice(0, 8)}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="w-40 text-xs text-neutral-500 dark:text-gray-400">
+              {t("outputDeviceUnsupported")}
+            </span>
+          )}
+        </label>
+        <label className="flex items-start justify-between gap-2 cursor-pointer">
+          <span>
+            {t("releaseMicrophone")}
+            <span className="block text-xs text-neutral-500 dark:text-gray-400">
+              {t("releaseMicrophoneHint")}
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="mt-1 accent-blue-600"
+            checked={preferences.releaseMicrophone}
+            onChange={(event) => hub.updatePreferences({ releaseMicrophone: event.target.checked })}
+          />
+        </label>
+        <label className="flex items-start justify-between gap-2 cursor-pointer">
+          <span>
+            {t("micProcessing")}
+            <span className="block text-xs text-neutral-500 dark:text-gray-400">
+              {t("micProcessingHint")}
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="mt-1 accent-blue-600"
+            checked={preferences.micProcessing}
+            onChange={(event) => hub.updatePreferences({ micProcessing: event.target.checked })}
+          />
+        </label>
+        <details className="rounded-md border border-gray-200 dark:border-quaternary px-2 py-1.5">
+          <summary className="cursor-pointer font-medium">{t("discordTitle")}</summary>
+          <ul className="mt-1.5 list-disc pl-4 flex flex-col gap-1 text-xs text-neutral-600 dark:text-gray-300">
+            <li>{t("discordHeadphones")}</li>
+            <li>{t("discordPttKey")}</li>
+            <li>{t("discordFocus")}</li>
+            <li>{t("discordAttenuation")}</li>
+            <li>{t("discordWindowsDucking")}</li>
+            <li>{t("discordVoiceActivity")}</li>
+            <li>{t("discordOutput")}</li>
+          </ul>
+        </details>
         {hub.isPopout ? null : (
           <label className="flex items-center justify-between gap-2">
             <span>{t("position")}</span>
