@@ -169,6 +169,27 @@ async function main() {
     }
   }
 
+  // columns the source has: a PostgreSQL CAD from an older version lacks columns added since
+  // (e.g. the DOT unit columns), so only those are read and the rest get the target's default
+  const sourceColumns = new Map();
+  {
+    const { lines, done } = psqlLines(
+      "SELECT json_build_array(table_name, column_name) FROM information_schema.columns WHERE table_schema = 'public'",
+    );
+    for await (const line of lines) {
+      if (!line.trim()) continue;
+      const [tableName, columnName] = JSON.parse(line);
+      const set = sourceColumns.get(tableName) ?? new Set();
+      set.add(columnName);
+      sourceColumns.set(tableName, set);
+    }
+    await done;
+  }
+
+  // per table: the columns to INSERT. Columns missing in the source are left out so the target's
+  // default applies, except NOT NULL JSON lists (no default on MySQL), which are filled with []
+  const insertColumnsByTable = new Map();
+
   // source row counts and data
   const sourceCounts = new Map();
   const data = new Map();
@@ -185,8 +206,23 @@ async function main() {
       continue;
     }
 
+    const inSource = sourceColumns.get(name) ?? new Set();
+    const readColumns = columns.filter((c) => inSource.has(c.name));
+    const skipped = columns.filter((c) => !inSource.has(c.name)).map((c) => c.name);
+    if (skipped.length) {
+      console.warn(`- ${name}: not in PostgreSQL, using defaults for ${skipped.join(", ")}`);
+    }
+    insertColumnsByTable.set(
+      name,
+      columns.filter(
+        (c) =>
+          inSource.has(c.name) ||
+          ((c.type === "json" || c.type === "longtext_json") && !c.isNullable),
+      ),
+    );
+
     // eslint-disable-next-line quotes
-    const select = columns.map((c) => `t."${c.name.replace(/"/g, '""')}"`).join(", ");
+    const select = readColumns.map((c) => `t."${c.name.replace(/"/g, '""')}"`).join(", ") || "1";
     const { lines, done } = psqlLines(
       // eslint-disable-next-line quotes
       `SELECT row_to_json(r) FROM (SELECT ${select} FROM "${name.replace(/"/g, '""')}" t) r`,
@@ -222,7 +258,7 @@ async function main() {
         const rows = data.get(name);
         if (!rows.length) continue;
 
-        const columns = columnsByTable.get(name);
+        const columns = insertColumnsByTable.get(name);
         const columnList = columns.map((c) => quote(c.name)).join(", ");
         const rowPlaceholder = `(${columns.map(() => "?").join(", ")})`;
 
