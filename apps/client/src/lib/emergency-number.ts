@@ -1,8 +1,6 @@
 import * as React from "react";
 
 export const DEFAULT_EMERGENCY_NUMBER = "911";
-export const EMERGENCY_NUMBER_STORAGE_KEY = "snailycad_emergency_number";
-export const EMERGENCY_NUMBER_CHANGED_EVENT = "snailycad:emergency-number-changed";
 
 export const EMERGENCY_NUMBER_PRESETS = [
   { value: "911", label: "911 (US, Canada)" },
@@ -18,26 +16,6 @@ export function sanitizeEmergencyNumber(value: string) {
     .replace(/[^\p{L}\p{N} -]/gu, "")
     .trim()
     .slice(0, 12);
-}
-
-export function getSavedEmergencyNumber(): string {
-  try {
-    const value = window.localStorage.getItem(EMERGENCY_NUMBER_STORAGE_KEY);
-    const sanitized = value ? sanitizeEmergencyNumber(value) : "";
-    return sanitized || DEFAULT_EMERGENCY_NUMBER;
-  } catch {
-    return DEFAULT_EMERGENCY_NUMBER;
-  }
-}
-
-export function saveEmergencyNumber(value: string) {
-  const sanitized = sanitizeEmergencyNumber(value) || DEFAULT_EMERGENCY_NUMBER;
-  try {
-    window.localStorage.setItem(EMERGENCY_NUMBER_STORAGE_KEY, sanitized);
-  } catch {
-    // storage unavailable: only applies until the page is reloaded
-  }
-  window.dispatchEvent(new Event(EMERGENCY_NUMBER_CHANGED_EVENT));
 }
 
 function replaceInMessages(value: unknown, emergencyNumber: string): unknown {
@@ -58,26 +36,13 @@ function replaceInMessages(value: unknown, emergencyNumber: string): unknown {
 }
 
 /**
- * replaces "911" in every translation with the user's chosen emergency number (e.g. 999 or 112).
- * The first render always uses the original messages so server and client markup match.
+ * replaces "911" in every translation with the CAD's emergency number (e.g. 999 or 112).
+ * It's a CAD-wide setting the owner sets in CAD Settings > General, so it's the same for every
+ * user and the same on the server and the client.
  */
-export function useEmergencyNumberMessages<T>(messages: T): T {
-  const [emergencyNumber, setEmergencyNumber] = React.useState(DEFAULT_EMERGENCY_NUMBER);
-
-  React.useEffect(() => {
-    setEmergencyNumber(getSavedEmergencyNumber());
-
-    function handleChange() {
-      setEmergencyNumber(getSavedEmergencyNumber());
-    }
-
-    window.addEventListener(EMERGENCY_NUMBER_CHANGED_EVENT, handleChange);
-    window.addEventListener("storage", handleChange);
-    return () => {
-      window.removeEventListener(EMERGENCY_NUMBER_CHANGED_EVENT, handleChange);
-      window.removeEventListener("storage", handleChange);
-    };
-  }, []);
+export function useEmergencyNumberMessages<T>(messages: T, cadEmergencyNumber?: string | null): T {
+  const emergencyNumber =
+    sanitizeEmergencyNumber(cadEmergencyNumber ?? "") || DEFAULT_EMERGENCY_NUMBER;
 
   return React.useMemo(() => {
     if (!messages || emergencyNumber === DEFAULT_EMERGENCY_NUMBER) return messages;

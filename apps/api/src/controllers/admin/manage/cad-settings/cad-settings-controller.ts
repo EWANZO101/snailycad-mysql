@@ -11,7 +11,7 @@ import { BodyParams, Context, PathParams, QueryParams } from "@tsed/platform-par
 import { ContentType, Delete, Description, Get, Post, Put, Tags } from "@tsed/schema";
 import { prisma } from "lib/data/prisma";
 import { CAD_SELECT, IsAuth, setCADFeatures } from "middlewares/auth/is-auth";
-import { BadRequest, NotFound } from "@tsed/exceptions";
+import { BadRequest, Forbidden, NotFound } from "@tsed/exceptions";
 import { MultipartFile, type PlatformMulterFile, Req, Res, UseBefore } from "@tsed/common";
 import { Socket } from "services/socket-service";
 import { nanoid } from "nanoid";
@@ -22,6 +22,8 @@ import {
   type Feature,
   type JailTimeScale,
   type Prisma,
+  type User,
+  Rank,
 } from "@prisma/client";
 import { getCADVersion } from "@snailycad/utils/version";
 import { getSessionUser, userProperties } from "lib/auth/getSessionUser";
@@ -138,6 +140,7 @@ export class CADSettingsController {
   })
   async updateCadSettings(
     @Context("sessionUserId") sessionUserId: string,
+    @Context("user") user: User,
     @Context("cad") cad: cad,
     @BodyParams() body: unknown,
   ): Promise<APITypes.PutCADSettingsData> {
@@ -148,6 +151,18 @@ export class CADSettingsController {
       where: { id: cad.id },
       include: { features: true, miscCadSettings: true, apiToken: true },
     });
+
+    // the emergency number is CAD-wide and only the owner can change it. Admins still send the
+    // current value with the rest of the form, so only an actual change is refused
+    const emergencyNumber =
+      data.emergencyNumber === undefined ? undefined : data.emergencyNumber?.trim() || null;
+    if (
+      emergencyNumber !== undefined &&
+      emergencyNumber !== (_cad?.miscCadSettings?.emergencyNumber ?? null) &&
+      user.rank !== Rank.OWNER
+    ) {
+      throw new Forbidden("onlyOwnerCanChangeEmergencyNumber");
+    }
 
     const updated = await prisma.cad.update({
       where: { id: cad.id },
@@ -167,6 +182,7 @@ export class CADSettingsController {
             cadOGDescription: data.cadOGDescription || null,
             loginNotice:
               data.loginNotice === undefined ? undefined : data.loginNotice?.trim() || null,
+            emergencyNumber: user.rank === Rank.OWNER ? emergencyNumber : undefined,
             roleplayEnabled: data.roleplayEnabled,
             authScreenBgImageId:
               data.authScreenBgImageId === null ? null : data.authScreenBgImageId || undefined,
