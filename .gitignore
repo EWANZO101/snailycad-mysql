@@ -59,3 +59,7 @@ livekit.yaml
 .data-postgres
 .dev-data-postgres
 __pycache__/
+
+# .env editor (Admin > CAD Settings > Environment)
+.env-backups/
+apps/api/.env-editor.json

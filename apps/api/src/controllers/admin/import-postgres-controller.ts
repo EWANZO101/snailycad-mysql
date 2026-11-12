@@ -14,6 +14,13 @@ import { findApiRoot } from "lib/recovery/recovery-token";
 import { assertNotDemoAccount } from "lib/demo/demo-mode";
 import { validateSchema } from "lib/data/validate-schema";
 import { prisma } from "lib/data/prisma";
+import {
+  backupCurrentEnv,
+  getEnvPaths,
+  saveOldCadEnv,
+  writeEnvEverywhere,
+} from "lib/env-editor/env-backup";
+import { mergeImportedEnv } from "lib/env-editor/env-file";
 
 const execFileAsync = promisify(execFile);
 
@@ -49,6 +56,8 @@ const START_SCHEMA = z.object({
   mode: z.enum(["values", "replace"]),
   confirmation: z.string().optional(),
   copyEncryptionToken: z.boolean().default(false),
+  /** copy the old CAD's .env settings (not this CAD's database, ports or URLs); "env" source only */
+  copyEnv: z.boolean().default(false),
 });
 
 interface ImportJob {
@@ -105,7 +114,7 @@ function redact(text: string) {
 
 function resolveSource(source: z.infer<typeof SOURCE_SCHEMA>) {
   if (source.type === "url") {
-    return { pgUrl: source.url, encryptionToken: null as string | null };
+    return { pgUrl: source.url, encryptionToken: null as string | null, envContent: null };
   }
 
   if (source.type === "fields") {
@@ -113,6 +122,7 @@ function resolveSource(source: z.infer<typeof SOURCE_SCHEMA>) {
     return {
       pgUrl: `postgresql://${auth}@${source.host}:${source.port}/${encodeURIComponent(source.database)}`,
       encryptionToken: null as string | null,
+      envContent: null,
     };
   }
 
@@ -135,7 +145,16 @@ function resolveSource(source: z.infer<typeof SOURCE_SCHEMA>) {
     throw new BadRequest("envFileHasNoPostgresDatabase");
   }
 
-  return { pgUrl, encryptionToken: env.ENCRYPTION_TOKEN ?? null };
+  return {
+    pgUrl,
+    encryptionToken: env.ENCRYPTION_TOKEN ?? null,
+    envContent: readFileSync(path, "utf8") as string | null,
+  };
+}
+
+function readCurrentEnv() {
+  const { envPath } = getEnvPaths();
+  return existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
 }
 
 function cleanPgUrl(url: string) {
@@ -220,7 +239,7 @@ export class ImportPostgresController {
   async check(@BodyParams() body: unknown, @Context("user") user: User) {
     await assertOwner(user);
     const data = validateSchema(START_SCHEMA.pick({ source: true, mode: true }), body);
-    const { pgUrl: rawUrl, encryptionToken } = resolveSource(data.source);
+    const { pgUrl: rawUrl, encryptionToken, envContent } = resolveSource(data.source);
     const pgUrl = cleanPgUrl(rawUrl);
 
     const [version, users] = await Promise.all([
@@ -266,6 +285,11 @@ export class ImportPostgresController {
       duplicateUsernames: data.mode === "replace" ? duplicateUsernames : [],
       existingValues,
       encryptionToken: tokenStatus,
+      // the .env settings a "replace" import with copyEnv would change (names only, never values)
+      envChanges:
+        envContent !== null && data.mode === "replace"
+          ? mergeImportedEnv(readCurrentEnv(), envContent).changedKeys
+          : null,
       problems,
       canImport: problems.length === 0,
     };
@@ -288,7 +312,7 @@ export class ImportPostgresController {
       if ((await prisma.value.count()) > 0) throw new BadRequest("valuesNotEmpty");
     }
 
-    const { pgUrl: rawUrl, encryptionToken } = resolveSource(data.source);
+    const { pgUrl: rawUrl, encryptionToken, envContent } = resolveSource(data.source);
     const pgUrl = cleanPgUrl(rawUrl);
     const args = migrateDataArgs(data.mode);
     const targetUrl = getTargetUrl();
@@ -330,7 +354,33 @@ export class ImportPostgresController {
       }
 
       job.state = "done";
-      if (
+
+      // keep a copy of the old CAD's .env in this CAD
+      if (envContent !== null) {
+        try {
+          job.lines.push(`Saved a copy of the old CAD's .env to ${saveOldCadEnv(envContent)}.`);
+        } catch (error) {
+          job.lines.push(`Couldn't save a copy of the old CAD's .env: ${String(error)}`);
+        }
+      }
+
+      if (data.mode === "replace" && data.copyEnv && envContent !== null) {
+        try {
+          const { content, changedKeys } = mergeImportedEnv(readCurrentEnv(), envContent);
+          if (changedKeys.length) {
+            const backup = backupCurrentEnv();
+            writeEnvEverywhere(content);
+            if (backup) job.lines.push(`Backed up this CAD's .env to ${backup}.`);
+            job.lines.push(`Copied the old CAD's .env settings: ${changedKeys.join(", ")}.`);
+            job.needsRestart = true;
+            restartCad();
+          } else {
+            job.lines.push("The old CAD's .env settings already match, nothing to copy.");
+          }
+        } catch (error) {
+          job.lines.push(`Couldn't copy the old CAD's .env: ${String(error)}`);
+        }
+      } else if (
         data.mode === "replace" &&
         data.copyEncryptionToken &&
         encryptionToken &&
@@ -352,6 +402,8 @@ export class ImportPostgresController {
 }
 
 function copyEncryptionToken(token: string) {
+  const backup = backupCurrentEnv();
+  if (backup) job.lines.push(`Backed up this CAD's .env to ${backup}.`);
   const root = getProjectRoot();
   for (const path of [
     join(root, ".env"),
