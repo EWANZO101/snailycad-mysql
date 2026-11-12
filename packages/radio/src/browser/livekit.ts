@@ -30,6 +30,16 @@ export class LiveKitAudio {
   #rooms = new Map<string, ChannelRoom>();
   #module: Promise<typeof LiveKit> | null = null;
   #container: HTMLElement | null = null;
+  #sinkId = "";
+
+  /** plays LiveKit audio on another output device ("" = default) */
+  async setOutputDevice(deviceId: string | null) {
+    this.#sinkId = deviceId ?? "";
+    const elements = this.#container?.querySelectorAll("audio, video") ?? [];
+    await Promise.allSettled(
+      [...elements].map((element) => applySinkId(element as HTMLMediaElement, this.#sinkId)),
+    );
+  }
 
   #load() {
     this.#module ??= import("livekit-client");
@@ -59,6 +69,7 @@ export class LiveKitAudio {
     room.on(livekit.RoomEvent.TrackSubscribed, (track: RemoteAudioTrack) => {
       if (track.kind !== livekit.Track.Kind.Audio) return;
       const element = track.attach();
+      void applySinkId(element, this.#sinkId);
       this.#element().appendChild(element);
       track.setVolume?.(entry.volume);
       entry.tracks.add(track);
@@ -99,4 +110,9 @@ export class LiveKitAudio {
     this.#container?.remove();
     this.#container = null;
   }
+}
+
+function applySinkId(element: HTMLMediaElement, sinkId: string) {
+  const media = element as HTMLMediaElement & { setSinkId?(id: string): Promise<void> };
+  return typeof media.setSinkId === "function" ? media.setSinkId(sinkId) : Promise.resolve();
 }

@@ -13,6 +13,12 @@ export interface RadioPreferences {
   /** KeyboardEvent.code of the push-to-talk key */
   pttKey: string;
   microphoneDeviceId: string | null;
+  /** where the radio plays (an "audiooutput" deviceId), e.g. another headset than Discord; null = default */
+  outputDeviceId: string | null;
+  /** echo cancellation, noise suppression and auto gain on the microphone */
+  micProcessing: boolean;
+  /** close the microphone a few seconds after talking (no "mic in use" / call ducking in between) */
+  releaseMicrophone: boolean;
   minimized: boolean;
   position: "bottom-left" | "bottom-right";
   /** where the dock was dragged to (left / top in px); null = the `position` corner */
@@ -30,6 +36,9 @@ export const DEFAULT_RADIO_PREFERENCES: RadioPreferences = {
   masterVolume: 0.8,
   pttKey: "Backquote",
   microphoneDeviceId: null,
+  outputDeviceId: null,
+  micProcessing: true,
+  releaseMicrophone: true,
   minimized: false,
   position: "bottom-right",
   dockPosition: null,

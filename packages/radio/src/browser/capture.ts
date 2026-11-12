@@ -43,6 +43,12 @@ registerProcessor("snaily-radio-capture", SnailyRadioCapture);
 
 export interface MicrophoneOptions {
   deviceId?: string;
+  /**
+   * the browser's echo cancellation, noise suppression and auto gain (default on). Turning it off
+   * can help when the radio runs next to Discord: no double processing, and Windows is less likely
+   * to treat it as a call and turn other apps down. Use headphones then.
+   */
+  processing?: boolean;
   /** called with every 20 ms frame while `transmitting` is true */
   onFrame(samples: Float32Array): void;
   /** input level 0..1, about 50 times a second while open */
@@ -78,6 +84,25 @@ export class Microphone {
     return this.#stream;
   }
 
+  /**
+   * changes the device or processing. An open microphone is closed and opens again with the new
+   * settings on the next push-to-talk (or right away when transmitting).
+   */
+  configure(options: Pick<MicrophoneOptions, "deviceId" | "processing">) {
+    const changed =
+      options.deviceId !== this.#options.deviceId ||
+      options.processing !== this.#options.processing;
+    this.#options = { ...this.#options, ...options };
+    if (!changed || !this.#stream) return;
+
+    const wasTransmitting = this.transmitting;
+    this.close();
+    if (wasTransmitting) {
+      this.transmitting = true;
+      void this.open().catch(() => undefined);
+    }
+  }
+
   /** microphone gain, 0..2 */
   setGain(gain: number) {
     this.#gain = Math.max(0, Math.min(2, gain));
@@ -101,9 +126,9 @@ export class Microphone {
     this.#stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         deviceId: this.#options.deviceId ? { exact: this.#options.deviceId } : undefined,
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
+        echoCancellation: this.#options.processing !== false,
+        noiseSuppression: this.#options.processing !== false,
+        autoGainControl: this.#options.processing !== false,
         channelCount: 1,
       },
       video: false,

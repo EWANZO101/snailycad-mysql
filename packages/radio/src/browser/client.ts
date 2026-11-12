@@ -61,6 +61,13 @@ export interface RadioClientOptions {
   /** follow "switch" messages from dispatch automatically */
   followSwitch?: boolean;
   microphoneDeviceId?: string;
+  /** echo cancellation / noise suppression / auto gain on the microphone (default true) */
+  microphoneProcessing?: boolean;
+  /**
+   * close the microphone this long after the last transmission (ms), so the browser's "mic in
+   * use" and Windows' call ducking don't stay on. null/undefined = keep it open (faster PTT)
+   */
+  releaseMicrophoneAfterMs?: number | null;
   /** reuse an AudioContext (e.g. the FiveM NUI's) */
   audioContext?: AudioContext;
 }
@@ -100,6 +107,8 @@ export class RadioClient extends Emitter<RadioClientEvents> {
   #pingTimer: ReturnType<typeof setInterval> | null = null;
   #livekit: LiveKitAudio | null = null;
   #closed = false;
+  #releaseTimer: ReturnType<typeof setTimeout> | null = null;
+  #outputDeviceId: string | null = null;
 
   constructor(options: RadioClientOptions) {
     super();
@@ -108,9 +117,62 @@ export class RadioClient extends Emitter<RadioClientEvents> {
     this.output = new RadioOutput(context, { effect: this.#options.radioEffect });
     this.microphone = new Microphone(context, {
       deviceId: options.microphoneDeviceId,
+      processing: options.microphoneProcessing,
       onFrame: (frame) => this.#sendAudio(frame),
       onLevel: (level) => this.emit("level", level),
     });
+  }
+
+  // --- audio devices -------------------------------------------------------------------
+
+  /** another microphone and/or processing; applies from the next push-to-talk */
+  setMicrophone(options: { deviceId?: string | null; processing?: boolean }) {
+    this.#options.microphoneDeviceId = options.deviceId ?? undefined;
+    if (options.processing !== undefined) this.#options.microphoneProcessing = options.processing;
+    this.microphone.configure({
+      deviceId: this.#options.microphoneDeviceId,
+      processing: this.#options.microphoneProcessing,
+    });
+  }
+
+  /** plays the radio on another output device (null = default). False when unsupported */
+  async setOutputDevice(deviceId: string | null) {
+    this.#outputDeviceId = deviceId;
+    const [builtin] = await Promise.all([
+      this.output.setOutputDevice(deviceId),
+      this.#livekit?.setOutputDevice(deviceId),
+    ]);
+    return builtin;
+  }
+
+  /** see RadioClientOptions.releaseMicrophoneAfterMs */
+  setReleaseMicrophoneAfter(ms: number | null) {
+    this.#options.releaseMicrophoneAfterMs = ms;
+    this.#cancelRelease();
+    if (!this.transmittingOn.size && !this.#pttWanted.size) this.#scheduleRelease();
+  }
+
+  #ensureLivekit() {
+    if (!this.#livekit) {
+      this.#livekit = new LiveKitAudio();
+      if (this.#outputDeviceId) void this.#livekit.setOutputDevice(this.#outputDeviceId);
+    }
+    return this.#livekit;
+  }
+
+  #cancelRelease() {
+    if (this.#releaseTimer) clearTimeout(this.#releaseTimer);
+    this.#releaseTimer = null;
+  }
+
+  #scheduleRelease() {
+    const ms = this.#options.releaseMicrophoneAfterMs;
+    if (ms === null || ms === undefined || !this.microphone.isOpen) return;
+    this.#cancelRelease();
+    this.#releaseTimer = setTimeout(() => {
+      this.#releaseTimer = null;
+      if (!this.transmittingOn.size && !this.#pttWanted.size) this.microphone.close();
+    }, ms);
   }
 
   // --- connection ---------------------------------------------------------------------
@@ -163,6 +225,7 @@ export class RadioClient extends Emitter<RadioClientEvents> {
     this.#closed = true;
     if (this.#retryTimer) clearTimeout(this.#retryTimer);
     this.#stopPing();
+    this.#cancelRelease();
     this.#socket?.close();
     this.#socket = null;
     this.#resetSession();
@@ -284,6 +347,7 @@ export class RadioClient extends Emitter<RadioClientEvents> {
     const targets = channel === undefined ? this.transmitTargets : channel ? [channel] : [];
     if (!targets.length || this.#pttWanted.size) return;
     void this.output.resume();
+    this.#cancelRelease();
     const wanted = new Set(targets);
     this.#pttWanted = wanted;
     try {
@@ -304,6 +368,7 @@ export class RadioClient extends Emitter<RadioClientEvents> {
     if (!wanted.size) return;
     for (const id of wanted) this.#send({ t: "ptt", channel: id, on: false });
     this.#stopTransmitting(true);
+    this.#scheduleRelease();
   }
 
   /** stops sending on `only` (or every channel); the roger beep once the last one stops */
@@ -319,6 +384,7 @@ export class RadioClient extends Emitter<RadioClientEvents> {
     this.transmitting = this.transmittingOn.values().next().value ?? null;
     if (!this.transmittingOn.size) {
       this.microphone.transmitting = false;
+      this.#scheduleRelease();
       if (roger) this.#tone("roger");
     }
     for (const id of channels) this.emit("transmit", { channel: id, on: false });
@@ -391,8 +457,7 @@ export class RadioClient extends Emitter<RadioClientEvents> {
         const volume = this.#volumes.get(message.channel) ?? 1;
         this.output.channel(message.channel).setVolume(volume);
         if (message.livekit) {
-          this.#livekit ??= new LiveKitAudio();
-          void this.#livekit
+          void this.#ensureLivekit()
             .join(message.channel, message.livekit.url, message.livekit.token)
             .then(() => this.#livekit?.setVolume(message.channel, volume))
             .catch((error) =>

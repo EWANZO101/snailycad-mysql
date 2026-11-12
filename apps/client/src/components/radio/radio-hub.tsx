@@ -411,6 +411,10 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
       client = new RadioClient({
         clientName: isPopout ? "snailycad-web/popout" : "snailycad-web",
         microphoneDeviceId: preferencesRef.current.microphoneDeviceId ?? undefined,
+        microphoneProcessing: preferencesRef.current.micProcessing,
+        releaseMicrophoneAfterMs: preferencesRef.current.releaseMicrophone
+          ? RELEASE_MICROPHONE_AFTER_MS
+          : null,
         getToken: async () => {
           const { json, error } = await executeRef.current<RadioTokenResponse>({
             path: "/radio/token",
@@ -424,6 +428,12 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
         },
       });
       clientRef.current = client;
+      if (preferencesRef.current.outputDeviceId) {
+        // the saved headset may be unplugged: fall back to the default output
+        client
+          .setOutputDevice(preferencesRef.current.outputDeviceId)
+          .catch(() => client?.setOutputDevice(null));
+      }
 
       // open the saved channels (or the unit's) whenever the radio (re)connects
       const openSaved = () => {
@@ -522,6 +532,29 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
     };
   }, [runsRadio, isPopout, updatePreferences]);
 
+  // microphone / output device settings apply to the running radio without reconnecting
+  React.useEffect(() => {
+    const client = clientRef.current;
+    if (!runsRadio || !client) return;
+    client.setMicrophone({
+      deviceId: preferences.microphoneDeviceId,
+      processing: preferences.micProcessing,
+    });
+    client.setReleaseMicrophoneAfter(
+      preferences.releaseMicrophone ? RELEASE_MICROPHONE_AFTER_MS : null,
+    );
+    client.setOutputDevice(preferences.outputDeviceId).catch(() => {
+      setLastError("The selected radio output device isn't available, using the default.");
+      void client.setOutputDevice(null);
+    });
+  }, [
+    runsRadio,
+    preferences.microphoneDeviceId,
+    preferences.micProcessing,
+    preferences.releaseMicrophone,
+    preferences.outputDeviceId,
+  ]);
+
   // re-publish when volumes change (they come from the preferences)
   React.useEffect(() => {
     const client = clientRef.current;
@@ -606,6 +639,9 @@ export function RadioHubProvider({ children }: { children: React.ReactNode }) {
 
   return <RadioHubContext.Provider value={hub}>{children}</RadioHubContext.Provider>;
 }
+
+/** how long the microphone stays open after talking when "release microphone" is on */
+const RELEASE_MICROPHONE_AFTER_MS = 8000;
 
 const TYPING_ELEMENTS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 

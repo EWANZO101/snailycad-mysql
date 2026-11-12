@@ -136,6 +136,22 @@ export class RadioOutput {
     this.#channels.delete(id);
   }
 
+  /** whether this browser can play the radio on another device than the default (Chrome/Edge 110+) */
+  static canSelectOutputDevice() {
+    return typeof AudioContext !== "undefined" && "setSinkId" in AudioContext.prototype;
+  }
+
+  /**
+   * plays the radio on another speaker / headset (a deviceId from enumerateDevices "audiooutput"),
+   * e.g. so it doesn't mix with Discord. null = the system default. Returns false if unsupported.
+   */
+  async setOutputDevice(deviceId: string | null) {
+    const context = this.context as AudioContext & { setSinkId?(id: string): Promise<void> };
+    if (typeof context.setSinkId !== "function") return false;
+    await context.setSinkId(deviceId ?? "");
+    return true;
+  }
+
   /** browsers start audio suspended until the user interacts with the page */
   resume() {
     return this.context.state === "suspended" ? this.context.resume() : Promise.resolve();
