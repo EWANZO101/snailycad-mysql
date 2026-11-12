@@ -180,7 +180,9 @@ export function GeneralSettingsTab() {
 
             <SettingsFormField
               label={t("emergencyNumber")}
-              description={isOwner ? t("emergencyNumberDescription") : t("emergencyNumberOwnerOnly")}
+              description={
+                isOwner ? t("emergencyNumberDescription") : t("emergencyNumberOwnerOnly")
+              }
               errorMessage={errors.emergencyNumber}
               optional
             >
