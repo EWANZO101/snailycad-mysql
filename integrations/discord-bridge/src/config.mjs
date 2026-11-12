@@ -8,13 +8,13 @@ export function loadConfig(raw, env = {}) {
   const discordToken = env.DISCORD_TOKEN || raw.discordToken;
 
   if (!cadApi || !/^https?:\/\//.test(cadApi)) {
-    throw new Error('"cadApi" must be your CAD API URL, e.g. https://cad-api.example.com/v1');
+    throw new Error("cadApi must be your CAD API URL, e.g. https://cad-api.example.com/v1");
   }
   if (!cadApiToken) {
-    throw new Error('"cadApiToken" is missing (Admin > CAD Settings > API Token)');
+    throw new Error("cadApiToken is missing (Admin > CAD Settings > API Token)");
   }
   if (!Array.isArray(raw.bridges) || !raw.bridges.length) {
-    throw new Error('"bridges" needs at least one { guildId, voiceChannelId, radioChannel }');
+    throw new Error("bridges needs at least one { guildId, voiceChannelId, radioChannel }");
   }
 
   const byToken = new Map();

@@ -37,6 +37,7 @@ export class Bridge {
   #speakers = new Map();
   /** radio identity ids of our own speaker connections: their audio isn't played back */
   #ownIds = new Set();
+  /** @type {PassThrough | null} */
   #stream = null;
   #suppress = false;
   #upsampleState = { last: 0 };

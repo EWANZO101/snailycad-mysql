@@ -11,13 +11,17 @@ import { RADIO_FRAME, mulawDecode, mulawEncode } from "./audio.mjs";
  */
 export class RadioSession extends EventEmitter {
   /** the server's id for this connection, from "ready" (talk messages use it) */
+  /** @type {string | null} */
   identityId = null;
   joined = false;
   granted = false;
   closed = false;
   #options;
+  /** @type {WebSocket | null} */
   #ws = null;
+  /** @type {number | null} */
   #handle = null;
+  /** @type {string | null} */
   #channelId = null;
   #seq = 0;
   #pttWanted = false;
@@ -143,26 +147,30 @@ export class RadioSession extends EventEmitter {
     if (message.channel && this.#channelId && message.channel !== this.#channelId) return;
 
     switch (message.t) {
-      case "ready":
+      case "ready": {
         this.identityId = message.identity?.id ?? null;
         this.emit("ready", message.identity);
         this.#send({ t: "join", channel: this.#channelId, mode: "member" });
         break;
-      case "joined":
+      }
+      case "joined": {
         this.#handle = message.handle;
         this.joined = true;
         this.emit("joined", message);
         if (this.#pttWanted) this.#send({ t: "ptt", channel: this.#channelId, on: true });
         break;
-      case "left":
+      }
+      case "left": {
         this.joined = false;
         this.granted = false;
         this.emit("left", message);
         break;
-      case "talk":
+      }
+      case "talk": {
         this.emit("talk", { id: message.id, name: message.name, on: message.on });
         break;
-      case "granted":
+      }
+      case "granted": {
         if (!this.#pttWanted) {
           // released while waiting: give the channel back
           this.#send({ t: "ptt", channel: this.#channelId, on: false });
@@ -172,21 +180,26 @@ export class RadioSession extends EventEmitter {
         this.#seq = 0;
         this.emit("granted");
         break;
-      case "busy":
+      }
+      case "busy": {
         this.#pttWanted = false;
         this.emit("busy", message.by);
         break;
-      case "preempted":
+      }
+      case "preempted": {
         this.#pttWanted = false;
         this.granted = false;
         this.emit("preempted", message.by);
         break;
-      case "error":
+      }
+      case "error": {
         this.emit("error", new Error(`${message.code}: ${message.message}`));
         if (message.fatal) this.closed = true;
         break;
-      default:
+      }
+      default: {
         break;
+      }
     }
   }
 
@@ -213,7 +226,7 @@ export class RadioSession extends EventEmitter {
     frame[0] = 1;
     frame[1] = 1;
     frame.writeUInt16BE(this.#handle, 2);
-    frame.writeUInt16BE(this.#seq++ & 0xffff, 4);
+    frame.writeUInt16BE(this.#seq++ % 65_536, 4);
     mulawEncode(samples).copy(frame, 6);
     ws.send(frame);
     return true;

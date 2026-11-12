@@ -18,11 +18,12 @@ async function mockServer({ transport = "builtin", busy = false } = {}) {
       if (isBinary) return received.frames.push(Buffer.from(data));
       const message = JSON.parse(data.toString());
       received.messages.push(message);
-      if (message.t === "hello")
+      if (message.t === "hello") {
         ws.send(
           JSON.stringify({ t: "ready", identity: { id: "x:discord:42", name: "Sam" }, transport }),
         );
-      if (message.t === "join")
+      }
+      if (message.t === "join") {
         ws.send(
           JSON.stringify({
             t: "joined",
@@ -32,6 +33,7 @@ async function mockServer({ transport = "builtin", busy = false } = {}) {
             members: [],
           }),
         );
+      }
       if (message.t === "ptt" && message.on) {
         ws.send(
           JSON.stringify(
@@ -99,7 +101,9 @@ test("joins the channel by name, transmits after granted, and decodes audio", as
   await granted;
   assert.equal(radio.sendFrame(new Int16Array(RADIO_FRAME).fill(1000)), true);
   radio.talk(false);
-  await new Promise((r) => setTimeout(r, 50));
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
 
   const [frame] = server.received.frames;
   assert.equal(frame.length, 6 + RADIO_FRAME);

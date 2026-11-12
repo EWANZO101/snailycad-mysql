@@ -12,7 +12,7 @@ import {
 
 test("mu-law round trip stays close (G.711 is lossy, ~3% at full scale)", () => {
   for (const sample of [0, 1, -1, 100, -100, 1000, -1000, 8000, -8000, 32000, -32000]) {
-    const back = mulawDecode(mulawEncode(Int16Array.of(sample)))[0];
+    const [back] = mulawDecode(mulawEncode(Int16Array.of(sample)));
     assert.ok(
       Math.abs(back - sample) <= Math.max(8, Math.abs(sample) * 0.04),
       `${sample} -> ${back}`,
