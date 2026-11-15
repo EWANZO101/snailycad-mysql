@@ -92,17 +92,23 @@ export function useRadioHub() {
 }
 
 /**
- * is the radio shown to this user: signed in, the RADIO feature on, and a dispatcher or an admin
- * (Owner / Admin rank or Manage CAD Settings). Units use the radio in game.
+ * is the radio shown to this user: signed in, the RADIO feature on, and a dispatcher, an LEO/EMS-FD
+ * unit, or an admin (Owner / Admin rank or Manage CAD Settings).
  */
 export function useRadioAvailable() {
   const { user } = useAuth();
   const { RADIO } = useFeatureEnabled();
   const { hasPermissions } = usePermission();
   if (!user || !RADIO) return false;
-  // the same check as the API's radio token (the owner has every permission); an "ADMIN" rank
-  // without these permissions would only get a permissions error
-  return hasPermissions([Permissions.ManageCADSettings, Permissions.Dispatch]);
+  // must match the API's /radio/token permission check (UNIT_PERMISSIONS + ManageCADSettings in
+  // apps/api/src/controllers/radio/radio-controller.ts) -- without these, the API would reject
+  // the token request with a permissions error even if this returned true.
+  return hasPermissions([
+    Permissions.ManageCADSettings,
+    Permissions.Dispatch,
+    Permissions.Leo,
+    Permissions.EmsFd,
+  ]);
 }
 
 /**
